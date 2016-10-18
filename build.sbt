@@ -14,7 +14,13 @@ libraryDependencies ++= Seq(
 
   // Scalatest
   "org.scalactic" %% "scalactic" % "2.2.6",
-  "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+  "org.scalatest" %% "scalatest" % "2.2.6" % "test",
+
+  // scopt
+  "com.github.scopt" %% "scopt" % "3.5.0",
+
+  // Phantom
+  "com.websudos" %%  "phantom-dsl" % "1.29.5"
 )
 
 mainClass in assembly := Some("io.asuna.lucinda.Main")
@@ -32,5 +38,6 @@ s3acl := com.amazonaws.services.s3.model.CannedAccessControlList.AuthenticatedRe
 
 // Resolver
 resolvers ++= Seq[Resolver](
+  Resolver.bintrayRepo("websudos", "oss-releases"),
   s3resolver.value("Aincrad", s3("aincrad.asuna.io"))
 )
