@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
   "com.websudos" %%  "phantom-dsl" % "1.29.5"
 )
 
-mainClass in assembly := Some("io.asuna.lucinda.Main")
+mainClass in assembly := Some("io.asuna.lucinda.LucindaServer")
 
 assemblyMergeStrategy in assembly := {
   case x if x contains "netty" => MergeStrategy.first

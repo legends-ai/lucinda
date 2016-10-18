@@ -1,3 +1,7 @@
+package io.asuna.lucinda
+
+import scopt.OptionParser
+
 case class Config(
   cassandraHosts: Seq[String] = List("localhost:9042"),
   port: Int = 23981
@@ -5,7 +9,7 @@ case class Config(
 
 object Config {
   /** Parser for command line options. */
-  val parser = new scopt.OptionParser[Config]("lucinda") {
+  val parser = new OptionParser[Config]("lucinda") {
     head("lucinda", "0.1.0")
 
     // Our list of Cassandra hosts.

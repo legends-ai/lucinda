@@ -9,26 +9,30 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 object LucindaServer {
 
-  private val logger = Logger.getLogger(classOf[LucindaServer].getName)
+  private lazy val logger = Logger.getLogger(classOf[LucindaServer].getName)
 
   def main(args: Array[String]): Unit = {
-    val server = new LucindaServer(ExecutionContext.global)
+    // Parse and verify config
+    val config = Config.parse(args)
+    if (!config.isDefined) {
+      sys.exit(1)
+      return
+    }
+
+    val server = new LucindaServer(config.get, ExecutionContext.global)
     server.start()
     server.blockUntilShutdown()
   }
 
-  // TODO(igm): make this port configurable
-  private val port = 23981
-
 }
 
-class LucindaServer(executionContext: ExecutionContext) { self =>
+class LucindaServer(config: Config, executionContext: ExecutionContext) { self =>
 
   private[this] var server: Server = null
 
   private def start(): Unit = {
-    server = ServerBuilder.forPort(LucindaServer.port).addService(LucindaGrpc.bindService(new LucindaImpl, executionContext)).build.start
-    LucindaServer.logger.info("Server started, listening on " + LucindaServer.port)
+    server = ServerBuilder.forPort(config.port).addService(LucindaGrpc.bindService(new LucindaImpl, executionContext)).build.start
+    LucindaServer.logger.info("Server started, listening on " + config.port)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         System.err.println("*** shutting down gRPC server since JVM is shutting down")
