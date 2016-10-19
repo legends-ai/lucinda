@@ -25,7 +25,7 @@ abstract class MatchSumsModel extends CassandraTable[ConcreteMatchSumsModel, Mat
 
 abstract class ConcreteMatchSumsModel extends MatchSumsModel with RootConnector {
 
-  def getFromFilters(filters: MatchFilters): Future[Option[MatchSum]] = {
+  def get(filters: MatchFilters): Future[Option[MatchSum]] = {
     select
       .where(_.championId eqs filters.championId)
       .and(_.enemyId eqs filters.enemyId)
