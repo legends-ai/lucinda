@@ -10,7 +10,7 @@ libraryDependencies ++= Seq(
   // Proto stuff
   "com.trueaccord.scalapb" %% "scalapb-runtime" % "0.5.39",
   "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % "0.5.39",
-  "io.grpc" % "grpc-netty" % "0.14.0",
+  "io.grpc" % "grpc-netty" % "1.0.1",
 
   // Scalatest
   "org.scalactic" %% "scalactic" % "2.2.6",
@@ -26,7 +26,7 @@ libraryDependencies ++= Seq(
 mainClass in assembly := Some("io.asuna.lucinda.LucindaServer")
 
 assemblyMergeStrategy in assembly := {
-  case x if x contains "netty" => MergeStrategy.first
+  case x if x.endsWith("io.netty.versions.properties") => MergeStrategy.first
   case x if x contains "publicsuffix" => MergeStrategy.first
   case x =>
     val oldStrategy = (assemblyMergeStrategy in assembly).value
