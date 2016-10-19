@@ -61,6 +61,14 @@ class LucindaServer(config: Config, executionContext: ExecutionContext) { self =
       Future.successful(reply)
     }
 
+    override def getChampion(req: GetChampionRequest) = {
+      Future.successful(Champion())
+    }
+
+    override def getMatchup(req: GetMatchupRequest) = {
+      Future.successful(Matchup())
+    }
+
   }
 
 }

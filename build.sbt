@@ -5,7 +5,7 @@ scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
   // Asuna standard lib
-  "io.asuna" %% "asunasan" % "0.1.0",
+  "io.asuna" %% "asunasan" % "0.1.1-SNAPSHOT",
 
   // Proto stuff
   "com.trueaccord.scalapb" %% "scalapb-runtime" % "0.5.39",
