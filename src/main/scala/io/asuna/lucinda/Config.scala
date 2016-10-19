@@ -25,4 +25,5 @@ object Config {
   def parse(args: Seq[String]): Option[Config] = {
     parser.parse(args, Config())
   }
+
 }

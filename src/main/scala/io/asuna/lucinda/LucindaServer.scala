@@ -4,6 +4,7 @@ import io.grpc.{Server, ServerBuilder}
 import io.asuna.proto.lucinda.LucindaData._
 import io.asuna.proto.service_lucinda.LucindaGrpc
 import io.asuna.proto.service_lucinda.LucindaRpc._
+import io.asuna.lucinda.database.{ Connector, LucindaDatabase }
 import java.util.logging.Logger
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -11,15 +12,22 @@ object LucindaServer {
 
   private lazy val logger = Logger.getLogger(classOf[LucindaServer].getName)
 
+  private var db: LucindaDatabase = null
+
   def main(args: Array[String]): Unit = {
     // Parse and verify config
-    val config = Config.parse(args)
-    if (!config.isDefined) {
+    val configOpt = Config.parse(args)
+    if (!configOpt.isDefined) {
       sys.exit(1)
       return
     }
+    val config = configOpt.get
 
-    val server = new LucindaServer(config.get, ExecutionContext.global)
+    // Setup database
+    val connector = Connector.fromConfig(config)
+    db = new LucindaDatabase(connector)
+
+    val server = new LucindaServer(config, ExecutionContext.global)
     server.start()
     server.blockUntilShutdown()
   }
