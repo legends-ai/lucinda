@@ -3,7 +3,7 @@ package io.asuna.lucinda
 import scopt.OptionParser
 
 case class Config(
-  cassandraHosts: Seq[String] = List("localhost:9042"),
+  cassandraHosts: Seq[String] = List("localhost"),
   port: Int = 23981
 )
 
