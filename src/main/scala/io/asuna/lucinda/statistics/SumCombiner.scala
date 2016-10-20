@@ -3,9 +3,9 @@ package io.asuna.lucinda.statistics
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.Sums
 import io.asuna.proto.match_sum.MatchSum
 
-object Summer {
+object SumCombiner {
 
-  def makeSums(sums: Map[Int, MatchSum]): Sums = {
+  def combineSums(sums: Map[Int, MatchSum]): Sums = {
     sums.foldLeft(Sums()) { case (agg, (champion, sum)) =>
       Sums(
         scalars = Some(
