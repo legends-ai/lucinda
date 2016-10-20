@@ -8,8 +8,15 @@ import io.asuna.asunasan.legends.MatchSumOperators._
 import scala.concurrent.Future
 
 abstract class MatchSumsModel extends CassandraTable[ConcreteMatchSumsModel, MatchSum] {
-  object championId extends IntColumn(this) with PartitionKey[Int]
-  object enemyId extends IntColumn(this) with PartitionKey[Int]
+
+  object championId extends IntColumn(this) with PartitionKey[Int] {
+    override def name = "champion_id"
+  }
+
+  object enemyId extends IntColumn(this) with PartitionKey[Int] {
+    override def name = "enemy_id"
+  }
+
   object patch extends StringColumn(this) with PartitionKey[String]
   object tier extends IntColumn(this) with PartitionKey[Int]
   object region extends IntColumn(this) with PartitionKey[Int]
@@ -24,6 +31,8 @@ abstract class MatchSumsModel extends CassandraTable[ConcreteMatchSumsModel, Mat
 }
 
 abstract class ConcreteMatchSumsModel extends MatchSumsModel with RootConnector {
+
+  override val tableName = "match_sums"
 
   def get(filters: MatchFilters): Future[Option[MatchSum]] = {
     select

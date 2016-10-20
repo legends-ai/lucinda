@@ -13,8 +13,6 @@ object LucindaServer {
 
   private lazy val logger = Logger.getLogger(classOf[LucindaServer].getName)
 
-  private var db: LucindaDatabase = null
-
   def main(args: Array[String]): Unit = {
     // Parse and verify config
     val configOpt = Config.parse(args)
@@ -26,16 +24,20 @@ object LucindaServer {
 
     // Setup database
     val connector = Connector.fromConfig(config)
-    db = new LucindaDatabase(connector)
+    val db = new LucindaDatabase(connector)
 
-    val server = new LucindaServer(config, ExecutionContext.global)
+    val server = new LucindaServer(config, db, ExecutionContext.global)
     server.start()
     server.blockUntilShutdown()
   }
 
 }
 
-class LucindaServer(config: Config, executionContext: ExecutionContext) { self =>
+class LucindaServer(
+  config: Config,
+  db: LucindaDatabase,
+  executionContext: ExecutionContext
+) { self =>
 
   private[this] var server: Server = null
 
@@ -79,7 +81,7 @@ class LucindaServer(config: Config, executionContext: ExecutionContext) { self =
     }
 
     override def getMatchSum(req: GetMatchSumRequest) = {
-      Future.successful(MatchSum())
+      db.matchSums.sum(req.filters)
     }
 
   }
