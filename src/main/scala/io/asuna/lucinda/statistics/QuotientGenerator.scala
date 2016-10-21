@@ -11,7 +11,7 @@ object QuotientsGenerator {
         case None => None
       },
       deltas = sums.deltas match {
-        case Some(de) => Some(generateDeltasQuotients(de))
+        case Some(de) => Some(generateDeltasQuotients(sums.durationDistributions.getOrElse(Sums.DurationDistributions()), de))
         case None => None
       }
     )
@@ -48,15 +48,48 @@ object QuotientsGenerator {
     )
   }
 
-  def generateDeltasQuotients(deltas: Sums.Deltas): Quotients.Deltas = {
-    Quotients.Deltas()
+  def generateDeltasQuotients(durationDistributions: Sums.DurationDistributions, deltas: Sums.Deltas): Quotients.Deltas = {
+    val divide = divideDeltasOption(durationDistributions, _: Option[Sums.Deltas.Delta])
+    Quotients.Deltas(
+      csDiff = divide(deltas.csDiff),
+      xpDiff = divide(deltas.xpDiff),
+      damageTakenDiff = divide(deltas.damageTakenDiff),
+      xpPerMin = divide(deltas.xpPerMin),
+      goldPerMin = divide(deltas.goldPerMin),
+      towersPerMin = divide(deltas.towersPerMin),
+      wardsPlaced = divide(deltas.wardsPlaced),
+      damageTaken = divide(deltas.damageTaken)
+    )
   }
 
-  def divideScalars(divisor: Map[Int, Long], scalars: Map[Int, Long]): Map[Int, Double] = {
-    val divisorDoubles = divisor.mapValues(_.toDouble)
-    scalars.transform((k, v) =>
-      divisorDoubles.get(k) match {
-        case Some(divisor) if divisor != 0 => v.toDouble / divisor
+  def divideDeltasOption(
+    durationDistributions: Sums.DurationDistributions, delta: Option[Sums.Deltas.Delta]
+  ): Option[Quotients.Deltas.Delta] = {
+    delta match {
+      case Some(d) => Some(divideDeltas(durationDistributions, d))
+      case None => None
+    }
+  }
+
+  /**
+    * Generates the quotient from the delta sums and duration distributions.
+    */
+  def divideDeltas(durationDistributions: Sums.DurationDistributions, delta: Sums.Deltas.Delta): Quotients.Deltas.Delta = {
+    Quotients.Deltas.Delta(
+      zeroToTen = divideScalars(durationDistributions.zeroToTen, delta.zeroToTen),
+      tenToTwenty = divideScalars(durationDistributions.tenToTwenty, delta.tenToTwenty),
+      twentyToThirty = divideScalars(durationDistributions.twentyToThirty, delta.twentyToThirty),
+      thirtyToEnd = divideScalars(durationDistributions.thirtyToEnd, delta.thirtyToEnd)
+    )
+  }
+
+  def divideScalars[S, T](
+    divisors: Map[Int, S], scalars: Map[Int, T]
+  )(implicit s: scala.math.Numeric[S], t: scala.math.Numeric[T]): Map[Int, Double] = {
+    val df = divisors.mapValues(x => s.toDouble(x))
+    scalars.mapValues(x => t.toDouble(x)).transform((k, v) =>
+      df.get(k) match {
+        case Some(divisor) if divisor != 0 => v / divisor
         case None => 0
       }
     )
