@@ -9,7 +9,8 @@ object ResultsGenerator {
 
   def generateResults(quotients: Quotients): Results = {
     Results(
-      scalars = Some(makeScalars(quotients.scalars.getOrElse(Quotients.Scalars())))
+      scalars = Some(makeScalars(quotients.scalars.getOrElse(Quotients.Scalars()))),
+      deltas = Some(makeDeltas(quotients.deltas.getOrElse(Quotients.Deltas())))
     )
   }
 
@@ -40,6 +41,35 @@ object ResultsGenerator {
       physicalDamage = makeStat(scalars.physicalDamage),
       magicDamage = makeStat(scalars.magicDamage),
       trueDamage = makeStat(scalars.trueDamage)
+    )
+  }
+
+  def makeDeltas(deltas: Quotients.Deltas): Results.Deltas = {
+    Results.Deltas(
+      csDiff = makeDeltaOption(deltas.csDiff),
+      xpDiff = makeDeltaOption(deltas.xpDiff),
+      damageTakenDiff = makeDeltaOption(deltas.damageTakenDiff),
+      xpPerMin = makeDeltaOption(deltas.xpPerMin),
+      goldPerMin = makeDeltaOption(deltas.goldPerMin),
+      towersPerMin = makeDeltaOption(deltas.towersPerMin),
+      wardsPlaced = makeDeltaOption(deltas.wardsPlaced),
+      damageTaken = makeDeltaOption(deltas.damageTaken)
+    )
+  }
+
+  def makeDeltaOption(delta: Option[Quotients.Deltas.Delta]): Option[Results.Deltas.Delta] = {
+    delta match {
+      case Some(delt) => Some(makeDelta(delt))
+      case None => None
+    }
+  }
+
+  def makeDelta(delta: Quotients.Deltas.Delta): Results.Deltas.Delta = {
+    Results.Deltas.Delta(
+      zeroToTen = makeStat(delta.zeroToTen),
+      tenToTwenty = makeStat(delta.tenToTwenty),
+      twentyToThirty = makeStat(delta.twentyToThirty),
+      thirtyToEnd = makeStat(delta.thirtyToEnd)
     )
   }
 
