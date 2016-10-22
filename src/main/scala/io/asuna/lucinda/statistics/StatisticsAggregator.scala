@@ -12,6 +12,9 @@ object StatisticsAggregator {
     return ChampionStatistics()
   }
 
+  /**
+    * Make the Statistics object from a role and sums for that role. This function is pure.
+    */
   def makeStatistics(role: Role, rawSums: Map[Int, MatchSum]): Statistics = {
     val sums = SumCombiner.combineSums(rawSums)
     val quotients = QuotientsGenerator.generateQuotients(sums)
