@@ -15,6 +15,14 @@ object SumCombiner {
         deltas = Some(
           agg.deltas.getOrElse(Sums.Deltas())
             .append(champion, sum.deltas.getOrElse(MatchSum.Deltas()))
+        ),
+        durationDistributions = Some(
+          agg.durationDistributions.getOrElse(Sums.DurationDistributions())
+            .append(champion, sum.durationDistribution.getOrElse(MatchSum.DurationDistribution()))
+        ),
+        subscalars = Some(
+          agg.subscalars.getOrElse(Sums.Subscalars())
+            .append(champion, bans = sum.bans, allies = sum.allies)
         )
       )
     }
@@ -67,6 +75,47 @@ object SumCombiner {
         towersPerMin = agg.towersPerMin.append(champion, deltas.towersPerMin),
         wardsPlaced = agg.wardsPlaced.append(champion, deltas.wardsPlaced),
         damageTaken = agg.damageTaken.append(champion, deltas.damageTaken)
+      )
+    }
+
+  }
+
+  private implicit class DurationDistributionsAggregator(agg: Sums.DurationDistributions) {
+
+    def append(champion: Int, dd: MatchSum.DurationDistribution): Sums.DurationDistributions = {
+      Sums.DurationDistributions(
+        zeroToTen = agg.zeroToTen + (champion -> dd.zeroToTen),
+        tenToTwenty = agg.tenToTwenty + (champion -> dd.tenToTwenty),
+        twentyToThirty = agg.twentyToThirty + (champion -> dd.twentyToThirty),
+        thirtyToEnd = agg.thirtyToEnd + (champion -> dd.thirtyToEnd)
+      )
+    }
+
+  }
+
+  private implicit class SubscalarsAggregator(agg: Sums.Subscalars) {
+
+    def append(
+      champion: Int, bans: Map[Int, MatchSum.Subscalars], allies: Map[Int, MatchSum.Subscalars]
+    ): Sums.Subscalars = {
+      Sums.Subscalars(
+        bans = agg.bans.transform { (key, subscalars) =>
+          subscalars.append(champion, bans.getOrElse(key, MatchSum.Subscalars()))
+        },
+        allies = agg.bans.transform { (key, subscalars) =>
+          subscalars.append(champion, allies.getOrElse(key, MatchSum.Subscalars()))
+        }
+      )
+    }
+
+  }
+
+  private implicit class SubscalarAggregator(agg: Sums.Subscalars.Subscalar) {
+
+    def append(champion: Int, subscalar: MatchSum.Subscalars): Sums.Subscalars.Subscalar = {
+      Sums.Subscalars.Subscalar(
+        plays = agg.plays + (champion -> subscalar.plays),
+        wins = agg.wins + (champion -> subscalar.wins)
       )
     }
 

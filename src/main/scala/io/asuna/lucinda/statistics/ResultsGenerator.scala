@@ -10,7 +10,8 @@ object ResultsGenerator {
   def generateResults(quotients: Quotients): Results = {
     Results(
       scalars = Some(makeScalars(quotients.scalars.getOrElse(Quotients.Scalars()))),
-      deltas = Some(makeDeltas(quotients.deltas.getOrElse(Quotients.Deltas())))
+      deltas = Some(makeDeltas(quotients.deltas.getOrElse(Quotients.Deltas()))),
+      derivatives = Some(makeDerivatives(quotients.derivatives.getOrElse(Quotients.Derivatives())))
     )
   }
 
@@ -70,6 +71,13 @@ object ResultsGenerator {
       tenToTwenty = makeStat(delta.tenToTwenty),
       twentyToThirty = makeStat(delta.twentyToThirty),
       thirtyToEnd = makeStat(delta.thirtyToEnd)
+    )
+  }
+
+  def makeDerivatives(derivatives: Quotients.Derivatives): Results.Derivatives = {
+    Results.Derivatives(
+      picks = makeStat(derivatives.picks),
+      bans = makeStat(derivatives.bans)
     )
   }
 
