@@ -13,7 +13,9 @@ object QuotientsGenerator {
       deltas = sums.deltas match {
         case Some(de) => Some(generateDeltasQuotients(sums.durationDistributions.getOrElse(Sums.DurationDistributions()), de))
         case None => None
-      }
+      },
+      derivatives = Some(generateDerivatives(
+        sums.scalars.getOrElse(Sums.Scalars()), sums.subscalars.getOrElse(Sums.Subscalars())))
     )
   }
 
@@ -59,6 +61,18 @@ object QuotientsGenerator {
       towersPerMin = divide(deltas.towersPerMin),
       wardsPlaced = divide(deltas.wardsPlaced),
       damageTaken = divide(deltas.damageTaken)
+    )
+  }
+
+  def generateDerivatives(scalars: Sums.Scalars, subscalars: Sums.Subscalars): Quotients.Derivatives = {
+    val divide = divideScalars(scalars.plays, _: Map[Int, Long])
+    Quotients.Derivatives(
+      picks = divide(subscalars.allies.mapValues { subscalar =>
+        subscalar.plays.values.foldLeft(0L) { _ + _ }
+      }).mapValues(_ / 10),
+      bans = divide(subscalars.bans.mapValues { subscalar =>
+        subscalar.plays.values.foldLeft(0L) { _ + _ }
+      }).mapValues(_ / 10)
     )
   }
 
