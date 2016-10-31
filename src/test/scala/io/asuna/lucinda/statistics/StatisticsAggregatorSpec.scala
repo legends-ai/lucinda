@@ -184,11 +184,38 @@ class StatisticsAggregatorSpec extends PropSpec with PropertyChecks with Matcher
   property("sums make sense") {
     forAll { (role: Role, inSums: Map[Int, MatchSum]) =>
       val stats = StatisticsAggregator.makeStatistics(role, inSums)
+      val scalars = stats.sums.flatMap(_.scalars).get
 
-      val sums = stats.sums.get
-      val scalars = sums.scalars.get
-
-      scalars.plays.size should be (inSums.size)
+      // Ensure all maps are the correct size
+      Seq[Map[Int, Long]](
+        scalars.wins,
+        scalars.goldEarned,
+        scalars.kills,
+        scalars.deaths,
+        scalars.assists,
+        scalars.damageDealt,
+        scalars.damageTaken,
+        scalars.minionsKilled,
+        scalars.teamJungleMinionsKilled,
+        scalars.enemyJungleMinionsKilled,
+        scalars.structureDamage,
+        scalars.killingSpree,
+        scalars.wardsBought,
+        scalars.wardsPlaced,
+        scalars.wardsKilled,
+        scalars.crowdControl,
+        scalars.firstBlood,
+        scalars.firstBloodAssist,
+        scalars.doublekills,
+        scalars.triplekills,
+        scalars.quadrakills,
+        scalars.pentakills,
+        scalars.physicalDamage,
+        scalars.magicDamage,
+        scalars.trueDamage
+      ).foreach { map =>
+        map.size should be (inSums.size)
+      }
     }
   }
 
