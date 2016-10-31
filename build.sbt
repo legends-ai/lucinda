@@ -42,3 +42,6 @@ resolvers ++= Seq[Resolver](
   Resolver.bintrayRepo("websudos", "oss-releases"),
   s3resolver.value("Aincrad", s3("aincrad.asuna.io"))
 )
+
+// testing
+testOptions in Test += Tests.Argument("-oDF")

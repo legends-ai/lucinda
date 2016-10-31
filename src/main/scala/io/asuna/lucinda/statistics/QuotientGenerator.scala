@@ -104,7 +104,7 @@ object QuotientsGenerator {
     scalars.mapValues(x => t.toDouble(x)).transform((k, v) =>
       df.get(k) match {
         case Some(divisor) if divisor != 0 => v / divisor
-        case None => 0
+        case _ => 0
       }
     )
   }

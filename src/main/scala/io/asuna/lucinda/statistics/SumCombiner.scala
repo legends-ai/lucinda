@@ -5,23 +5,31 @@ import io.asuna.proto.match_sum.MatchSum
 
 object SumCombiner {
 
+  // This is a zero sum game.
+  val zeroSums = Sums(
+    scalars = Option(Sums.Scalars()),
+    deltas = Option(Sums.Deltas()),
+    durationDistributions = Option(Sums.DurationDistributions()),
+    subscalars = Option(Sums.Subscalars())
+  )
+
   def combineSums(sums: Map[Int, MatchSum]): Sums = {
-    sums.foldLeft(Sums()) { case (agg, (champion, sum)) =>
+    sums.foldLeft(zeroSums) { case (agg, (champion, sum)) =>
       Sums(
         scalars = Some(
-          agg.scalars.getOrElse(Sums.Scalars())
+          agg.scalars.get
             .append(champion, sum.scalars.getOrElse(MatchSum.Scalars()))
         ),
         deltas = Some(
-          agg.deltas.getOrElse(Sums.Deltas())
+          agg.deltas.get
             .append(champion, sum.deltas.getOrElse(MatchSum.Deltas()))
         ),
         durationDistributions = Some(
-          agg.durationDistributions.getOrElse(Sums.DurationDistributions())
+          agg.durationDistributions.get
             .append(champion, sum.durationDistribution.getOrElse(MatchSum.DurationDistribution()))
         ),
         subscalars = Some(
-          agg.subscalars.getOrElse(Sums.Subscalars())
+          agg.subscalars.get
             .append(champion, bans = sum.bans, allies = sum.allies)
         )
       )
