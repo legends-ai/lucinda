@@ -13,8 +13,9 @@ libraryDependencies ++= Seq(
   "io.grpc" % "grpc-netty" % "1.0.1",
 
   // Scalatest
-  "org.scalactic" %% "scalactic" % "2.2.6",
-  "org.scalatest" %% "scalatest" % "2.2.6" % "test",
+  "org.scalactic" %% "scalactic" % "3.0.0",
+  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.13.3" % "test", // prop tests
 
   // scopt
   "com.github.scopt" %% "scopt" % "3.5.0",

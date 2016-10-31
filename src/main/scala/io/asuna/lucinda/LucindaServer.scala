@@ -81,7 +81,7 @@ class LucindaServer(
     }
 
     override def getMatchSum(req: GetMatchSumRequest) = {
-      db.matchSums.sum(req.filters)
+      db.matchSums.sum(req.filters.toSet)
     }
 
   }

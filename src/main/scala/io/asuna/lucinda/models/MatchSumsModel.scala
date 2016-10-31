@@ -46,7 +46,7 @@ abstract class ConcreteMatchSumsModel extends MatchSumsModel with RootConnector 
       .one()
   }
 
-  def sum(filters: Seq[MatchFilters]): Future[MatchSum] = {
+  def sum(filters: Set[MatchFilters]): Future[MatchSum] = {
     val futures = Future.sequence(filters.map(get(_)))
     futures.map { (list) =>
       list.foldLeft(MatchSum()) {
