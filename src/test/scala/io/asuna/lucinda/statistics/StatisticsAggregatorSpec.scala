@@ -6,6 +6,7 @@ import prop._
 import scala.collection.immutable._
 import io.asuna.proto.enums.Role
 import io.asuna.proto.match_sum.MatchSum
+import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 
 class StatisticsAggregatorSpec extends PropSpec with PropertyChecks with Matchers {
   import Arbitrary.arbitrary
@@ -182,9 +183,12 @@ class StatisticsAggregatorSpec extends PropSpec with PropertyChecks with Matcher
   }
 
   property("sums make sense") {
+    import ChampionStatistics.Sums
+
     forAll { (role: Role, inSums: Map[Int, MatchSum]) =>
       val stats = StatisticsAggregator.makeStatistics(role, inSums)
-      val scalars = stats.sums.flatMap(_.scalars).get
+      val sums = stats.sums
+      val scalars = sums.flatMap(_.scalars).get
 
       // Ensure all maps are the correct size
       Seq[Map[Int, Long]](
@@ -216,6 +220,72 @@ class StatisticsAggregatorSpec extends PropSpec with PropertyChecks with Matcher
       ).foreach { map =>
         map.size should be (inSums.size)
       }
+
+      val deltas = sums.flatMap(_.deltas).get
+      Seq[Option[Sums.Deltas.Delta]](
+        deltas.csDiff,
+        deltas.xpDiff,
+        deltas.damageTakenDiff,
+        deltas.xpPerMin,
+        deltas.goldPerMin,
+        deltas.towersPerMin,
+        deltas.wardsPlaced,
+        deltas.damageTaken
+      ).foreach {
+        deltaOpt => deltaOpt match {
+          case Some(delta) => Seq[Map[Int, Double]](
+            delta.zeroToTen,
+            delta.tenToTwenty,
+            delta.twentyToThirty,
+            delta.thirtyToEnd
+          ).foreach { map =>
+            map.size should be (inSums.size)
+          }
+          case None => None
+        }
+      }
+
+      val dds = sums.flatMap(_.durationDistributions).get
+      Seq[Map[Int, Long]](
+        dds.zeroToTen,
+        dds.tenToTwenty,
+        dds.twentyToThirty,
+        dds.thirtyToEnd
+      ).foreach { map =>
+        map.size should be (inSums.size)
+      }
+
+      val subscalars = sums.flatMap(_.subscalars).get
+      Seq[Map[Int, Sums.Subscalars.Subscalar]](
+        subscalars.bans,
+        subscalars.allies
+      ).foreach { ssMap =>
+        ssMap.values.foreach { ss =>
+          Seq[Map[Int, Long]](
+            ss.plays,
+            ss.wins
+          ).foreach { map =>
+            map.size should be (inSums.size)
+          }
+        }
+      }
+
+    }
+
+    // TODO(igm): more rigorous proof of correctness
+  }
+
+  property("quotients make sense") {
+    forAll { (role: Role, inSums: Map[Int, MatchSum]) =>
+      val stats = StatisticsAggregator.makeStatistics(role, inSums)
+      val scalars = stats.quotients.flatMap(_.scalars).get
+    }
+  }
+
+  property("results make sense") {
+    forAll { (role: Role, inSums: Map[Int, MatchSum]) =>
+      val stats = StatisticsAggregator.makeStatistics(role, inSums)
+      val scalars = stats.results.flatMap(_.scalars).get
     }
   }
 

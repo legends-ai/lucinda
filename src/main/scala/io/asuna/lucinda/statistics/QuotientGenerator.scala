@@ -8,11 +8,11 @@ object QuotientsGenerator {
     Quotients(
       scalars = sums.scalars match {
         case Some(sc) => Some(generateScalarsQuotients(sc))
-        case None => None
+        case None => Some(Quotients.Scalars())
       },
       deltas = sums.deltas match {
         case Some(de) => Some(generateDeltasQuotients(sums.durationDistributions.getOrElse(Sums.DurationDistributions()), de))
-        case None => None
+        case None => Some(Quotients.Deltas())
       },
       derivatives = Some(generateDerivatives(
         sums.scalars.getOrElse(Sums.Scalars()), sums.subscalars.getOrElse(Sums.Subscalars())))
