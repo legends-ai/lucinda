@@ -45,3 +45,6 @@ resolvers ++= Seq[Resolver](
 
 // testing
 testOptions in Test += Tests.Argument("-oDF")
+
+// Needed for ENSIME
+scalaVersion in ThisBuild := "2.11.8"

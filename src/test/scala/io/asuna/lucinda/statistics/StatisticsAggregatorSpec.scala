@@ -301,13 +301,22 @@ class StatisticsAggregatorSpec extends PropSpec with PropertyChecks with Matcher
 
       }
 
-      Seq[Map[Int, Long]](
-        dds.zeroToTen,
-        dds.tenToTwenty,
-        dds.twentyToThirty,
-        dds.thirtyToEnd
-      ).foreach { map =>
+      Seq[(Map[Int, Long], MatchSum.DurationDistribution => Long)](
+        (dds.zeroToTen, _.zeroToTen),
+        (dds.tenToTwenty, _.tenToTwenty),
+        (dds.twentyToThirty, _.twentyToThirty),
+        (dds.thirtyToEnd, _.thirtyToEnd)
+      ).foreach { case (map, ddFn) =>
         map.size should be (inSums.size)
+
+          map.foreach { case (key, value) =>
+            val inSum = inSums.get(key)
+            if (!inSum.isDefined) {
+              fail("Map of duration distributions contains rogue values")
+            }
+
+            ddFn(inSum.flatMap(_.durationDistribution).get) should be (value)
+          }
       }
 
       Seq[Map[Int, Sums.Subscalars.Subscalar]](
@@ -325,8 +334,6 @@ class StatisticsAggregatorSpec extends PropSpec with PropertyChecks with Matcher
       }
 
     }
-
-    // TODO(igm): more rigorous proof of correctness
   }
 
   property("quotients make sense") {
