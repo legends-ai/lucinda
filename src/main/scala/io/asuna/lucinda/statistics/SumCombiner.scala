@@ -5,10 +5,22 @@ import io.asuna.proto.match_sum.MatchSum
 
 object SumCombiner {
 
+  // Zero of the deltas list
+  val zeroDeltas = Sums.Deltas(
+    csDiff = Option(Sums.Deltas.Delta()),
+    xpDiff = Option(Sums.Deltas.Delta()),
+    damageTakenDiff = Option(Sums.Deltas.Delta()),
+    xpPerMin = Option(Sums.Deltas.Delta()),
+    goldPerMin = Option(Sums.Deltas.Delta()),
+    towersPerMin = Option(Sums.Deltas.Delta()),
+    wardsPlaced = Option(Sums.Deltas.Delta()),
+    damageTaken = Option(Sums.Deltas.Delta())
+  )
+
   // This is a zero sum game.
   val zeroSums = Sums(
     scalars = Option(Sums.Scalars()),
-    deltas = Option(Sums.Deltas()),
+    deltas = Option(zeroDeltas),
     durationDistributions = Option(Sums.DurationDistributions()),
     subscalars = Option(Sums.Subscalars())
   )

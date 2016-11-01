@@ -186,66 +186,121 @@ class StatisticsAggregatorSpec extends PropSpec with PropertyChecks with Matcher
     import ChampionStatistics.Sums
 
     forAll { (role: Role, inSums: Map[Int, MatchSum]) =>
+      // Run the stats aggregator!
       val stats = StatisticsAggregator.makeStatistics(role, inSums)
+
+      // First, we will extract the sums object.
       val sums = stats.sums
+
+      // We will be testing all properties, so let's grab them.
+      // These all should exist in all instances, even if the inSums data is invalid.
       val scalars = sums.flatMap(_.scalars).get
-
-      // Ensure all maps are the correct size
-      Seq[Map[Int, Long]](
-        scalars.wins,
-        scalars.goldEarned,
-        scalars.kills,
-        scalars.deaths,
-        scalars.assists,
-        scalars.damageDealt,
-        scalars.damageTaken,
-        scalars.minionsKilled,
-        scalars.teamJungleMinionsKilled,
-        scalars.enemyJungleMinionsKilled,
-        scalars.structureDamage,
-        scalars.killingSpree,
-        scalars.wardsBought,
-        scalars.wardsPlaced,
-        scalars.wardsKilled,
-        scalars.crowdControl,
-        scalars.firstBlood,
-        scalars.firstBloodAssist,
-        scalars.doublekills,
-        scalars.triplekills,
-        scalars.quadrakills,
-        scalars.pentakills,
-        scalars.physicalDamage,
-        scalars.magicDamage,
-        scalars.trueDamage
-      ).foreach { map =>
-        map.size should be (inSums.size)
-      }
-
       val deltas = sums.flatMap(_.deltas).get
-      Seq[Option[Sums.Deltas.Delta]](
-        deltas.csDiff,
-        deltas.xpDiff,
-        deltas.damageTakenDiff,
-        deltas.xpPerMin,
-        deltas.goldPerMin,
-        deltas.towersPerMin,
-        deltas.wardsPlaced,
-        deltas.damageTaken
+      val dds = sums.flatMap(_.durationDistributions).get
+      val subscalars = sums.flatMap(_.subscalars).get
+
+      // Let's first check the integrity of our MatchSum scalars.
+      // Let's iterate over all of the properties. We will also supply a function
+      // to extract the scalars.
+      Seq[(Map[Int, Long], MatchSum.Scalars => Long)](
+        (scalars.wins, _.wins),
+        (scalars.goldEarned, _.goldEarned),
+        (scalars.kills, _.kills),
+        (scalars.deaths, _.deaths),
+        (scalars.assists, _.assists),
+        (scalars.damageDealt, _.damageDealt),
+        (scalars.damageTaken, _.damageTaken),
+        (scalars.minionsKilled, _.minionsKilled),
+        (scalars.teamJungleMinionsKilled, _.teamJungleMinionsKilled),
+        (scalars.enemyJungleMinionsKilled, _.enemyJungleMinionsKilled),
+        (scalars.structureDamage, _.structureDamage),
+        (scalars.killingSpree, _.killingSpree),
+        (scalars.wardsBought, _.wardsBought),
+        (scalars.wardsPlaced, _.wardsPlaced),
+        (scalars.wardsKilled, _.wardsKilled),
+        (scalars.crowdControl, _.crowdControl),
+        (scalars.firstBlood, _.firstBlood),
+        (scalars.firstBloodAssist, _.firstBloodAssist),
+        (scalars.doublekills, _.doublekills),
+        (scalars.triplekills, _.triplekills),
+        (scalars.quadrakills, _.quadrakills),
+        (scalars.pentakills, _.pentakills),
+        (scalars.physicalDamage, _.physicalDamage),
+        (scalars.magicDamage, _.magicDamage),
+        (scalars.trueDamage, _.trueDamage)
       ).foreach {
-        deltaOpt => deltaOpt match {
-          case Some(delta) => Seq[Map[Int, Double]](
-            delta.zeroToTen,
-            delta.tenToTwenty,
-            delta.twentyToThirty,
-            delta.thirtyToEnd
-          ).foreach { map =>
-            map.size should be (inSums.size)
+        case (map, scalarFn) =>
+          // The size of the map should be equivalent to the size of the input map.
+          // This corresponds to number of champions.
+          map.size should be (inSums.size)
+
+          // Now, we will ensure that all of our values in the map are correct.
+          // Let's iterate over the key/value pairs in the map:
+          map.foreach { case (key, value) =>
+            // First, let's fetch the input sum that corresponds to the key (i.e. champion).
+            val inSum = inSums.get(key)
+
+            // If it's not there, the map should not contain this value.
+            // This should never happen, and we will fail here.
+            if (!inSum.isDefined) {
+              fail("Map contains rogue value")
+            }
+
+            // If it's there, we should have the correct value.
+            scalarFn(inSum.flatMap(_.scalars).get) should be (value)
           }
-          case None => None
-        }
       }
 
-      val dds = sums.flatMap(_.durationDistributions).get
+      // Next, we will verify the integrity of the deltas object in a similar fashion.
+      Seq[(Option[Sums.Deltas.Delta], MatchSum.Deltas => Option[MatchSum.Deltas.Delta])](
+        (deltas.csDiff, _.csDiff),
+        (deltas.xpDiff, _.xpDiff),
+        (deltas.damageTakenDiff, _.damageTakenDiff),
+        (deltas.xpPerMin, _.xpPerMin),
+        (deltas.goldPerMin, _.goldPerMin),
+        (deltas.towersPerMin, _.towersPerMin),
+        (deltas.wardsPlaced, _.wardsPlaced),
+        (deltas.damageTaken, _.damageTaken)
+      ).foreach { case (deltaOpt, deltasFn) =>
+        // Let's extract the delta from the deltas and the function to build delta from the MatchSum.
+
+        // This should never happen.
+        if (!deltaOpt.isDefined) {
+          fail("Deltas missing!")
+        }
+        val delta = deltaOpt.get
+
+        // We know that this delta exists (good!) so let's now build another sequence.
+        // This sequence will contain extractors for Delta fields.
+        Seq[(Map[Int, Double], MatchSum.Deltas.Delta => Double)](
+          (delta.zeroToTen, _.zeroToTen),
+          (delta.tenToTwenty, _.tenToTwenty),
+          (delta.twentyToThirty, _.twentyToThirty),
+          (delta.thirtyToEnd, _.thirtyToEnd)
+        ).foreach { case (map, deltaFn) =>
+          // Similarly, we should check that the size of each map is equivalent to the size of the input map.
+          map.size should be (inSums.size)
+
+          // Again, we will also iterate over the map in the same fashion.
+          map.foreach { case (key, value) =>
+            // First, let's fetch the input sum that corresponds to the key (i.e. champion).
+            val inSum = inSums.get(key)
+
+            // If it's not there, the map should not contain this value.
+            // This should never happen, and we will fail here.
+            if (!inSum.isDefined) {
+              fail("Map of deltas contains rogue value")
+            }
+
+            // If it's there, we should have the correct value.
+            val deltas = deltasFn(inSum.flatMap(_.deltas).get)
+            val delta = deltaFn(deltas.get)
+            delta should be (value)
+          }
+        }
+
+      }
+
       Seq[Map[Int, Long]](
         dds.zeroToTen,
         dds.tenToTwenty,
@@ -255,7 +310,6 @@ class StatisticsAggregatorSpec extends PropSpec with PropertyChecks with Matcher
         map.size should be (inSums.size)
       }
 
-      val subscalars = sums.flatMap(_.subscalars).get
       Seq[Map[Int, Sums.Subscalars.Subscalar]](
         subscalars.bans,
         subscalars.allies
