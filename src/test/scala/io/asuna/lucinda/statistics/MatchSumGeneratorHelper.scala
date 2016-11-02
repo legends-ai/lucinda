@@ -185,4 +185,11 @@ trait MatchSumGeneratorHelper {
   } yield SumCombiner.combineSums(sumMap)
 
   implicit lazy val arbSums: Arbitrary[ChampionStatistics.Sums] = Arbitrary(genSums)
+
+  // TODO(igm): generate these quotients independently
+  val genQuotients = for {
+    sums <- genSums
+  } yield QuotientsGenerator.generateQuotients(sums)
+
+  implicit lazy val arbQuotients: Arbitrary[ChampionStatistics.Quotients] = Arbitrary(genQuotients)
 }

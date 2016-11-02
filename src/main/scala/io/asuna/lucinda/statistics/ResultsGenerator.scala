@@ -99,7 +99,7 @@ object ResultsGenerator {
         rank = index + 1,
         value = value,
         average = average,
-        percentile = 1 - index / statsMap.size
+        percentile = 1 - index.toDouble / statsMap.size
       )
     }
   }
