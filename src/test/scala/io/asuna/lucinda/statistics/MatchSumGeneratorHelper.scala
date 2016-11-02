@@ -5,6 +5,7 @@ import org.scalacheck.Arbitrary
 import Arbitrary.arbitrary
 
 import io.asuna.proto.enums.Role
+import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.match_sum.MatchSum
 
 /**
@@ -177,4 +178,11 @@ trait MatchSumGeneratorHelper {
 
   // Arbitrary map of sums
   implicit lazy val arbSumMap: Arbitrary[Map[Int, MatchSum]] = Arbitrary(genMatchSumMap)
+
+  // TODO(igm): generate these sums independently
+  val genSums = for {
+    sumMap <- genMatchSumMap
+  } yield SumCombiner.combineSums(sumMap)
+
+  implicit lazy val arbSums: Arbitrary[ChampionStatistics.Sums] = Arbitrary(genSums)
 }
