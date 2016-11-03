@@ -15,10 +15,22 @@ object StatisticsAggregator {
     return ChampionStatistics()
   }
 
-  def buildFilterMap(
-    patches: Set[String], tiers: Set[Int], region: Region, enemy: Int = -1
-  ): Map[Int, Set[MatchFilters]] = {
-    Map()
+  def buildFilterSet(
+    championId: Int, patches: Set[String], tiers: Set[Int],
+    region: Region, enemy: Int = -1
+  ): Set[MatchFilters] = {
+    for {
+      patch <- patches
+      tier <- tiers
+      role <- Role.values
+    } yield MatchFilters(
+      championId = championId,
+      patch = patch,
+      tier = tier,
+      region = region,
+      enemyId = enemy,
+      role = role
+    )
   }
 
   /**

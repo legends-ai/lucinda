@@ -4,7 +4,7 @@ import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
 import Arbitrary.arbitrary
 
-import io.asuna.proto.enums.Role
+import io.asuna.proto.enums.{Region, Role}
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.match_sum.MatchSum
 
@@ -172,6 +172,9 @@ trait MatchSumGeneratorHelper {
     champs <- Gen.containerOf[Set, Int](Gen.choose(1, 100))
     sums <- Gen.containerOfN[List, MatchSum](champs.size, makeGenMatchSum(champs))
   } yield champs.zip(sums).toMap
+
+  // Arbitrary region
+  implicit lazy val arbRegion: Arbitrary[Region] = Arbitrary(Gen.oneOf(Region.values))
 
   // Arbitrary role
   implicit lazy val arbRole: Arbitrary[Role] = Arbitrary(Gen.oneOf(Role.values))
