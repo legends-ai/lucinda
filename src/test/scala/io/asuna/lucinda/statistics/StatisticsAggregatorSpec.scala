@@ -19,24 +19,25 @@ class StatisticsAggregatorSpec extends PropSpec
   property("filters should be correct cardinality") {
     forAll {
       (championId: Int, patches: Set[String], tiers: Set[Int],
-       region: Region, enemy: Int) =>
+       region: Region, role: Role, enemy: Int) =>
 
-      val result = buildFilterSet(championId, patches, tiers, region, enemy)
-      result.size should be (patches.size * tiers.size * Role.values.size)
+      val result = buildFilterSet(championId, patches, tiers, region, role, enemy)
+      result.size should be (patches.size * tiers.size)
     }
   }
 
   property("correct # of filters for each property") {
     forAll {
       (championId: Int, patches: Set[String], tiers: Set[Int],
-       region: Region, enemy: Int) =>
+       region: Region, role: Role, enemy: Int) =>
 
-      val result = buildFilterSet(championId, patches, tiers, region, enemy)
+      val result = buildFilterSet(championId, patches, tiers, region, role, enemy)
 
       // constants
       result.filter(_.championId == championId).size should be (result.size)
       result.filter(_.region == region).size should be (result.size)
       result.filter(_.enemyId == enemy).size should be (result.size)
+      result.filter(_.role == role).size should be (result.size)
 
       result.groupBy(_.patch).values.foreach { group =>
         group.size should be (result.size / patches.size)
@@ -44,39 +45,36 @@ class StatisticsAggregatorSpec extends PropSpec
       result.groupBy(_.tier).values.foreach { group =>
         group.size should be (result.size / tiers.size)
       }
-      result.groupBy(_.role).values.foreach { group =>
-        group.size should be (result.size / Role.values.size)
-      }
     }
   }
 
   property("correct # of classes of filters for each property") {
     forAll {
       (championId: Int, patches: Set[String], tiers: Set[Int],
-      region: Region, enemy: Int) =>
+      region: Region, role: Role, enemy: Int) =>
 
-      val result = buildFilterSet(championId, patches, tiers, region, enemy)
+      val result = buildFilterSet(championId, patches, tiers, region, role, enemy)
 
       whenever (!patches.isEmpty && !tiers.isEmpty) {
         result.groupBy(_.championId).size should be (1)
         result.groupBy(_.region).size should be (1)
         result.groupBy(_.enemyId).size should be (1)
+        result.groupBy(_.role).size should be (1)
         result.groupBy(_.patch).size should be (patches.size)
         result.groupBy(_.tier).size should be (tiers.size)
-        result.groupBy(_.role).size should be (Role.values.size)
       }
     }
   }
 
   property("Empty result for empty patches or tiers") {
     forAll {
-      (championId: Int, tiers: Set[Int], region: Region, enemy: Int) =>
-      val result = buildFilterSet(championId, Set(), tiers, region, enemy)
+      (championId: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int) =>
+      val result = buildFilterSet(championId, Set(), tiers, region, role, enemy)
       result.size should be (0)
     }
     forAll {
-      (championId: Int, patches: Set[String], region: Region, enemy: Int) =>
-      val result = buildFilterSet(championId, patches, Set(), region, enemy)
+      (championId: Int, patches: Set[String], region: Region, role: Role, enemy: Int) =>
+      val result = buildFilterSet(championId, patches, Set(), region, role, enemy)
       result.size should be (0)
     }
   }

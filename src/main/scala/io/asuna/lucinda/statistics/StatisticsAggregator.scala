@@ -6,23 +6,66 @@ import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics._
 import io.asuna.lucinda.database.LucindaDatabase
+import scala.concurrent.{ ExecutionContext, Future }
 
 object StatisticsAggregator {
 
+  /**
+    *  This function derives a ChampionStatistics object from a set of patches, tiers, a region, and an enemy.
+    *
+    *  An overview of the steps to do this is as follows:
+    *  1. Find filters for each champion. (see buildFilterSet)
+    *  2. Convert these filters into MatchSums using the database.
+    *  3. Build the Statistics objects from the raw MatchSums. (see makeStatistics)
+    *
+    *  This does not take caching into account.
+    */
   def aggregate(
-    patches: Set[String], tiers: Set[Int], region: Region, enemy: Int = -1
-  )(implicit db: LucindaDatabase): ChampionStatistics = {
-    return ChampionStatistics()
+    champions: Set[Int], patches: Set[String], tiers: Set[Int], region: Region, enemy: Int = -1
+  )(implicit db: LucindaDatabase, ec: ExecutionContext): Future[ChampionStatistics] = {
+    // A lot goes on in this function, especially since we're dealing with Futures.
+    // I'll try to explain every step in detail.
+
+    // First, we're going to iterate over every Role. This is a given --
+    // the ChampionStatistics returns one Statistics object for each role.
+    val statsFuts = Role.values.map { role =>
+      // Here, we build the Set[MatchFilters] for every champion.
+      // This is of type Map[Int, Set[MatchFilters]].
+      val filtersMap = champions.map {champ =>
+        (champ, buildFilterSet(champ, patches, tiers, region, role, enemy))
+      }.toMap
+
+      // Next, we'll compute the MatchSums. This is where the function is no longer
+      // pure, and we make a database call. (Note that since we're using futures,
+      // no database call is made at the time of execution.) This returns a
+      // Map[Int, Future[MatchSum]].
+      val sumsMapFuts = filtersMap.mapValues(filters => db.matchSums.sum(filters))
+
+      // Next, we'll extract the Future from the value using some map magic.
+      // Thus we end up with a Future[Map[Int, MatchSum]].
+      val sumsMapFut = Future.sequence(
+        sumsMapFuts.map(entry => entry._2.map(i => (entry._1, i)))
+      ).map(_.toMap)
+
+      // Finally, we'll map over the values of this map to generate a Statistics
+      // object for each value. Thus we end up with a Future[Statistics].
+      sumsMapFut.map { sumsMap =>
+        makeStatistics(role, sumsMap)
+      }
+    }
+
+    // Now that we have a List[Future[Statistics]], we'll again unwrap the Future
+    // to create a Future[ChampionStatistics], and we are done.
+    Future.sequence(statsFuts).map(s => ChampionStatistics(statistics = s))
   }
 
   def buildFilterSet(
     championId: Int, patches: Set[String], tiers: Set[Int],
-    region: Region, enemy: Int = -1
+    region: Region, role: Role, enemy: Int = -1
   ): Set[MatchFilters] = {
     for {
       patch <- patches
       tier <- tiers
-      role <- Role.values
     } yield MatchFilters(
       championId = championId,
       patch = patch,
