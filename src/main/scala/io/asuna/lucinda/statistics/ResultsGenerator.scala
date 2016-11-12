@@ -1,5 +1,6 @@
 package io.asuna.lucinda.statistics
 
+import io.asuna.proto.lucinda.LucindaData.Statistic
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.{Results, Quotients}
 
 /**
@@ -81,7 +82,7 @@ object ResultsGenerator {
     )
   }
 
-  def makeStat(statsMap: Map[Int, Double]): Map[Int, Results.Statistic] = {
+  def makeStat(statsMap: Map[Int, Double]): Map[Int, Statistic] = {
     val sortedPairs = statsMap.toSeq.sortBy(_._2)
 
     // average of the value
@@ -95,7 +96,7 @@ object ResultsGenerator {
     }.toMap
 
     statsWithIndex.mapValues { case (value, index) =>
-      Results.Statistic(
+      Statistic(
         rank = index + 1,
         value = value,
         average = average,

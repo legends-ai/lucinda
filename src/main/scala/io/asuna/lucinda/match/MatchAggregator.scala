@@ -1,10 +1,13 @@
 package io.asuna.lucinda.statistics
 
+import io.asuna.lucinda.FutureUtil
+import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.proto.enums.{Region, Role}
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.match_aggregate.MatchAggregateRoles
 import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.match_aggregate.MatchAggregate
+import scala.concurrent.{ ExecutionContext, Future }
 
 object MatchAggregator {
 
@@ -22,7 +25,7 @@ object MatchAggregator {
   )(implicit db: LucindaDatabase, ec: ExecutionContext): Future[MatchAggregate] = {
     // First, let's retrieve all stats for this combination.
     // TODO(igm): use the cache when it is implemented
-    val allStats = StatisticsAggregator.aggregate(champions, patches, tiers, region, enemy)
+    val allStatsFut = StatisticsAggregator.aggregate(champions, patches, tiers, region, enemy)
 
     // Next, let's get per-role sums.
     val byRoleFilters = Role.values.map { someRole =>
@@ -30,16 +33,20 @@ object MatchAggregator {
          patch => buildFilters(champion, patch, tiers, region, enemy, someRole)
        })
     }.toMap
-    val byRole = byRoleFilters.mapValues(filters => db.matchSums.sum(filters))
+    val byRoleFut = FutureUtil.sequenceMap(byRoleFilters.mapValues(filters => db.matchSums.sum(filters)))
 
     // Next, let's get per-patch sums.
     val byPatchFilters = lastFivePatches.map { patch =>
       (role, buildFilters(champion, patch, tiers, region, enemy, role))
     }.toMap
-    val byPatch = byPatchFilters.mapValues(filters => db.matchSums.sum(filters))
+    val byPatchFut = FutureUtil.sequenceMap(byPatchFilters.mapValues(filters => db.matchSums.sum(filters)))
 
-    // Finally, we'll build everything.
-    MatchAggregate(
+    // Finally, we'll execute and build everything.
+    for {
+      allStats <- allStatsFut
+      byRole <- byRoleFut
+      byPatch <- byPatchFut
+    } yield MatchAggregate(
       role = Option(makeRoleStats(role, champion, allStats))
     )
   }

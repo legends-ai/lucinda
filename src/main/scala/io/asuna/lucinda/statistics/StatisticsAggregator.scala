@@ -1,5 +1,6 @@
 package io.asuna.lucinda.statistics
 
+import io.asuna.lucinda.FutureUtil
 import io.asuna.proto.enums.{Region, Role}
 import io.asuna.proto.lucinda.LucindaData._
 import io.asuna.proto.match_sum.MatchSum
@@ -43,9 +44,7 @@ object StatisticsAggregator {
 
       // Next, we'll extract the Future from the value using some map magic.
       // Thus we end up with a Future[Map[Int, MatchSum]].
-      val sumsMapFut = Future.sequence(
-        sumsMapFuts.map(entry => entry._2.map(i => (entry._1, i)))
-      ).map(_.toMap)
+      val sumsMapFut = FutureUtil.sequenceMap(sumsMapFuts)
 
       // Finally, we'll map over the values of this map to generate a Statistics
       // object for each value. Thus we end up with a Future[Statistics].

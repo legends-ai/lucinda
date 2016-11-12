@@ -1,5 +1,6 @@
 package io.asuna.lucinda.statistics
 
+import io.asuna.proto.lucinda.LucindaData.Statistic
 import org.scalatest.{ Matchers, PropSpec }
 import org.scalatest.prop.PropertyChecks
 
@@ -18,7 +19,7 @@ class ResultsGeneratorSpec extends PropSpec
     }
   }
 
-  def testStatsMap(stats: Map[Int, Results.Statistic]) = {
+  def testStatsMap(stats: Map[Int, Statistic]) = {
     // Unique ranking
     val statRanks = stats.values.map(_.rank)
     assert(statRanks.toSet.size == statRanks.size)
