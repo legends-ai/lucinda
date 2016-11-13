@@ -4,9 +4,9 @@ import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.proto.enums.{Region, Role}
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
-import io.asuna.proto.match_aggregate.MatchAggregateRoles
+import io.asuna.proto.lucinda.LucindaData.Statistic
+import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
 import io.asuna.proto.match_filters.MatchFilters
-import io.asuna.proto.match_aggregate.MatchAggregate
 import scala.concurrent.{ ExecutionContext, Future }
 
 object MatchAggregator {
@@ -47,7 +47,8 @@ object MatchAggregator {
       byRole <- byRoleFut
       byPatch <- byPatchFut
     } yield MatchAggregate(
-      role = Option(makeRoleStats(role, champion, allStats))
+      roles = Option(makeRoleStats(role, champion, allStats)),
+      statistics = Option(makeStatistics(role, champion, allStats))
     )
   }
 
@@ -70,7 +71,7 @@ object MatchAggregator {
   /**
     * Prepares the MatchAggregateRoles object.
     */
-  private def makeRoleStats(role: Role, champion: Int, allStats: ChampionStatistics): MatchAggregateRoles = {
+  private def makeRoleStats(role: Role, champion: Int, allStats: ChampionStatistics): MatchAggregate.Roles = {
     val myRoleStats = allStats.statistics.find(_.role == role)
 
     // We get the total champions in role based on number of win rates in map.
@@ -88,17 +89,88 @@ object MatchAggregator {
 
     // Stats by role.
     val roleStats = gamesByRole.map { case (role, numMatches) =>
-      MatchAggregateRoles.RoleStats(
+      MatchAggregate.Roles.RoleStats(
         role = role,
         pickRate = numMatches.toDouble / totalGames,
         numMatches = numMatches.toInt
       )
     }
 
-    MatchAggregateRoles(
+    MatchAggregate.Roles(
       role = role,
       totalChampionsInRole = totalChampionsInRole,
       roleStats = roleStats
+    )
+  }
+
+  private def getStat[T](obj: Option[T], champion: Int, accessor: T => Map[Int, Statistic]): Option[Statistic] = {
+    obj.flatMap(accessor(_).get(champion))
+  }
+
+  private def getDelta(deltas: Option[ChampionStatistics.Results.Deltas], champion: Int, accessor: ChampionStatistics.Results.Deltas => Option[ChampionStatistics.Results.Deltas.Delta]): Option[MatchAggregate.Statistics.Deltas.Delta] = {
+    val delta = deltas.flatMap(accessor)
+    val get = getStat(delta, champion, _: ChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic])
+    if (!delta.isDefined) {
+      return None
+    }
+    Option(MatchAggregate.Statistics.Deltas.Delta(
+      zeroToTen = get(_.zeroToTen),
+      tenToTwenty = get(_.tenToTwenty),
+      twentyToThirty = get(_.twentyToThirty),
+      thirtyToEnd = get(_.thirtyToEnd)
+    ))
+  }
+
+  private def makeStatistics(role: Role, champion: Int, allStats: ChampionStatistics): MatchAggregate.Statistics = {
+    val results = allStats.statistics.find(_.role == role).flatMap(_.results)
+
+    val scalars = results.flatMap(_.scalars)
+    val getScalar = getStat(scalars, champion, _: ChampionStatistics.Results.Scalars => Map[Int, Statistic])
+    val derivatives = results.flatMap(_.derivatives)
+
+    val scalarsStats = MatchAggregate.Statistics.Scalars(
+      winRate = getScalar(_.wins),
+      pickRate = getStat[ChampionStatistics.Results.Derivatives](derivatives, champion, _.picks),
+      banRate = getStat[ChampionStatistics.Results.Derivatives](derivatives, champion, _.bans),
+      goldEarned = getScalar(_.goldEarned),
+      kills = getScalar(_.kills),
+      deaths = getScalar(_.deaths),
+      assists = getScalar(_.assists),
+      damageDealt = getScalar(_.damageDealt),
+      damageTaken = getScalar(_.damageTaken),
+      minionsKilled = getScalar(_.minionsKilled),
+      teamJungleMinionsKilled = getScalar(_.teamJungleMinionsKilled),
+      enemyJungleMinionsKilled = getScalar(_.enemyJungleMinionsKilled),
+      structureDamage = getScalar(_.structureDamage),
+      killingSpree = getScalar(_.killingSpree),
+      wardsBought = getScalar(_.wardsBought),
+      wardsPlaced = getScalar(_.wardsPlaced),
+      wardsKilled = getScalar(_.wardsKilled),
+      crowdControl = getScalar(_.crowdControl),
+      firstBlood = getScalar(_.firstBlood),
+      firstBloodAssist = getScalar(_.firstBloodAssist),
+      doubleKills = getScalar(_.doublekills),
+      tripleKills = getScalar(_.triplekills),
+      quadrakills = getScalar(_.quadrakills),
+      pentakills = getScalar(_.pentakills)
+    )
+
+    val deltas = results.flatMap(_.deltas)
+    val getDeltas = getDelta(deltas, champion, _: ChampionStatistics.Results.Deltas => Option[ChampionStatistics.Results.Deltas.Delta])
+    val deltasStats = MatchAggregate.Statistics.Deltas(
+      csDiff = getDeltas(_.csDiff),
+      xpDiff = getDeltas(_.xpDiff),
+      damageTakenDiff = getDeltas(_.damageTakenDiff),
+      xpPerMin = getDeltas(_.xpPerMin),
+      goldPerMin = getDeltas(_.goldPerMin),
+      towersPerMin = getDeltas(_.towersPerMin),
+      wardsPlaced = getDeltas(_.wardsPlaced),
+      damageTaken = getDeltas(_.damageTaken)
+    )
+
+    MatchAggregate.Statistics(
+      scalars = Option(scalarsStats),
+      deltas = Option(deltasStats)
     )
   }
 
