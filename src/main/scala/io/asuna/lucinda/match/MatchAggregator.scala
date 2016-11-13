@@ -169,8 +169,8 @@ object MatchAggregator {
       crowdControl = getScalar(_.crowdControl),
       firstBlood = getScalar(_.firstBlood),
       firstBloodAssist = getScalar(_.firstBloodAssist),
-      doubleKills = getScalar(_.doublekills),
-      tripleKills = getScalar(_.triplekills),
+      doublekills = getScalar(_.doublekills),
+      triplekills = getScalar(_.triplekills),
       quadrakills = getScalar(_.quadrakills),
       pentakills = getScalar(_.pentakills)
     )
