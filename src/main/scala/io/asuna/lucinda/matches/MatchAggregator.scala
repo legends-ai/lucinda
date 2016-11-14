@@ -1,7 +1,8 @@
-package io.asuna.lucinda.statistics
+package io.asuna.lucinda.matches
 
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.database.LucindaDatabase
+import io.asuna.lucinda.statistics.StatisticsAggregator
 import io.asuna.proto.enums.{Region, Role}
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.lucinda.LucindaData.Statistic
