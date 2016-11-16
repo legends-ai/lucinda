@@ -1,5 +1,6 @@
 package io.asuna.lucinda.matches
 
+import io.asuna.proto.range.IntRange
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.lucinda.statistics.StatisticsAggregator
@@ -251,6 +252,13 @@ object MatchAggregator {
           winRate = patchResults.flatMap(_.scalars).flatMap(_.wins.mapValues(_.value).get(id)).get,
           pickRate = patchResults.flatMap(_.derivatives).flatMap(_.picks.mapValues(_.value).get(id)).get,
           banRate = patchResults.flatMap(_.derivatives).flatMap(_.bans.mapValues(_.value).get(id)).get
+        )
+      }.toSeq,
+
+      byGameLength = quot.durations.map { case (duration, stats) =>
+        MatchAggregate.Graphs.ByGameLength(
+          gameLength = Option(IntRange(min = duration, max = duration)),
+          winRate = stats.wins
         )
       }.toSeq
     )
