@@ -1,5 +1,6 @@
 package io.asuna.lucinda.statistics
 
+import scalaz.Scalaz._
 import io.asuna.proto.enums.Role
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 
@@ -52,20 +53,10 @@ object StatisticsCombiner {
 
   def addScalars(a: ChampionStatistics.Sums.Scalars, b: ChampionStatistics.Sums.Scalars): ChampionStatistics.Sums.Scalars = {
     ChampionStatistics.Sums.Scalars(
-      plays = addMapValues(a.plays, b.plays),
-      wins = addMapValues(a.wins, b.wins)
+      plays = a.plays |+| b.plays,
+      wins = a.wins |+| b.wins
         // TODO(pradyuman): implement
     )
-  }
-
-  def addMapValues[T](a: Map[Int, T], b: Map[Int, T])(implicit valueMonoid: Numeric[T]): Map[Int, T] = {
-    val pairs = for {
-      key <- a.keys ++ b.keys
-    } yield {
-      (key, valueMonoid.plus(
-         a.getOrElse(key, valueMonoid.zero), b.getOrElse(key, valueMonoid.zero)))
-    }
-    pairs.toMap
   }
 
 }
