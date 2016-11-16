@@ -12,7 +12,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 object StatisticsAggregator {
 
   /**
-    *  This function derives a ChampionStatistics object from a set of patches, tiers, a region, and an enemy.
+    *  This function derives a ChampionStatistics object from a patch, a set of tiers, a region, and an enemy.
     *
     *  An overview of the steps to do this is as follows:
     *  1. Find filters for each champion. (see buildFilterSet)
@@ -22,7 +22,7 @@ object StatisticsAggregator {
     *  This does not take caching into account.
     */
   def aggregate(
-    champions: Set[Int], patches: Set[String], tiers: Set[Int], region: Region, enemy: Int = -1
+    champions: Set[Int], patch: String, tiers: Set[Int], region: Region, enemy: Int = -1
   )(implicit db: LucindaDatabase, ec: ExecutionContext): Future[ChampionStatistics] = {
     // A lot goes on in this function, especially since we're dealing with Futures.
     // I'll try to explain every step in detail.
@@ -33,7 +33,7 @@ object StatisticsAggregator {
       // Here, we build the Set[MatchFilters] for every champion.
       // This is of type Map[Int, Set[MatchFilters]].
       val filtersMap = champions.map {champ =>
-        (champ, buildFilterSet(champ, patches, tiers, region, role, enemy))
+        (champ, buildFilterSet(champ, patch, tiers, region, role, enemy))
       }.toMap
 
       // Next, we'll compute the MatchSums. This is where the function is no longer
@@ -59,11 +59,10 @@ object StatisticsAggregator {
   }
 
   def buildFilterSet(
-    championId: Int, patches: Set[String], tiers: Set[Int],
+    championId: Int, patch: String, tiers: Set[Int],
     region: Region, role: Role, enemy: Int = -1
   ): Set[MatchFilters] = {
     for {
-      patch <- patches
       tier <- tiers
     } yield MatchFilters(
       championId = championId,

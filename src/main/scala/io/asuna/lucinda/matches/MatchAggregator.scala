@@ -3,11 +3,14 @@ package io.asuna.lucinda.matches
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.lucinda.statistics.StatisticsAggregator
+import io.asuna.lucinda.statistics.StatisticsCombiner
 import io.asuna.proto.enums.{Region, Role}
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.lucinda.LucindaData.Statistic
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
 import io.asuna.proto.match_filters.MatchFilters
+import io.asuna.proto.match_quotient.MatchQuotient
+import io.asuna.proto.match_sum.MatchSum
 import scala.concurrent.{ ExecutionContext, Future }
 
 object MatchAggregator {
@@ -26,7 +29,16 @@ object MatchAggregator {
   )(implicit db: LucindaDatabase, ec: ExecutionContext): Future[MatchAggregate] = {
     // First, let's retrieve all stats for this combination.
     // TODO(igm): use the cache when it is implemented
-    val allStatsFut = StatisticsAggregator.aggregate(champions, patches, tiers, region, enemy)
+    val allStatsFuts = patches.map { patch =>
+      StatisticsAggregator.aggregate(champions, patch, tiers, region, enemy)
+        .map { stats =>
+          (patch, stats)
+        }
+    }
+
+    // This future contains an element of the form Map[String, ChampionStatistics]
+    // where key is the patch and value is the stats.
+    val allStatsFut = Future.sequence(allStatsFuts).map(_.toMap)
 
     // Next, let's get per-role sums.
     val byRoleFilters = Role.values.map { someRole =>
@@ -47,10 +59,25 @@ object MatchAggregator {
       allStats <- allStatsFut
       byRole <- byRoleFut
       byPatch <- byPatchFut
-    } yield MatchAggregate(
-      roles = Option(makeRoleStats(role, champion, allStats)),
-      statistics = Option(makeStatistics(role, champion, allStats))
-    )
+    } yield {
+      val combinedStats = StatisticsCombiner.combineMulti(allStats.values)
+      val roleStats = combinedStats.statistics.find(_.role == role)
+
+      // Stats of a role by patch. This maps a patch to the ChampionStatistics object for the patch.
+      val roleStatsByPatch = allStats
+        .mapValues(_.statistics.find(_.role == role).getOrElse(ChampionStatistics.Statistics()))
+
+      // This maps a patch to the champion's role quotient for the patch.
+      val patchQuots = byPatch.mapValues(QuotientGenerator.generate)
+
+      MatchAggregate(
+        roles = Option(makeRoleStats(role, champion, combinedStats)),
+        statistics = Option(makeStatistics(role, champion, combinedStats)),
+        graphs = for {
+          roles <- roleStats
+        } yield makeGraphs(roles, roleStatsByPatch, champion)
+      )
+    }
   }
 
   /**
@@ -192,6 +219,38 @@ object MatchAggregator {
     MatchAggregate.Statistics(
       scalars = Option(scalarsStats),
       deltas = Option(deltasStats)
+    )
+  }
+
+  /**
+    * Makes our graphs.
+    *
+    * @param patchStats: Map of patch to results for the role.
+    */
+  def makeGraphs(
+    roleStats: ChampionStatistics.Statistics,
+    patchStats: Map[String, ChampionStatistics.Statistics],
+    id: Int
+  ): MatchAggregate.Graphs = {
+    val results = roleStats.results
+    MatchAggregate.Graphs(
+      // Win/pick/ban distribution across all champions.
+      distribution = Option(MatchAggregate.Graphs.Distribution(
+        winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.value)).get,
+        pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.value)).get,
+        banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.value)).get
+      )),
+
+      // Per-patch statistics.
+      // TODO(igm): investigate why this code is so freaking ugly
+      byPatch = patchStats.mapValues(_.results).map { case (patch, patchResults) =>
+        MatchAggregate.Graphs.ByPatch(
+          patch = patch,
+          winRate = patchResults.flatMap(_.scalars).flatMap(_.wins.mapValues(_.value).get(id)).get,
+          pickRate = patchResults.flatMap(_.derivatives).flatMap(_.picks.mapValues(_.value).get(id)).get,
+          banRate = patchResults.flatMap(_.derivatives).flatMap(_.bans.mapValues(_.value).get(id)).get
+        )
+      }.toSeq
     )
   }
 

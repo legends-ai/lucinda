@@ -1,4 +1,4 @@
-package io.asuna.lucinda.statistics
+package io.asuna.lucinda.matches
 
 import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum

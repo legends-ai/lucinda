@@ -17,8 +17,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "org.scalacheck" %% "scalacheck" % "1.13.3" % "test", // prop tests
 
-  // scopt
   "com.github.scopt" %% "scopt" % "3.5.0",
+  "org.scalaz" %% "scalaz-core" % "7.2.7",
 
   // Phantom
   "com.websudos" %%  "phantom-dsl" % "1.29.5"
