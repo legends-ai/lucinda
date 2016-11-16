@@ -12,6 +12,7 @@ import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
 import scala.concurrent.{ ExecutionContext, Future }
+import io.asuna.asunasan.legends.MatchSumOperators._
 
 object MatchAggregator {
 
@@ -67,15 +68,15 @@ object MatchAggregator {
       val roleStatsByPatch = allStats
         .mapValues(_.statistics.find(_.role == role).getOrElse(ChampionStatistics.Statistics()))
 
-      // This maps a patch to the champion's role quotient for the patch.
-      val patchQuots = byPatch.mapValues(QuotientGenerator.generate)
+      // This is the quotient of the champion for the entire search space.
+      val quot = QuotientGenerator.generate(byPatch.values.foldLeft(MatchSum())(_ + _))
 
       MatchAggregate(
         roles = Option(makeRoleStats(role, champion, combinedStats)),
         statistics = Option(makeStatistics(role, champion, combinedStats)),
         graphs = for {
           roles <- roleStats
-        } yield makeGraphs(roles, roleStatsByPatch, champion)
+        } yield makeGraphs(roles, roleStatsByPatch, quot, champion)
       )
     }
   }
@@ -230,6 +231,7 @@ object MatchAggregator {
   def makeGraphs(
     roleStats: ChampionStatistics.Statistics,
     patchStats: Map[String, ChampionStatistics.Statistics],
+    quot: MatchQuotient,
     id: Int
   ): MatchAggregate.Graphs = {
     val results = roleStats.results
