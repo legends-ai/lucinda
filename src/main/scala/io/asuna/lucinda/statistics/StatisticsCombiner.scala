@@ -41,7 +41,42 @@ object StatisticsCombiner {
 
   def addSums(a: ChampionStatistics.Sums, b: ChampionStatistics.Sums): ChampionStatistics.Sums = {
     // TODO(igm): hard part
-    ChampionStatistics.Sums()
+    ChampionStatistics.Sums(
+      scalars = Option(addScalars(
+        a.scalars.getOrElse(ChampionStatistics.Sums.Scalars()),
+        b.scalars.getOrElse(ChampionStatistics.Sums.Scalars())
+      ))
+        // TODO(pradyuman): implement
+    )
+  }
+
+  def addScalars(a: ChampionStatistics.Sums.Scalars, b: ChampionStatistics.Sums.Scalars): ChampionStatistics.Sums.Scalars = {
+    ChampionStatistics.Sums.Scalars(
+      plays = addMapValues(a.plays, b.plays),
+      wins = addMapValues(a.wins, b.wins)
+        // TODO(pradyuman): implement
+    )
+  }
+
+  def addMapValues[T](a: Map[Int, T], b: Map[Int, T])(implicit valueMonoid: Numeric[T]): Map[Int, T] = {
+    val pairs = for {
+      key <- a.keys ++ b.keys
+    } yield {
+      val ae = a.get(key)
+      val be = b.get(key)
+      val result = ae match {
+        case Some(av) => be match {
+          case Some(bv) => valueMonoid.plus(av, bv)
+          case None => av
+        }
+        case None => be match {
+          case Some(bv) => bv
+          case None => valueMonoid.zero
+        }
+      }
+      (key, result)
+    }
+    pairs.toMap
   }
 
 }
