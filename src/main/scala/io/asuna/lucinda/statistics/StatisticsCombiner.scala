@@ -62,19 +62,8 @@ object StatisticsCombiner {
     val pairs = for {
       key <- a.keys ++ b.keys
     } yield {
-      val ae = a.get(key)
-      val be = b.get(key)
-      val result = ae match {
-        case Some(av) => be match {
-          case Some(bv) => valueMonoid.plus(av, bv)
-          case None => av
-        }
-        case None => be match {
-          case Some(bv) => bv
-          case None => valueMonoid.zero
-        }
-      }
-      (key, result)
+      (key, valueMonoid.plus(
+         a.getOrElse(key, valueMonoid.zero), b.getOrElse(key, valueMonoid.zero)))
     }
     pairs.toMap
   }
