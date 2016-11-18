@@ -1,5 +1,6 @@
 package io.asuna.lucinda.matches
 
+import io.asuna.proto.enums.Ability
 import io.asuna.proto.range.IntRange
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.database.LucindaDatabase
@@ -77,7 +78,10 @@ object MatchAggregator {
         statistics = Option(makeStatistics(role, champion, combinedStats)),
         graphs = for {
           roles <- roleStats
-        } yield makeGraphs(roles, roleStatsByPatch, quot, champion)
+        } yield makeGraphs(roles, roleStatsByPatch, quot, champion),
+        collections = for {
+          roles <- roleStats
+        } yield makeCollections(roles, roleStatsByPatch, quot, champion, minPlayRate)
       )
     }
   }
@@ -261,6 +265,90 @@ object MatchAggregator {
           winRate = stats.wins
         )
       }.toSeq
+    )
+  }
+
+  /**
+    * Makes our collections.
+    */
+  def makeCollections(
+    roleStats: ChampionStatistics.Statistics,
+    patchStats: Map[String, ChampionStatistics.Statistics],
+    quot: MatchQuotient,
+    id: Int,
+    minPlayRate: Double
+  ): MatchAggregate.Collections = {
+    val results = roleStats.results
+    MatchAggregate.Collections(
+      runes = quot.runes
+        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
+        .map { case (runeSet, subscalars) =>
+          MatchAggregate.Collections.RuneSet(
+            runes = deserializeBonusSet(runeSet),
+            pickRate = subscalars.plays,
+            winRate = subscalars.wins,
+            numMatches = subscalars.playCount.toInt
+          )
+      }.toSeq,
+
+      masteries = quot.masteries
+        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
+        .map { case (masterySet, subscalars) =>
+          MatchAggregate.Collections.MasterySet(
+            masteries = deserializeBonusSet(masterySet),
+            pickRate = subscalars.plays,
+            winRate = subscalars.wins,
+            numMatches = subscalars.playCount.toInt
+          )
+      }.toSeq,
+
+      summonerSpells = quot.summoners
+        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
+        .map { case (spells, subscalars) =>
+          val (spell1, spell2) = deserializeSummoners(spells)
+          MatchAggregate.Collections.SummonerSet(
+            spell1 = spell1,
+            spell2 = spell2,
+            pickRate = subscalars.plays,
+            winRate = subscalars.wins,
+            numMatches = subscalars.playCount.toInt
+          )
+      }.toSeq,
+
+      skillOrders = quot.skillOrders
+        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
+        .map { case (skillOrder, subscalars) =>
+          MatchAggregate.Collections.SkillOrder(
+            skillOrder = deserializeSkillOrder(skillOrder),
+            pickRate = subscalars.plays,
+            winRate = subscalars.wins,
+            numMatches = subscalars.playCount.toInt
+          )
+      }.toSeq
+    )
+  }
+
+  def deserializeBonusSet(serialized: String): Map[Int, Int] = {
+    serialized.split("|").map { part =>
+      var element = part.split(":").map(_.toInt)
+      (element(0), element(1))
+    }.toMap
+  }
+
+  def deserializeSummoners(serialized: String): (Int, Int) = {
+    val Array(a, b) = serialized.split("|")
+    (a.toInt, b.toInt)
+  }
+
+  def deserializeSkillOrder(serialized: String): Seq[Ability] = {
+    serialized.map(
+      _ match {
+        case 'Q' => Ability.Q
+        case 'W' => Ability.W
+        case 'E' => Ability.E
+        case 'R' => Ability.R
+        case _ => Ability.U
+      }
     )
   }
 
