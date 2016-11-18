@@ -276,9 +276,7 @@ object MatchAggregator {
         .map { case (runeSet, subscalars) =>
           MatchAggregate.Collections.RuneSet(
             runes = deserializeBonusSet(runeSet),
-            pickRate = subscalars.plays,
-            winRate = subscalars.wins,
-            numMatches = subscalars.playCount.toInt
+            subscalars = Option(subscalars)
           )
       }.toSeq,
 
@@ -287,9 +285,7 @@ object MatchAggregator {
         .map { case (masterySet, subscalars) =>
           MatchAggregate.Collections.MasterySet(
             masteries = deserializeBonusSet(masterySet),
-            pickRate = subscalars.plays,
-            winRate = subscalars.wins,
-            numMatches = subscalars.playCount.toInt
+            subscalars = Option(subscalars)
           )
       }.toSeq,
 
@@ -300,9 +296,7 @@ object MatchAggregator {
           MatchAggregate.Collections.SummonerSet(
             spell1 = spell1,
             spell2 = spell2,
-            pickRate = subscalars.plays,
-            winRate = subscalars.wins,
-            numMatches = subscalars.playCount.toInt
+            subscalars = Option(subscalars)
           )
       }.toSeq,
 
@@ -311,9 +305,7 @@ object MatchAggregator {
         .map { case (skillOrder, subscalars) =>
           MatchAggregate.Collections.SkillOrder(
             skillOrder = deserializeSkillOrder(skillOrder),
-            pickRate = subscalars.plays,
-            winRate = subscalars.wins,
-            numMatches = subscalars.playCount.toInt
+            subscalars = Option(subscalars)
           )
       }.toSeq,
 
@@ -322,9 +314,7 @@ object MatchAggregator {
         .map { case (build, subscalars) =>
           MatchAggregate.Collections.Build(
             build = deserializeBuild(build),
-            pickRate = subscalars.plays,
-            winRate = subscalars.wins,
-            numMatches = subscalars.playCount.toInt
+            subscalars = Option(subscalars)
           )
       }.toSeq,
 
@@ -333,9 +323,7 @@ object MatchAggregator {
         .map { case (build, subscalars) =>
           MatchAggregate.Collections.Build(
             build = deserializeBuild(build),
-            pickRate = subscalars.plays,
-            winRate = subscalars.wins,
-            numMatches = subscalars.playCount.toInt
+            subscalars = Option(subscalars)
           )
       }.toSeq
     )
