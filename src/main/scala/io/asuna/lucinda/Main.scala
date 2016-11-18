@@ -34,10 +34,11 @@ class Main(
   executionContext: ExecutionContext
 ) { self =>
 
-  private[this] var server: Server = null
+  private[this] var server: Server =
+    ServerBuilder.forPort(config.port).addService(LucindaGrpc.bindService(new LucindaServer(config), executionContext)).build
 
   private def start(): Unit = {
-    server = ServerBuilder.forPort(config.port).addService(LucindaGrpc.bindService(new LucindaServer(config), executionContext)).build.start
+    server.start
     Main.logger.info("Server started, listening on " + config.port)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
@@ -49,15 +50,11 @@ class Main(
   }
 
   private def stop(): Unit = {
-    if (server != null) {
-      server.shutdown()
-    }
+    server.shutdown()
   }
 
   private def blockUntilShutdown(): Unit = {
-    if (server != null) {
-      server.awaitTermination()
-    }
+    server.awaitTermination()
   }
 
 }
