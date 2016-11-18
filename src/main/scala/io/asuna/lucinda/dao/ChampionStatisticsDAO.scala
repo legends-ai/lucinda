@@ -14,14 +14,12 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 case class ChampionStatisticsId(
   // TODO(igm): support queue type
-  champions: Set[Int], tiers: Set[Int], patch: String, region: Region, enemy: Int
+  tiers: Set[Int], patch: String, region: Region, enemy: Int
 ) {
-  import upickle.default._
-
-  def keyify: String = write(this)
+  def keyify: String = upickle.default.write(this)
 }
 
-class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient, vulgate: Vulgate)(implicit ec: ExecutionContext) {
+class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
 
   /**
     * Gets a ChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
@@ -29,7 +27,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient, vulgate: Vu
   def get(champions: Set[Int], tiers: Set[Int], patch: String, region: Region, enemy: Int = -1): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
 
-    val id = ChampionStatisticsId(champions, tiers, patch, region, enemy)
+    val id = ChampionStatisticsId(tiers, patch, region, enemy)
     val key = id.keyify
     redis.get(key) flatMap {
       // If the key is found, we shall parse it
