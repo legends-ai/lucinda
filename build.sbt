@@ -19,12 +19,13 @@ libraryDependencies ++= Seq(
 
   "com.github.scopt" %% "scopt" % "3.5.0",
   "org.scalaz" %% "scalaz-core" % "7.2.7",
+  "net.debasishg" %% "redisclient" % "3.2",
 
   // Phantom
   "com.websudos" %%  "phantom-dsl" % "1.29.5"
 )
 
-mainClass in assembly := Some("io.asuna.lucinda.LucindaServer")
+mainClass in assembly := Some("io.asuna.lucinda.Main")
 
 assemblyMergeStrategy in assembly := {
   case x if x.endsWith("io.netty.versions.properties") => MergeStrategy.first
