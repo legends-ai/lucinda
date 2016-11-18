@@ -19,7 +19,8 @@ libraryDependencies ++= Seq(
 
   "com.github.scopt" %% "scopt" % "3.5.0",
   "org.scalaz" %% "scalaz-core" % "7.2.7",
-  "net.debasishg" %% "redisclient" % "3.2",
+  "com.github.etaty" %% "rediscala" % "1.6.0",
+  "com.lihaoyi" %% "upickle" % "0.4.3",
 
   // Phantom
   "com.websudos" %%  "phantom-dsl" % "1.29.5"

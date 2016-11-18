@@ -18,53 +18,6 @@ import io.asuna.asunasan.legends.MatchSumOperators._
 
 object MatchAggregator {
 
-  /**
-    * Fetches and aggregates information about a single champion.
-    *
-    * @param patches -- The patches in the patch range we are considering.
-    * @param lastFivePatches -- The last five patches of the game.
-    */
-  def aggregate(
-    champion: Int, champions: Set[Int], patches: Set[String],
-    lastFivePatches: Set[String],
-    tiers: Set[Int], region: Region, role: Role, enemy: Int = -1,
-    minPlayRate: Double
-  )(implicit db: LucindaDatabase, ec: ExecutionContext): Future[MatchAggregate] = {
-    // First, let's retrieve all stats for this combination.
-    // TODO(igm): use the cache when it is implemented
-    val allStatsFuts = patches.map { patch =>
-      StatisticsAggregator.aggregate(champions, patch, tiers, region, enemy)
-        .map { stats =>
-          (patch, stats)
-        }
-    }
-
-    // This future contains an element of the form Map[String, ChampionStatistics]
-    // where key is the patch and value is the stats.
-    val allStatsFut = Future.sequence(allStatsFuts).map(_.toMap)
-
-    // Next, let's get per-role sums.
-    val byRoleFilters = Role.values.map { someRole =>
-      (role, patches.flatMap {
-         patch => buildFilters(champion, patch, tiers, region, enemy, someRole)
-       })
-    }.toMap
-    val byRoleFut = FutureUtil.sequenceMap(byRoleFilters.mapValues(filters => db.matchSums.sum(filters)))
-
-    // Next, let's get per-patch sums.
-    val byPatchFilters = lastFivePatches.map { patch =>
-      (patch, buildFilters(champion, patch, tiers, region, enemy, role))
-    }.toMap
-    val byPatchFut = FutureUtil.sequenceMap(byPatchFilters.mapValues(filters => db.matchSums.sum(filters)))
-
-    // Finally, we'll execute and build everything.
-    for {
-      allStats <- allStatsFut
-      byRole <- byRoleFut
-      byPatch <- byPatchFut
-    } yield makeAggregate(role, champion, minPlayRate, allStats, byRole, byPatch)
-  }
-
   def makeAggregate(
     role: Role, champion: Int, minPlayRate: Double,
     allStats: Map[String, ChampionStatistics], byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
@@ -92,7 +45,7 @@ object MatchAggregator {
   /**
     * Build filters for the given champion with the given tiers.
     */
-  private def buildFilters(champion: Int, patch: String, tiers: Set[Int], region: Region, enemy: Int = -1, role: Role): Set[MatchFilters] = {
+  def buildFilters(champion: Int, patch: String, tiers: Set[Int], region: Region, enemy: Int = -1, role: Role): Set[MatchFilters] = {
     for {
       tier <- tiers
     } yield MatchFilters(
