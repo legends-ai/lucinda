@@ -79,9 +79,7 @@ object MatchAggregator {
         graphs = for {
           roles <- roleStats
         } yield makeGraphs(roles, roleStatsByPatch, quot, champion),
-        collections = for {
-          roles <- roleStats
-        } yield makeCollections(roles, roleStatsByPatch, quot, champion, minPlayRate)
+        collections = Option(makeCollections(quot, minPlayRate))
       )
     }
   }
@@ -271,14 +269,7 @@ object MatchAggregator {
   /**
     * Makes our collections.
     */
-  def makeCollections(
-    roleStats: ChampionStatistics.Statistics,
-    patchStats: Map[String, ChampionStatistics.Statistics],
-    quot: MatchQuotient,
-    id: Int,
-    minPlayRate: Double
-  ): MatchAggregate.Collections = {
-    val results = roleStats.results
+  def makeCollections(quot: MatchQuotient, minPlayRate: Double): MatchAggregate.Collections = {
     MatchAggregate.Collections(
       runes = quot.runes
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
@@ -324,6 +315,28 @@ object MatchAggregator {
             winRate = subscalars.wins,
             numMatches = subscalars.playCount.toInt
           )
+      }.toSeq,
+
+      starterItems = quot.starterItems
+        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
+        .map { case (build, subscalars) =>
+          MatchAggregate.Collections.Build(
+            build = deserializeBuild(build),
+            pickRate = subscalars.plays,
+            winRate = subscalars.wins,
+            numMatches = subscalars.playCount.toInt
+          )
+      }.toSeq,
+
+      buildPath = quot.buildPath
+        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
+        .map { case (build, subscalars) =>
+          MatchAggregate.Collections.Build(
+            build = deserializeBuild(build),
+            pickRate = subscalars.plays,
+            winRate = subscalars.wins,
+            numMatches = subscalars.playCount.toInt
+          )
       }.toSeq
     )
   }
@@ -350,6 +363,10 @@ object MatchAggregator {
         case _ => Ability.U
       }
     )
+  }
+
+  def deserializeBuild(serialized: String): Seq[Int] = {
+    serialized.split("|").map(_.toInt)
   }
 
 }
