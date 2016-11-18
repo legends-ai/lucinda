@@ -53,7 +53,7 @@ object MatchAggregator {
 
     // Next, let's get per-patch sums.
     val byPatchFilters = lastFivePatches.map { patch =>
-      (role, buildFilters(champion, patch, tiers, region, enemy, role))
+      (patch, buildFilters(champion, patch, tiers, region, enemy, role))
     }.toMap
     val byPatchFut = FutureUtil.sequenceMap(byPatchFilters.mapValues(filters => db.matchSums.sum(filters)))
 
@@ -62,26 +62,31 @@ object MatchAggregator {
       allStats <- allStatsFut
       byRole <- byRoleFut
       byPatch <- byPatchFut
-    } yield {
-      val combinedStats = StatisticsCombiner.combineMulti(allStats.values)
-      val roleStats = combinedStats.statistics.find(_.role == role)
+    } yield makeAggregate(role, champion, minPlayRate, allStats, byRole, byPatch)
+  }
 
-      // Stats of a role by patch. This maps a patch to the ChampionStatistics object for the patch.
-      val roleStatsByPatch = allStats
-        .mapValues(_.statistics.find(_.role == role).getOrElse(ChampionStatistics.Statistics()))
+  def makeAggregate(
+    role: Role, champion: Int, minPlayRate: Double,
+    allStats: Map[String, ChampionStatistics], byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
+  ): MatchAggregate = {
+    val combinedStats = StatisticsCombiner.combineMulti(allStats.values)
+    val roleStats = combinedStats.statistics.find(_.role == role)
 
-      // This is the quotient of the champion for the entire search space.
-      val quot = QuotientGenerator.generate(byPatch.values.foldLeft(MatchSum())(_ + _))
+    // Stats of a role by patch. This maps a patch to the ChampionStatistics object for the patch.
+    val roleStatsByPatch = allStats
+      .mapValues(_.statistics.find(_.role == role).getOrElse(ChampionStatistics.Statistics()))
 
-      MatchAggregate(
-        roles = Option(makeRoleStats(role, champion, combinedStats)),
-        statistics = Option(makeStatistics(role, champion, combinedStats)),
-        graphs = for {
-          roles <- roleStats
-        } yield makeGraphs(roles, roleStatsByPatch, quot, champion),
-        collections = Option(makeCollections(quot, minPlayRate))
-      )
-    }
+    // This is the quotient of the champion for the entire search space.
+    val quot = QuotientGenerator.generate(byPatch.values.foldLeft(MatchSum())(_ + _))
+
+    MatchAggregate(
+      roles = Option(makeRoleStats(role, champion, combinedStats)),
+      statistics = Option(makeStatistics(role, champion, combinedStats)),
+      graphs = for {
+        roles <- roleStats
+      } yield makeGraphs(roles, roleStatsByPatch, quot, champion),
+      collections = Option(makeCollections(quot, minPlayRate))
+    )
   }
 
   /**
