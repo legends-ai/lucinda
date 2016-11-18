@@ -26,21 +26,6 @@ object StatisticsCombiner {
     ChampionStatistics(statistics = combinedList.toSeq)
   }
 
-  def combineStats(role: Role, a: ChampionStatistics.Statistics, b: ChampionStatistics.Statistics): ChampionStatistics.Statistics = {
-    val sums = for {
-      aS <- a.sums
-      bS <- b.sums
-    } yield addSums(aS, bS)
-    val quotients = sums.map(QuotientsGenerator.generateQuotients)
-    val results = quotients.map(ResultsGenerator.generateResults)
-    ChampionStatistics.Statistics(
-      role = role,
-      results = results,
-      quotients = quotients,
-      sums = sums
-    )
-  }
-
   implicit object ScalarsMonoid extends Monoid[ChampionStatistics.Sums.Scalars] {
 
     def append(a: ChampionStatistics.Sums.Scalars, b: => ChampionStatistics.Sums.Scalars): ChampionStatistics.Sums.Scalars = {
@@ -77,13 +62,28 @@ object StatisticsCombiner {
     def zero = ChampionStatistics.Sums.Scalars()
   }
 
-  def addSums(a: ChampionStatistics.Sums, b: ChampionStatistics.Sums): ChampionStatistics.Sums = {
-    // TODO(igm): hard part
-    ChampionStatistics.Sums(
-      scalars = a.scalars |+| b.scalars
-        // TODO(pradyuman): implement
-    )
+  implicit object SumsMonoid extends Monoid[ChampionStatistics.Sums] {
+    def append(a: ChampionStatistics.Sums, b: => ChampionStatistics.Sums): ChampionStatistics.Sums = {
+      // TODO(igm): hard part
+      ChampionStatistics.Sums(
+        scalars = a.scalars |+| b.scalars
+          // TODO(pradyuman): implement
+      )
+    }
+
+    def zero = ChampionStatistics.Sums()
   }
 
+  def combineStats(role: Role, a: ChampionStatistics.Statistics, b: ChampionStatistics.Statistics): ChampionStatistics.Statistics = {
+    val sums = a.sums |+| b.sums
+    val quotients = sums.map(QuotientsGenerator.generateQuotients)
+    val results = quotients.map(ResultsGenerator.generateResults)
+    ChampionStatistics.Statistics(
+      role = role,
+      results = results,
+      quotients = quotients,
+      sums = sums
+    )
+  }
 
 }
