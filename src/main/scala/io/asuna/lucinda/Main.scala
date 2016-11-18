@@ -22,11 +22,7 @@ object Main {
     }
     val config = configOpt.get
 
-    // Setup database
-    val connector = Connector.fromConfig(config)
-    val db = new LucindaDatabase(connector)
-
-    val server = new Main(config, db, ExecutionContext.global)
+    val server = new Main(config, ExecutionContext.global)
     server.start()
     server.blockUntilShutdown()
   }
@@ -35,14 +31,13 @@ object Main {
 
 class Main(
   config: Config,
-  db: LucindaDatabase,
   executionContext: ExecutionContext
 ) { self =>
 
   private[this] var server: Server = null
 
   private def start(): Unit = {
-    server = ServerBuilder.forPort(config.port).addService(LucindaGrpc.bindService(new LucindaServer(db), executionContext)).build.start
+    server = ServerBuilder.forPort(config.port).addService(LucindaGrpc.bindService(new LucindaServer(config), executionContext)).build.start
     Main.logger.info("Server started, listening on " + config.port)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
