@@ -5,27 +5,7 @@ import scalaz.Scalaz._
 import io.asuna.proto.enums.Role
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 
-object StatisticsCombiner {
-
-  def combineMulti(aList: Iterable[ChampionStatistics]): ChampionStatistics = {
-    if (aList.size == 0) {
-      return ChampionStatistics()
-    }
-    combine(aList.head, combineMulti(aList.tail))
-  }
-
-  def combine(a: ChampionStatistics, b: ChampionStatistics): ChampionStatistics = {
-    val aRole = a.statistics.groupBy(_.role).mapValues(_.head)
-    val bRole = b.statistics.groupBy(_.role).mapValues(_.head)
-    val combinedList = for {
-      role <- aRole.keys ++ bRole.keys
-    } yield combineStats(
-      role, aRole.getOrElse(role, ChampionStatistics.Statistics()),
-      bRole.getOrElse(role, ChampionStatistics.Statistics())
-    )
-    ChampionStatistics(statistics = combinedList.toSeq)
-  }
-
+trait StatisticsMonoids {
   implicit object ScalarsMonoid extends Monoid[ChampionStatistics.Sums.Scalars] {
 
     def append(a: ChampionStatistics.Sums.Scalars, b: => ChampionStatistics.Sums.Scalars): ChampionStatistics.Sums.Scalars = {
@@ -72,6 +52,29 @@ object StatisticsCombiner {
     }
 
     def zero = ChampionStatistics.Sums()
+  }
+
+}
+
+object StatisticsCombiner extends StatisticsMonoids {
+
+  def combineMulti(aList: Iterable[ChampionStatistics]): ChampionStatistics = {
+    if (aList.size == 0) {
+      return ChampionStatistics()
+    }
+    combine(aList.head, combineMulti(aList.tail))
+  }
+
+  def combine(a: ChampionStatistics, b: ChampionStatistics): ChampionStatistics = {
+    val aRole = a.statistics.groupBy(_.role).mapValues(_.head)
+    val bRole = b.statistics.groupBy(_.role).mapValues(_.head)
+    val combinedList = for {
+      role <- aRole.keys ++ bRole.keys
+    } yield combineStats(
+      role, aRole.getOrElse(role, ChampionStatistics.Statistics()),
+      bRole.getOrElse(role, ChampionStatistics.Statistics())
+    )
+    ChampionStatistics(statistics = combinedList.toSeq)
   }
 
   def combineStats(role: Role, a: ChampionStatistics.Statistics, b: ChampionStatistics.Statistics): ChampionStatistics.Statistics = {
