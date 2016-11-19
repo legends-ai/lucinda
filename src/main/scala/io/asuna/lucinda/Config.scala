@@ -1,6 +1,6 @@
 package io.asuna.lucinda
 
-import io.asuna.asunasan.{ Config, ConfigParser }
+import io.asuna.asunasan.{ AsunaServiceType, Config, ConfigParser }
 
 case class LucindaConfig(
   cassandraHosts: Seq[String] = List("localhost")
@@ -8,7 +8,8 @@ case class LucindaConfig(
 
 object LucindaConfig {
 
-  val parser = new ConfigParser[LucindaConfig]("lucinda") {
+  // TODO(igm): figure out how to use SBT=specified version here
+  val parser = new ConfigParser[LucindaConfig](AsunaServiceType.Lucinda, "0.1.0", Set(AsunaServiceType.Bacchus)) {
     // Our list of Cassandra hosts.
     opt[Seq[String]]("cassandraHosts").valueName("<node1>,<node2>...")
       .action((x, c) => c.copy(custom = c.custom.copy(cassandraHosts = x)))

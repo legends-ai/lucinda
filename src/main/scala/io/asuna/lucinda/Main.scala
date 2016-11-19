@@ -34,8 +34,7 @@ class Main(
   config: Config[LucindaConfig],
   executionContext: ExecutionContext
 ) { self =>
-
-  val lucinda = config.asuna.lucinda.get
+  val lucinda = config.asuna.lucinda
 
   private[this] var server: Server =
     ServerBuilder.forPort(lucinda.port).addService(LucindaGrpc.bindService(new LucindaServer(config), executionContext)).build

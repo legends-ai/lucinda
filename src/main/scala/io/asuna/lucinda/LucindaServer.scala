@@ -1,6 +1,7 @@
 package io.asuna.lucinda
 
 import io.asuna.asunasan.Config
+import io.asuna.proto.service_vulgate.VulgateGrpc
 import scala.concurrent.{ExecutionContext, Future}
 
 import io.asuna.lucinda.dao.{MatchAggregateDAO, ChampionStatisticsDAO}
@@ -21,7 +22,9 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
   val connector = Connector.fromConfig(config)
   val db = new LucindaDatabase(connector)
 
-  val vulgateConn = config.asuna.vulgate
+  // Setup vulgate connection
+  val vulgateConn = config.asuna.vulgate.conn
+  val vulgate = VulgateGrpc.stub(vulgateConn)
 
   // Next, let's init all of our dependencies.
   // We'll use lazy vals because the compiler should do the work of figuring the order out.
