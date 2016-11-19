@@ -1,7 +1,7 @@
 package io.asuna.lucinda
 
 import io.asuna.asunasan.Config
-import io.asuna.proto.service_vulgate.VulgateGrpc
+import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
 import scala.concurrent.{ExecutionContext, Future}
 
 import io.asuna.lucinda.dao.{MatchAggregateDAO, ChampionStatisticsDAO}
@@ -38,7 +38,22 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
   }
 
   override def getChampion(req: GetChampionRequest) = {
-    Future.successful(Champion())
+    for {
+      statisticsCtx <- vulgate.getStatisticsContext(
+        VulgateRpc.GetStatisticsContextRequest(
+          patches = req.patch,
+          tiers = req.tier
+        )
+      )
+      matchAggregate <- matchAggregateDAO.get(
+        statisticsCtx.champions.toSet, statisticsCtx.patches.toSet, statisticsCtx.lastFivePatches.toSet,
+        req.championId, statisticsCtx.tiers.toSet, req.region, req.role, -1, req.minPlayRate
+      )
+    } yield {
+      Champion(
+        matchAggregate = Some(matchAggregate)
+      )
+    }
   }
 
   override def getMatchup(req: GetMatchupRequest) = {
