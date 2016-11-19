@@ -1,5 +1,6 @@
 package io.asuna.lucinda
 
+import io.asuna.asunasan.Config
 import scala.concurrent.{ExecutionContext, Future}
 
 import io.asuna.lucinda.dao.{MatchAggregateDAO, ChampionStatisticsDAO}
@@ -9,7 +10,7 @@ import io.asuna.proto.service_lucinda.LucindaGrpc
 import io.asuna.proto.service_lucinda.LucindaRpc._
 import redis.RedisClient
 
-class LucindaServer(config: Config) extends LucindaGrpc.Lucinda {
+class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
 
   implicit val akkaSystem = akka.actor.ActorSystem()
 
@@ -19,6 +20,8 @@ class LucindaServer(config: Config) extends LucindaGrpc.Lucinda {
   // Setup database
   val connector = Connector.fromConfig(config)
   val db = new LucindaDatabase(connector)
+
+  val vulgateConn = config.asuna.vulgate
 
   // Next, let's init all of our dependencies.
   // We'll use lazy vals because the compiler should do the work of figuring the order out.

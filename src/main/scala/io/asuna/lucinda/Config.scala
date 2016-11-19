@@ -1,29 +1,22 @@
 package io.asuna.lucinda
 
-import scopt.OptionParser
+import io.asuna.asunasan.{ Config, ConfigParser }
 
-case class Config(
-  cassandraHosts: Seq[String] = List("localhost"),
-  port: Int = 23981
+case class LucindaConfig(
+  cassandraHosts: Seq[String] = List("localhost")
 )
 
-object Config {
-  /** Parser for command line options. */
-  val parser = new OptionParser[Config]("lucinda") {
-    head("lucinda", "0.1.0")
+object LucindaConfig {
 
+  val parser = new ConfigParser[LucindaConfig]("lucinda") {
     // Our list of Cassandra hosts.
     opt[Seq[String]]("cassandraHosts").valueName("<node1>,<node2>...")
-      .action((x, c) => c.copy(cassandraHosts = x))
+      .action((x, c) => c.copy(custom = c.custom.copy(cassandraHosts = x)))
       .text("List of Cassandra hosts to connect to.")
-
-    opt[Int]("port").valueName("<port>")
-      .action((x, c) => c.copy(port = x))
-      .text("The port on which gRPC should listen.")
   }
 
-  def parse(args: Seq[String]): Option[Config] = {
-    parser.parse(args, Config())
+  def parse(args: Seq[String]): Option[Config[LucindaConfig]] = {
+    parser.parseWithDefaults(args, LucindaConfig())
   }
 
 }

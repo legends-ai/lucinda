@@ -1,6 +1,7 @@
 package io.asuna.lucinda
 
 import io.grpc.{Server, ServerBuilder}
+import io.asuna.asunasan.Config
 import io.asuna.proto.lucinda.LucindaData._
 import io.asuna.proto.service_lucinda.LucindaGrpc
 import io.asuna.proto.service_lucinda.LucindaRpc._
@@ -15,7 +16,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     // Parse and verify config
-    val configOpt = Config.parse(args)
+    val configOpt = LucindaConfig.parse(args)
     if (!configOpt.isDefined) {
       sys.exit(1)
       return
@@ -30,16 +31,18 @@ object Main {
 }
 
 class Main(
-  config: Config,
+  config: Config[LucindaConfig],
   executionContext: ExecutionContext
 ) { self =>
 
+  val lucinda = config.asuna.lucinda.get
+
   private[this] var server: Server =
-    ServerBuilder.forPort(config.port).addService(LucindaGrpc.bindService(new LucindaServer(config), executionContext)).build
+    ServerBuilder.forPort(lucinda.port).addService(LucindaGrpc.bindService(new LucindaServer(config), executionContext)).build
 
   private def start(): Unit = {
     server.start
-    Main.logger.info("Server started, listening on " + config.port)
+    Main.logger.info("Server started, listening on " + lucinda.port)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         System.err.println("*** shutting down gRPC server since JVM is shutting down")
