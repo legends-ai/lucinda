@@ -34,8 +34,8 @@ class ChampionDAO(statisticsDAO: ChampionStatisticsDAO, matchAggregateDAO: Match
         champion, tiers, region,
         role, enemy, minPlayRate
       )
-      enemyStatistics <- statisticsDAO.getForPatches(champions, tiers, patches, region, enemy)
-      championStatistics <- statisticsDAO.getForPatches(champions, tiers, patches, region, enemy, reverse = true)
+      enemyStatistics <- statisticsDAO.getForPatches(champions, tiers, patches, region, role, enemy)
+      championStatistics <- statisticsDAO.getForPatches(champions, tiers, patches, region, role, enemy, reverse = true)
     } yield {
       Champion(
         matchAggregate = resChampion.matchAggregate,

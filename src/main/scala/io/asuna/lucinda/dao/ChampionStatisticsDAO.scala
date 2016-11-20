@@ -15,7 +15,7 @@ import scala.concurrent.{ ExecutionContext, Future }
   */
 case class ChampionStatisticsId(
   // TODO(igm): support queue type
-  tiers: Set[Int], patch: String, region: Region, enemy: Int
+  tiers: Set[Int], patch: String, region: Region, role: Role, enemy: Int
 ) {
   def keyify: String = upickle.default.write(this)
 }
@@ -27,11 +27,11 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     */
   def get(
     champions: Set[Int], tiers: Set[Int], patch: String, region: Region,
-    enemy: Int = -1, reverse: Boolean = false
+    role: Role, enemy: Int = -1, reverse: Boolean = false
   ): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
 
-    val id = ChampionStatisticsId(tiers, patch, region, enemy)
+    val id = ChampionStatisticsId(tiers, patch, region, role, enemy)
     val key = id.keyify
     redis.get(key) flatMap {
       // If the key is found, we shall parse it
@@ -39,7 +39,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
 
       // If the key is not found, recalculate it and write it
       case None => for {
-        stats <- forceGet(champions, tiers, patch, region, enemy, reverse)
+        stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
         result <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
       } yield stats
     }
@@ -50,11 +50,11 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     */
   def getForPatches(
     champions: Set[Int], tiers: Set[Int], patch: Set[String], region: Region,
-    enemy: Int = -1, reverse: Boolean = false
+    role: Role, enemy: Int = -1, reverse: Boolean = false
   ): Future[ChampionStatistics] = {
     for {
-      statsList <- Future.sequence(patch.map(get(champions, tiers, _, region, enemy, reverse)))
-    } yield StatisticsCombiner.combineMulti(statsList)
+      statsList <- Future.sequence(patch.map(get(champions, tiers, _, region, role, enemy, reverse)))
+    } yield StatisticsCombiner.combine(statsList.toList)
   }
 
   /**
@@ -69,48 +69,41 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     */
   private def forceGet(
     champions: Set[Int], tiers: Set[Int], patch: String, region: Region,
-    enemy: Int, reverse: Boolean
+    role: Role, enemy: Int, reverse: Boolean
   ): Future[ChampionStatistics] = {
     // A lot goes on in this function, especially since we're dealing with Futures.
     // I'll try to explain every step in detail.
 
-    // First, we're going to iterate over every Role. This is a given --
-    // the ChampionStatistics returns one Statistics object for each role.
-    val statsFuts = Role.values.map { role =>
-      // Here, we build the Set[MatchFilters] for every champion.
-      // This is of type Map[Int, Set[MatchFilters]].
-      val filtersMap = champions.map { champ =>
-        val basis = StatisticsAggregator.buildFilterSet(champ, patch, tiers, region, role, enemy)
-        val filterSet = reverse match {
-          case true => basis.map { filter =>
-            filter.copy(championId = filter.enemyId, enemyId = filter.championId)
-          }
-          case
-              false => basis
+    // Here, we build the Set[MatchFilters] for every champion.
+    // This is of type Map[Int, Set[MatchFilters]].
+    val filtersMap = champions.map { champ =>
+      val basis = StatisticsAggregator.buildFilterSet(champ, patch, tiers, region, role, enemy)
+      val filterSet = reverse match {
+        case true => basis.map { filter =>
+          filter.copy(championId = filter.enemyId, enemyId = filter.championId)
         }
-        (champ, filterSet)
-      }.toMap
-
-      // Next, we'll compute the MatchSums. This is where the function is no longer
-      // pure, and we make a database call. (Note that since we're using futures,
-      // no database call is made at the time of execution.) This returns a
-      // Map[Int, Future[MatchSum]].
-      val sumsMapFuts = filtersMap.mapValues(filters => db.matchSums.sum(filters))
-
-      // Next, we'll extract the Future from the value using some map magic.
-      // Thus we end up with a Future[Map[Int, MatchSum]].
-      val sumsMapFut = FutureUtil.sequenceMap(sumsMapFuts)
-
-      // Finally, we'll map over the values of this map to generate a Statistics
-      // object for each value. Thus we end up with a Future[Statistics].
-      sumsMapFut.map { sumsMap =>
-        StatisticsAggregator.makeStatistics(role, sumsMap)
+        case
+            false => basis
       }
-    }
+      (champ, filterSet)
+    }.toMap
 
-    // Now that we have a List[Future[Statistics]], we'll again unwrap the Future
-    // to create a Future[ChampionStatistics], and we are done.
-    Future.sequence(statsFuts).map(s => ChampionStatistics(statistics = s))
+    // Next, we'll compute the MatchSums. This is where the function is no longer
+    // pure, and we make a database call. (Note that since we're using futures,
+    // no database call is made at the time of execution.) This returns a
+    // Map[Int, Future[MatchSum]].
+    val sumsMapFuts = filtersMap.mapValues(filters => db.matchSums.sum(filters))
+
+    // Next, we'll extract the Future from the value using some map magic.
+    // Thus we end up with a Future[Map[Int, MatchSum]].
+    val sumsMapFut = FutureUtil.sequenceMap(sumsMapFuts)
+
+    // Finally, we'll map over the values of this map to generate a Statistics
+    // object for each value. Thus we end up with a Future[ChampionStatistics],
+    // and we are done.
+    sumsMapFut.map { sumsMap =>
+      StatisticsAggregator.makeStatistics(role, sumsMap)
+    }
   }
 
   private def invertFilters(filters: MatchFilters): MatchFilters = {

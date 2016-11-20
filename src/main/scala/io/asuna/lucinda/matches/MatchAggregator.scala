@@ -9,30 +9,24 @@ import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.range.IntRange
+import scalaz.Scalaz._
 
 object MatchAggregator {
 
   def makeAggregate(
     role: Role, champion: Int, minPlayRate: Double,
-    allStats: Map[String, ChampionStatistics], byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
+    patchStats: Map[String, ChampionStatistics], byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
   ): MatchAggregate = {
-    val combinedStats = StatisticsCombiner.combineMulti(allStats.values)
-    val roleStats = combinedStats.statistics.find(_.role == role)
-
-    // Stats of a role by patch. This maps a patch to the ChampionStatistics object for the patch.
-    val roleStatsByPatch = allStats
-      .mapValues(_.statistics.find(_.role == role).getOrElse(ChampionStatistics.Statistics()))
+    val allStats = StatisticsCombiner.combine(patchStats.values.toList)
 
     // This is the quotient of the champion for the entire search space.
     val quot = QuotientGenerator.generate(byPatch.values.foldLeft(MatchSum())(_ + _))
 
     MatchAggregate(
-      roles = Option(makeRoleStats(role, champion, combinedStats)),
-      statistics = Option(makeStatistics(role, champion, combinedStats)),
-      graphs = for {
-        roles <- roleStats
-      } yield makeGraphs(roles, roleStatsByPatch, quot, champion),
-      collections = Option(makeCollections(quot, minPlayRate))
+      roles = makeRoleStats(allStats, byRole).some,
+      statistics = makeStatistics(role, champion, allStats).some,
+      graphs = makeGraphs(allStats, patchStats, quot, champion).some,
+      collections = makeCollections(quot, minPlayRate).some
     )
   }
 
@@ -55,33 +49,28 @@ object MatchAggregator {
   /**
     * Prepares the MatchAggregateRoles object.
     */
-  private def makeRoleStats(role: Role, champion: Int, allStats: ChampionStatistics): MatchAggregate.Roles = {
-    val myRoleStats = allStats.statistics.find(_.role == role)
-
+  private def makeRoleStats(allStats: ChampionStatistics, roleSums: Map[Role, MatchSum]): MatchAggregate.Roles = {
     // We get the total champions in role based on number of win rates in map.
-    val totalChampionsInRole = myRoleStats
-      .flatMap(_.results).flatMap(_.scalars)
+    val totalChampionsInRole = allStats.results.flatMap(_.scalars)
       .map(_.wins).map(_.size).getOrElse(0)
 
     // Number of games played by the champion for each role.
-    val gamesByRole = allStats.statistics.map { case stats =>
-      (stats.role, stats.sums.flatMap(_.scalars).flatMap(_.plays.get(champion)).getOrElse(0L))
-    }
+    val gamesByRole = roleSums.mapValues(_.scalars.map(_.plays).getOrElse(0L)).toMap
 
     // Number of total games played by the champion.
-    val totalGames = gamesByRole.map { case (_, plays) => plays }.sum
+    val totalGames = gamesByRole.values.sum
 
     // Stats by role.
     val roleStats = gamesByRole.map { case (role, numMatches) =>
       MatchAggregate.Roles.RoleStats(
-        role = role,
+        role = allStats.role,
         pickRate = numMatches.toDouble / totalGames,
         numMatches = numMatches.toInt
       )
-    }
+    }.toSeq
 
     MatchAggregate.Roles(
-      role = role,
+      role = allStats.role,
       totalChampionsInRole = totalChampionsInRole,
       roleStats = roleStats
     )
@@ -105,9 +94,8 @@ object MatchAggregator {
     ))
   }
 
-  private def makeStatistics(role: Role, champion: Int, allStats: ChampionStatistics): MatchAggregate.Statistics = {
-    val roleStats = allStats.statistics.find(_.role == role)
-    val results = roleStats.flatMap(_.results)
+  private def makeStatistics(role: Role, champion: Int, roleStats: ChampionStatistics): MatchAggregate.Statistics = {
+    val results = roleStats.results
 
     val scalars = results.flatMap(_.scalars)
     val getScalar = getStat(scalars, champion, _: ChampionStatistics.Results.Scalars => Map[Int, Statistic])
@@ -117,8 +105,7 @@ object MatchAggregator {
     val pickRateStat = getStat[ChampionStatistics.Results.Derivatives](derivatives, champion, _.picks)
 
     // Number of games played by this champion in this role.
-    val gamesPlayed = roleStats
-      .flatMap(_.sums).flatMap(_.scalars).flatMap(_.plays.get(champion)).getOrElse(0L)
+    val gamesPlayed = roleStats.sums.flatMap(_.scalars).flatMap(_.plays.get(champion)).getOrElse(0L)
 
     // We can derive the gamesPlayed stat from the pickRate stat as they are virtually identical.
     val gamesPlayedStat = pickRateStat.map { stat =>
@@ -184,8 +171,8 @@ object MatchAggregator {
     * @param patchStats: Map of patch to results for the role.
     */
   def makeGraphs(
-    roleStats: ChampionStatistics.Statistics,
-    patchStats: Map[String, ChampionStatistics.Statistics],
+    roleStats: ChampionStatistics,
+    patchStats: Map[String, ChampionStatistics],
     quot: MatchQuotient,
     id: Int
   ): MatchAggregate.Graphs = {

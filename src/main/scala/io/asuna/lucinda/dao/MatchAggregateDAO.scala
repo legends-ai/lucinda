@@ -55,7 +55,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     // First, let's retrieve all stats for this combination.
     // TODO(igm): use the cache when it is implemented
     val allStatsFuts = patches.map { patch =>
-      statistics.get(champions, tiers, patch, region, enemy).map((patch, _))
+      statistics.get(champions, tiers, patch, region, role, enemy).map((patch, _))
     }
 
     // This future contains an element of the form Map[String, ChampionStatistics]

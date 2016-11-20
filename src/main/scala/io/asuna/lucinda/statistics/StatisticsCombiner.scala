@@ -137,7 +137,7 @@ trait StatisticsMonoids {
 
   implicit object StatisticsMonoid extends Monoid[ChampionStatistics] {
 
-    def append(a: ChampionStatistics, b: ChampionStatistics): ChampionStatistics = {
+    def append(a: ChampionStatistics, b: => ChampionStatistics): ChampionStatistics = {
       // wow a monoid can calculate things too!
       val sums = a.sums |+| b.sums
       val quotients = sums.map(QuotientsGenerator.generateQuotients)
