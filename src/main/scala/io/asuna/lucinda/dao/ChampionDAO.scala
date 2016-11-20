@@ -4,7 +4,6 @@ import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.Champion
 import scala.concurrent.{ ExecutionContext, Future }
 
-
 class ChampionDAO(statisticsDAO: ChampionStatisticsDAO, matchAggregateDAO: MatchAggregateDAO)(implicit ec: ExecutionContext) {
 
   def get(

@@ -4,7 +4,7 @@ import io.asuna.asunasan.Config
 import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
 import scala.concurrent.{ExecutionContext, Future}
 
-import io.asuna.lucinda.dao.{MatchAggregateDAO, ChampionStatisticsDAO}
+import io.asuna.lucinda.dao.{ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO}
 import io.asuna.lucinda.database.{Connector, LucindaDatabase}
 import io.asuna.proto.lucinda.LucindaData._
 import io.asuna.proto.service_lucinda.LucindaGrpc
