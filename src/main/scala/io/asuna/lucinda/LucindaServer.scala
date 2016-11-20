@@ -28,7 +28,9 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
 
   // Next, let's init all of our dependencies.
   // We'll use lazy vals because the compiler should do the work of figuring the order out.
-  lazy val redis = RedisClient()
+
+  lazy val redis = RedisClient() // TOOD(igm): use separate redis databases for all types of data we store
+  lazy val championDAO = new ChampionDAO(championStatisticsDAO, matchAggregateDAO)
   lazy val championStatisticsDAO = new ChampionStatisticsDAO(db, redis)
   lazy val matchAggregateDAO = new MatchAggregateDAO(db, redis, championStatisticsDAO)
 
