@@ -1,9 +1,10 @@
 package io.asuna.lucinda.dao
 
 import io.asuna.lucinda.FutureUtil
-import io.asuna.lucinda.statistics.StatisticsAggregator
+import io.asuna.lucinda.statistics.{ StatisticsAggregator, StatisticsCombiner }
 import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
+import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.service_vulgate.VulgateGrpc.Vulgate
 import redis.RedisClient
 import io.asuna.lucinda.database.LucindaDatabase
@@ -24,7 +25,10 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
   /**
     * Gets a ChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
     */
-  def get(champions: Set[Int], tiers: Set[Int], patch: String, region: Region, enemy: Int = -1): Future[ChampionStatistics] = {
+  def get(
+    champions: Set[Int], tiers: Set[Int], patch: String, region: Region,
+    enemy: Int = -1, reverse: Boolean = false
+  ): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
 
     val id = ChampionStatisticsId(tiers, patch, region, enemy)
@@ -35,10 +39,22 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
 
       // If the key is not found, recalculate it and write it
       case None => for {
-        stats <- forceGet(champions, tiers, patch, region, enemy)
+        stats <- forceGet(champions, tiers, patch, region, enemy, reverse)
         result <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
       } yield stats
     }
+  }
+
+  /**
+    * Runs get across multiple patches and aggregates into one ChampionStatistics object.
+    */
+  def getForPatches(
+    champions: Set[Int], tiers: Set[Int], patch: Set[String], region: Region,
+    enemy: Int = -1, reverse: Boolean = false
+  ): Future[ChampionStatistics] = {
+    for {
+      statsList <- Future.sequence(patch.map(get(champions, tiers, _, region, enemy, reverse)))
+    } yield StatisticsCombiner.combineMulti(statsList)
   }
 
   /**
@@ -51,7 +67,10 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     *
     *  This does not take caching into account.
     */
-  private def forceGet(champions: Set[Int], tiers: Set[Int], patch: String, region: Region, enemy: Int): Future[ChampionStatistics] = {
+  private def forceGet(
+    champions: Set[Int], tiers: Set[Int], patch: String, region: Region,
+    enemy: Int, reverse: Boolean
+  ): Future[ChampionStatistics] = {
     // A lot goes on in this function, especially since we're dealing with Futures.
     // I'll try to explain every step in detail.
 
@@ -60,8 +79,16 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     val statsFuts = Role.values.map { role =>
       // Here, we build the Set[MatchFilters] for every champion.
       // This is of type Map[Int, Set[MatchFilters]].
-      val filtersMap = champions.map {champ =>
-        (champ, StatisticsAggregator.buildFilterSet(champ, patch, tiers, region, role, enemy))
+      val filtersMap = champions.map { champ =>
+        val basis = StatisticsAggregator.buildFilterSet(champ, patch, tiers, region, role, enemy)
+        val filterSet = reverse match {
+          case true => basis.map { filter =>
+            filter.copy(championId = filter.enemyId, enemyId = filter.championId)
+          }
+          case
+              false => basis
+        }
+        (champ, filterSet)
       }.toMap
 
       // Next, we'll compute the MatchSums. This is where the function is no longer
@@ -84,6 +111,10 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     // Now that we have a List[Future[Statistics]], we'll again unwrap the Future
     // to create a Future[ChampionStatistics], and we are done.
     Future.sequence(statsFuts).map(s => ChampionStatistics(statistics = s))
+  }
+
+  private def invertFilters(filters: MatchFilters): MatchFilters = {
+    filters.copy(championId = filters.championId, enemyId = filters.enemyId)
   }
 
 }
