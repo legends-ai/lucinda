@@ -27,7 +27,8 @@ class ChampionDAO(
         VulgateRpc.GetAggregationFactorsRequest(
           context = context,
           patches = patches,
-          tiers = tiers
+          tiers = tiers,
+          champion = champion
         )
       )
 
@@ -58,7 +59,7 @@ class ChampionDAO(
     } yield {
       Champion(
         metadata = Champion.Metadata(
-          staticInfo = champions.champions.get(champion)
+          staticInfo = factors.focus
             // TODO(igm): patch start and end
         ).some,
         matchAggregate = matchAggregate.some,
