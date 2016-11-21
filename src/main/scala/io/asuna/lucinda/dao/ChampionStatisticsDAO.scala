@@ -1,11 +1,16 @@
 package io.asuna.lucinda.dao
 
+import scalaz.Scalaz._
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.statistics.{ StatisticsAggregator, StatisticsCombiner }
 import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.match_filters.MatchFilters
+import io.asuna.proto.range.{ PatchRange, TierRange }
+import io.asuna.proto.service_lucinda.LucindaRpc.GetStatisticsResponse.RoleStatistics
 import io.asuna.proto.service_vulgate.VulgateGrpc.Vulgate
+import io.asuna.proto.service_vulgate.VulgateRpc
+import io.asuna.proto.vulgate.VulgateData
 import redis.RedisClient
 import io.asuna.lucinda.database.LucindaDatabase
 import scala.concurrent.{ ExecutionContext, Future }
@@ -20,7 +25,35 @@ case class ChampionStatisticsId(
   def keyify: String = upickle.default.write(this)
 }
 
-class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
+class ChampionStatisticsDAO(vulgate: Vulgate, db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
+
+  /**
+    * Gets a RoleStatistics object.
+    */
+  def getWithRoles(
+    tiers: Option[TierRange], patches: Option[PatchRange], region: Region
+  ): Future[Seq[RoleStatistics]] = {
+    val context = VulgateData.Context().some // TODO(igm): implement
+    for {
+      factors <- vulgate.getAggregationFactors(
+        VulgateRpc.GetAggregationFactorsRequest(
+          context = context,
+          patches = patches,
+          tiers = tiers
+        )
+      )
+      roleStats <- Future.sequence(
+        (Role.values zip factors.patches) map { case (role, patch) =>
+          get(factors.champions.toSet, factors.tiers.toSet, patch, region, role).map((role, _))
+        }
+      )
+    } yield roleStats.map { case (role, statistics) =>
+      RoleStatistics(
+        role = role,
+        statistics = statistics.some
+      )
+    }
+  }
 
   /**
     * Gets a ChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
