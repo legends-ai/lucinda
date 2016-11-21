@@ -16,7 +16,7 @@ class ChampionDAO(
   vulgate: Vulgate, statisticsDAO: ChampionStatisticsDAO, matchAggregateDAO: MatchAggregateDAO
 )(implicit ec: ExecutionContext) {
 
-  def getFull(
+  def get(
     tiers: Option[TierRange], patches: Option[PatchRange], champion: Int, region: Region,
     role: Role, minPlayRate: Double, enemy: Int = -1
   ): Future[Champion] = {
@@ -65,22 +65,6 @@ class ChampionDAO(
         matchups = makeMatchups(enemyStatistics, championStatistics)
       )
     }
-  }
-
-  def get(
-    champions: Set[Int], patches: Set[String], lastFivePatches: Set[String],
-    champion: Int, tiers: Set[Int], region: Region,
-    role: Role, enemy: Int = -1, minPlayRate: Double = 0.05
-  ): Future[Champion] = {
-    for {
-      matchAggregate <- matchAggregateDAO.get(
-        champions, patches, lastFivePatches,
-        champion, tiers, region,
-        role, enemy, minPlayRate
-      )
-    } yield Champion(
-      matchAggregate = Some(matchAggregate)
-    )
   }
 
   private def makeMatchups(enemy: ChampionStatistics, champion: ChampionStatistics): Seq[MatchupOverview] = {

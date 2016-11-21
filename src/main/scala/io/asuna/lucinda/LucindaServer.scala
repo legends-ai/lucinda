@@ -42,7 +42,7 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
   }
 
   override def getChampion(req: GetChampionRequest) = {
-    championDAO.getFull(req.tier, req.patch, req.championId, req.region, req.role, req.minPlayRate)
+    championDAO.get(req.tier, req.patch, req.championId, req.region, req.role, req.minPlayRate)
   }
 
   override def getMatchup(req: GetMatchupRequest) = {
