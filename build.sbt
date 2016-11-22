@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
 
   // Scalatest
   "org.scalacheck" %% "scalacheck" % "1.13.3" % "test", // prop tests
-  "org.scalactic" %% "scalactic" % "3.0.0",
+  "org.scalactic" %% "scalactic" % "3.0.0" % "test",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
 
   "com.github.etaty" %% "rediscala" % "1.6.0",
