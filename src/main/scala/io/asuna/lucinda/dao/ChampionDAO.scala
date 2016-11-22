@@ -1,10 +1,9 @@
 package io.asuna.lucinda.dao
 
-import scala.language.existentials
 import io.asuna.proto.charon.CharonData.{ Static }
 import io.asuna.proto.lucinda.LucindaData.{ Champion, Matchup }
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
-import scalaz.{ Monoid, Semigroup }
+import scalaz.Semigroup
 import scalaz.Scalaz._
 import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchupOverview
@@ -101,20 +100,12 @@ class ChampionDAO(
     }
   }
 
-  /**
-    * We're using Monoid to represent this, but we should honestly be calling this the annihilator.
-    */
-  implicit object IntSetIntersectionAnnihilator extends Monoid[Set[Int]] {
-    def append(a: Set[Int], b: => Set[Int]): Set[Int] = a intersect b
-    def zero = Set()
-  }
-
   private def makeMatchups(championData: Map[Int, Static.Champion], enemy: ChampionStatistics, focus: ChampionStatistics): Seq[MatchupOverview] = {
     // First, let's get all of the common champions in both data sets.
-    val champs = getChamps(enemy) |+| getChamps(focus)
+    val champs = getChamps(enemy) intersect getChamps(focus)
 
     // Now, let's build our result by iterating over this.
-    champs.getOrElse(Set()).map { champ =>
+    champs.map { champ =>
       MatchupOverview(
         enemyData = championData.get(champ)
           // TODO(igm): derive individual statistics
@@ -122,7 +113,7 @@ class ChampionDAO(
     }.toSeq
   }
 
-  private def getChamps(statistics: ChampionStatistics) =
-    statistics.sums.flatMap(_.scalars).map(_.wins.keys.toSet)
+  private def getChamps(statistics: ChampionStatistics): Set[Int] =
+    statistics.sums.flatMap(_.scalars).map(_.wins.keys.toSet).getOrElse(Set())
 
 }
