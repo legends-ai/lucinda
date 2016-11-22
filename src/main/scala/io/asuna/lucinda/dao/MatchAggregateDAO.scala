@@ -81,7 +81,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
       allStats <- allStatsFut
       byRole <- byRoleFut
       byPatch <- byPatchFut
-    } yield MatchAggregator.makeAggregate(role, champion, minPlayRate, allStats, byRole, byPatch)
+    } yield MatchAggregator.makeAggregate(champion, minPlayRate, allStats, byRole, byPatch)
   }
 
 }

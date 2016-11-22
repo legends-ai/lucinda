@@ -1,9 +1,9 @@
 package io.asuna.lucinda.dao
 
+import io.asuna.lucinda.matches.MatchAggregator
 import io.asuna.proto.charon.CharonData.{ Static }
 import io.asuna.proto.lucinda.LucindaData.{ Champion, Matchup }
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
-import scalaz.Semigroup
 import scalaz.Scalaz._
 import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchupOverview
@@ -107,8 +107,9 @@ class ChampionDAO(
     // Now, let's build our result by iterating over this.
     champs.map { champ =>
       MatchupOverview(
-        enemyData = championData.get(champ)
-          // TODO(igm): derive individual statistics
+        enemyData = championData.get(champ),
+        focusStatistics = MatchAggregator.makeStatistics(champ, focus).some,
+        enemyStatistics = MatchAggregator.makeStatistics(champ, enemy).some
       )
     }.toSeq
   }

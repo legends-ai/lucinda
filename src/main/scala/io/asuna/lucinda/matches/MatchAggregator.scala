@@ -14,7 +14,7 @@ import scalaz.Scalaz._
 object MatchAggregator {
 
   def makeAggregate(
-    role: Role, champion: Int, minPlayRate: Double,
+    champion: Int, minPlayRate: Double,
     patchStats: Map[String, ChampionStatistics], byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
   ): MatchAggregate = {
     val allStats = StatisticsCombiner.combine(patchStats.values.toList)
@@ -24,7 +24,7 @@ object MatchAggregator {
 
     MatchAggregate(
       roles = makeRoleStats(allStats, byRole).some,
-      statistics = makeStatistics(role, champion, allStats).some,
+      statistics = makeStatistics(champion, allStats).some,
       graphs = makeGraphs(allStats, patchStats, quot, champion).some,
       collections = makeCollections(quot, minPlayRate).some
     )
@@ -94,7 +94,7 @@ object MatchAggregator {
     ))
   }
 
-  private def makeStatistics(role: Role, champion: Int, roleStats: ChampionStatistics): MatchAggregate.Statistics = {
+  def makeStatistics(champion: Int, roleStats: ChampionStatistics): MatchAggregate.Statistics = {
     val results = roleStats.results
 
     val scalars = results.flatMap(_.scalars)
