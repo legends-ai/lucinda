@@ -36,6 +36,7 @@ assemblyMergeStrategy in assembly := {
     val oldStrategy = (assemblyMergeStrategy in assembly).value
     oldStrategy(x)
 }
+assemblyJarName in assembly := "lucinda-assembly.jar"
 
 s3region := com.amazonaws.services.s3.model.Region.US_West
 s3acl := com.amazonaws.services.s3.model.CannedAccessControlList.AuthenticatedRead
