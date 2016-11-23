@@ -9,7 +9,7 @@ case class LucindaConfig(
 object LucindaConfig {
 
   // TODO(igm): figure out how to use SBT=specified version here
-  val parser = new ConfigParser[LucindaConfig](AsunaServiceType.Lucinda, "0.1.0", Set(AsunaServiceType.Bacchus)) {
+  val parser = new ConfigParser[LucindaConfig](AsunaServiceType.Lucinda, "0.1.0", Set(AsunaServiceType.Vulgate)) {
     // Our list of Cassandra hosts.
     opt[Seq[String]]("cassandraHosts").valueName("<node1>,<node2>...")
       .action((x, c) => c.copy(custom = c.custom.copy(cassandraHosts = x)))
