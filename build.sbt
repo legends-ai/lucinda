@@ -68,14 +68,9 @@ dockerfile in docker := {
   }
 }
 
+val base = "096202052535.dkr.ecr.us-west-2.amazonaws.com"
 imageNames in docker := Seq(
   // Sets the latest tag
-  ImageName(s"${organization.value}/${name.value}:latest"),
-
-  // Sets a name with a tag that contains the project version
-  ImageName(
-    namespace = Some(organization.value),
-    repository = name.value,
-    tag = Some("v" + version.value)
-  )
+  ImageName(s"${base}/${name.value}:latest"),
+  ImageName(s"${base}/${name.value}:${version.value}")
 )
