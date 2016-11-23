@@ -16,7 +16,7 @@ object LucindaConfig {
       .action((x, c) => c.copy(custom = c.custom.copy(cassandraHosts = x)))
       .text("List of Cassandra hosts to connect to.")
 
-    opt[Seq[String]]("redis_host").valueName("<node1>,<node2>...")
+    opt[String]("redis_host").valueName("<node1>,<node2>...")
       .action((x, c) => c.copy(custom = c.custom.copy(redisHost = x)))
       .text("Redis host to connect to.")
 
