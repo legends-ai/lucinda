@@ -4,7 +4,8 @@ import io.asuna.asunasan.{ AsunaServiceType, Config, ConfigParser }
 
 case class LucindaConfig(
   cassandraHosts: Seq[String] = List("localhost"),
-  redisHost: String = "localhost"
+  redisHost: String = "localhost",
+  redisPort: Int = 6379
 )
 
 object LucindaConfig {
@@ -16,9 +17,13 @@ object LucindaConfig {
       .action((x, c) => c.copy(custom = c.custom.copy(cassandraHosts = x)))
       .text("List of Cassandra hosts to connect to.")
 
-    opt[String]("redis_host").valueName("<node1>,<node2>...")
+    opt[String]("redis_host").valueName("<host>")
       .action((x, c) => c.copy(custom = c.custom.copy(redisHost = x)))
       .text("Redis host to connect to.")
+
+    opt[Int]("redis_port").valueName("<port>")
+      .action((x, c) => c.copy(custom = c.custom.copy(redisPort = x)))
+      .text("Redis port to connect to.")
 
   }
 
