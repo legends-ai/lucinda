@@ -3,8 +3,8 @@ package io.asuna.lucinda.matches
 import io.asuna.asunasan.legends.MatchSumOperators._
 import io.asuna.lucinda.statistics.StatisticsCombiner
 import io.asuna.proto.enums.{Ability, Region, Role}
+import io.asuna.proto.lucinda.LucindaData.{ChampionStatistics, Statistic}
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
-import io.asuna.proto.lucinda.LucindaData.{Statistic, ChampionStatistics}
 import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
