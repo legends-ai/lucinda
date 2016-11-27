@@ -25,11 +25,12 @@ class ChampionDAO(
     tiers: Option[TierRange], patches: Option[PatchRange], champion: Int, region: Region,
     role: Role, minPlayRate: Double
   ): Future[Champion] = {
+    // Default to an empty version if a patch range is not specified. This tells Vulgate to use the latest version.
     val release = patches match {
       case Some(range) => VulgateData.Context.Release.Patch(range.max)
       case None => VulgateData.Context.Release.Empty
     }
-    val context = VulgateData.Context(release=release).some // TODO(igm): implement
+
     for {
       (factors, bareChamp) <- getWithoutMatchups(tiers, patches, champion, region, role, minPlayRate, -1)
 
@@ -42,7 +43,11 @@ class ChampionDAO(
       // Vulgate champion data
       champions <- vulgate.getChampions(
         VulgateRpc.GetChampionsRequest(
-          context = context,
+          // TODO(igm): locale
+          context = VulgateData.Context(
+            region = region,
+            release = release
+          ).some,
 
           // List of all champions we care about.
           // In theory this list will also include the champion requesting the data.
