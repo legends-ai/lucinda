@@ -16,4 +16,4 @@ devtunnel:
 run:
 	java -jar target/scala-2.11/lucinda-assembly.jar \
 		--vulgate_host=localhost --vulgate_port=6205 \
-    --redis_host=localhost --cassandra_hosts=localhost
+		--redis_host=localhost --cassandra_hosts=localhost
