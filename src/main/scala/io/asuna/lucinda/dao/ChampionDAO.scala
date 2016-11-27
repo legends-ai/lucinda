@@ -25,7 +25,11 @@ class ChampionDAO(
     tiers: Option[TierRange], patches: Option[PatchRange], champion: Int, region: Region,
     role: Role, minPlayRate: Double
   ): Future[Champion] = {
-    val context = VulgateData.Context().some // TODO(igm): implement
+    val release = patches match {
+      case Some(range) => VulgateData.Context.Release.Patch(range.max)
+      case None => VulgateData.Context.Release.Empty
+    }
+    val context = VulgateData.Context(release=release).some // TODO(igm): implement
     for {
       (factors, bareChamp) <- getWithoutMatchups(tiers, patches, champion, region, role, minPlayRate, -1)
 
