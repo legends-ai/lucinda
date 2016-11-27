@@ -10,6 +10,8 @@ import io.asuna.proto.match_sum.MatchSum
 
 /**
   * Helper for generating valid MatchSum maps.
+  * WARNING: this code is a steaming pile of shit. This warrants a major refactor!
+  * It's extremely confusing and not ordered well. We should separate concerns!
   */
 trait MatchSumGeneratorHelper {
 
@@ -138,6 +140,7 @@ trait MatchSumGeneratorHelper {
     for {
       scalars <- genScalars
       deltas <- genDeltas
+      // TODO(igm): make these maps valid. it messes up the data
       masteries <- genStrSubscalarsMap
       runes <- genStrSubscalarsMap
       keystones <- genStrSubscalarsMap
@@ -168,10 +171,17 @@ trait MatchSumGeneratorHelper {
     )
   }
 
+  // Builds a generator for a Map[Int, MatchSum] given a champion list
+  def makeMatchSumMap(champs: Set[Int]): Gen[Map[Int, MatchSum]] = {
+    for {
+      sums <- Gen.containerOfN[List, MatchSum](champs.size, makeGenMatchSum(champs))
+    } yield champs.zip(sums).toMap
+  }
+
   val genMatchSumMap = for {
     champs <- Gen.containerOf[Set, Int](Gen.choose(1, 100))
-    sums <- Gen.containerOfN[List, MatchSum](champs.size, makeGenMatchSum(champs))
-  } yield champs.zip(sums).toMap
+    sumMap <- makeMatchSumMap(champs)
+  } yield sumMap
 
   // Arbitrary region
   implicit lazy val arbRegion: Arbitrary[Region] = Arbitrary(Gen.oneOf(Region.values))
@@ -195,4 +205,51 @@ trait MatchSumGeneratorHelper {
   } yield QuotientsGenerator.generateQuotients(sums)
 
   implicit lazy val arbQuotients: Arbitrary[ChampionStatistics.Quotients] = Arbitrary(genQuotients)
+
+  val genMatchAggregatorArgs: Gen[MatchAggregatorArgs] = {
+    for {
+      champion <- arbitrary[Int]
+      minPlayRate <- arbitrary[Double]
+      otherChamps <- Gen.containerOf[Set, Int](Gen.choose(1, 100))
+      patches <- Gen.containerOf[Set, String](arbitrary[String])
+      role <- arbitrary[Role]
+      champs = otherChamps + champion
+
+      // Generate a ChampionStatistics object for every patch.
+      // This is probably the most expensive operation here. #bigdata
+      patchSums <- Gen.containerOfN[List, Map[Int, MatchSum]](patches.size, makeMatchSumMap(champs))
+      patchStats = patches.zip(patchSums).map { case (patch, sumMap) =>
+        (patch, StatisticsAggregator.makeStatistics(role, sumMap))
+      }.toMap
+
+      // Generate a MatchSum for every role.
+      // TODO(igm): use valid data
+      roleSums <- Gen.containerOfN[List, MatchSum](Role.values.size, makeGenMatchSum(champs))
+      byRole = Role.values.zip(roleSums).toMap
+
+      patchSums <- Gen.containerOfN[List, MatchSum](patches.size, makeGenMatchSum(champs))
+      byPatch = patches.zip(patchSums).toMap
+
+    } yield {
+      MatchAggregatorArgs(
+        champion = champion,
+        minPlayRate = minPlayRate,
+        patchStats = patchStats,
+        byRole = byRole,
+        byPatch = byPatch
+      )
+    }
+  }
+
+  implicit lazy val arbMatchAggregatorArgs: Arbitrary[MatchAggregatorArgs] = Arbitrary(genMatchAggregatorArgs)
 }
+
+// Below is used to test the match aggregator.
+// TODO(igm): reevalutate whether this is a good testing strategy. It's messy af.
+case class MatchAggregatorArgs(
+  champion: Int,
+  minPlayRate: Double,
+  patchStats: Map[String, ChampionStatistics],
+  byRole: Map[Role, MatchSum],
+  byPatch: Map[String, MatchSum]
+)

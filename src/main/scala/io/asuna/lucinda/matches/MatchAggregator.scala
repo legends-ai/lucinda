@@ -180,9 +180,9 @@ object MatchAggregator {
     MatchAggregate.Graphs(
       // Win/pick/ban distribution across all champions.
       distribution = Option(MatchAggregate.Graphs.Distribution(
-        winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.value)).get,
-        pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.value)).get,
-        banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.value)).get
+        winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.value)).getOrElse(Map()),
+        pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.value)).getOrElse(Map()),
+        banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.value)).getOrElse(Map())
       )),
 
       // Per-patch statistics.
@@ -190,9 +190,9 @@ object MatchAggregator {
       byPatch = patchStats.mapValues(_.results).map { case (patch, patchResults) =>
         MatchAggregate.Graphs.ByPatch(
           patch = patch,
-          winRate = patchResults.flatMap(_.scalars).flatMap(_.wins.mapValues(_.value).get(id)).get,
-          pickRate = patchResults.flatMap(_.derivatives).flatMap(_.picks.mapValues(_.value).get(id)).get,
-          banRate = patchResults.flatMap(_.derivatives).flatMap(_.bans.mapValues(_.value).get(id)).get
+          winRate = patchResults.flatMap(_.scalars).flatMap(_.wins.mapValues(_.value).get(id)).getOrElse(0),
+          pickRate = patchResults.flatMap(_.derivatives).flatMap(_.picks.mapValues(_.value).get(id)).getOrElse(0),
+          banRate = patchResults.flatMap(_.derivatives).flatMap(_.bans.mapValues(_.value).get(id)).getOrElse(0)
         )
       }.toSeq,
 
@@ -205,14 +205,27 @@ object MatchAggregator {
     )
   }
 
+  implicit class SafeMap[T](coll: Traversable[T]) {
+    def safelyMap[U](f: T => U): Traversable[U] = {
+      coll.map { el =>
+        try {
+          Some(f(el))
+        } catch {
+          case _ => None
+        }
+      }.filter(_ != None).map(_.get)
+    }
+  }
+
   /**
     * Makes our collections.
     */
   def makeCollections(quot: MatchQuotient, minPlayRate: Double): MatchAggregate.Collections = {
+    // TODO(igm): figure out how we can do more code reuse here.
     MatchAggregate.Collections(
       runes = quot.runes
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .map { case (runeSet, subscalars) =>
+        .safelyMap { case (runeSet, subscalars) =>
           MatchAggregate.Collections.RuneSet(
             runes = deserializeBonusSet(runeSet),
             subscalars = Option(subscalars)
@@ -221,7 +234,7 @@ object MatchAggregator {
 
       masteries = quot.masteries
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .map { case (masterySet, subscalars) =>
+        .safelyMap { case (masterySet, subscalars) =>
           MatchAggregate.Collections.MasterySet(
             masteries = deserializeBonusSet(masterySet),
             subscalars = Option(subscalars)
@@ -230,7 +243,7 @@ object MatchAggregator {
 
       summonerSpells = quot.summoners
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .map { case (spells, subscalars) =>
+        .safelyMap { case (spells, subscalars) =>
           val (spell1, spell2) = deserializeSummoners(spells)
           MatchAggregate.Collections.SummonerSet(
             spell1 = spell1,
@@ -241,7 +254,7 @@ object MatchAggregator {
 
       skillOrders = quot.skillOrders
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .map { case (skillOrder, subscalars) =>
+        .safelyMap { case (skillOrder, subscalars) =>
           MatchAggregate.Collections.SkillOrder(
             skillOrder = deserializeSkillOrder(skillOrder),
             subscalars = Option(subscalars)
@@ -250,7 +263,7 @@ object MatchAggregator {
 
       starterItems = quot.starterItems
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .map { case (build, subscalars) =>
+        .safelyMap { case (build, subscalars) =>
           MatchAggregate.Collections.Build(
             build = deserializeBuild(build),
             subscalars = Option(subscalars)
@@ -259,7 +272,7 @@ object MatchAggregator {
 
       buildPath = quot.buildPath
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .map { case (build, subscalars) =>
+        .safelyMap { case (build, subscalars) =>
           MatchAggregate.Collections.Build(
             build = deserializeBuild(build),
             subscalars = Option(subscalars)
