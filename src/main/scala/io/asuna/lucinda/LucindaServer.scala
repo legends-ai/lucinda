@@ -47,23 +47,37 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
   lazy val championDAO = new ChampionDAO(vulgate, championStatisticsDAO, matchAggregateDAO)
 
   override def getStatistics(req: GetStatisticsRequest) = {
-    for {
+    val fut = for {
       statistics <- championStatisticsDAO.getWithRoles(req.tier, req.patch, req.region)
     } yield GetStatisticsResponse(
       statistics = statistics
     )
+    logFuture(fut)
   }
 
   override def getChampion(req: GetChampionRequest) = {
-    championDAO.getChampion(req.tier, req.patch, req.championId, req.region, req.role, req.minPlayRate)
+    val fut = championDAO.getChampion(req.tier, req.patch, req.championId, req.region, req.role, req.minPlayRate)
+    logFuture(fut)
   }
 
   override def getMatchup(req: GetMatchupRequest) = {
-    championDAO.getMatchup(req.tier, req.patch, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId)
+    val fut = championDAO.getMatchup(req.tier, req.patch, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId)
+    logFuture(fut)
   }
 
   override def getMatchSum(req: GetMatchSumRequest) = {
-    db.matchSums.sum(req.filters.toSet)
+    val fut = db.matchSums.sum(req.filters.toSet)
+    logFuture(fut)
+  }
+
+  private[this] def logFuture[T](fut: Future[T]): Future[T] = {
+    fut.onFailure {
+      case t => {
+        println("An error has occured: " + t.getMessage)
+        t.printStackTrace()
+      }
+    }
+    fut
   }
 
 }
