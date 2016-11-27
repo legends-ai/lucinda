@@ -38,6 +38,7 @@ assemblyMergeStrategy in assembly := {
 }
 assemblyJarName in assembly := "lucinda-assembly.jar"
 
+awsProfile := "asuna"
 s3region := com.amazonaws.services.s3.model.Region.US_West
 s3acl := com.amazonaws.services.s3.model.CannedAccessControlList.AuthenticatedRead
 
