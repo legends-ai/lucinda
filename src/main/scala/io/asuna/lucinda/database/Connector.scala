@@ -7,6 +7,6 @@ import io.asuna.lucinda.LucindaConfig
 object Connector {
 
   def fromConfig(config: Config[LucindaConfig]): KeySpaceDef =
-    ContactPoints(config.custom.cassandraHosts).keySpace("athena_out")
+    ContactPoints(config.service.cassandraHosts).keySpace("athena_out")
 
 }

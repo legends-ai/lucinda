@@ -30,14 +30,14 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
 
   // Next, let's init all of our dependencies.
   lazy val statsRedis = RedisClient(
-    host = config.custom.redisHost,
-    port = config.custom.redisPort,
+    host = config.service.redisHost,
+    port = config.service.redisPort,
     db = 0.some,
     name = "lucinda:stats"
   )
   lazy val aggRedis = RedisClient(
-    host = config.custom.redisHost,
-    port = config.custom.redisPort,
+    host = config.service.redisHost,
+    port = config.service.redisPort,
     db = 1.some,
     name = "lucinda:aggs"
   )

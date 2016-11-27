@@ -34,14 +34,12 @@ class Main(
   config: Config[LucindaConfig],
   executionContext: ExecutionContext
 ) { self =>
-  val lucinda = config.asuna.lucinda
-
   private[this] var server: Server =
-    ServerBuilder.forPort(lucinda.port).addService(LucindaGrpc.bindService(new LucindaServer(config), executionContext)).build
+    ServerBuilder.forPort(config.asuna.port).addService(LucindaGrpc.bindService(new LucindaServer(config), executionContext)).build
 
   private def start(): Unit = {
     server.start
-    Main.logger.info("Server started, listening on " + lucinda.port)
+    Main.logger.info("Server started, listening on " + config.asuna.port)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         System.err.println("*** shutting down gRPC server since JVM is shutting down")
