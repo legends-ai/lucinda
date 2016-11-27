@@ -1,5 +1,6 @@
 package io.asuna.lucinda.dao
 
+import io.asuna.lucinda.VulgateHelpers
 import scalaz.Scalaz._
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.statistics.{ StatisticsAggregator, StatisticsCombiner }
@@ -33,11 +34,11 @@ class ChampionStatisticsDAO(vulgate: Vulgate, db: LucindaDatabase, redis: RedisC
   def getWithRoles(
     tiers: Option[TierRange], patches: Option[PatchRange], region: Region
   ): Future[Seq[RoleStatistics]] = {
-    val context = VulgateData.Context().some // TODO(igm): implement
+    // TODO(igm): locale
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
-          context = context,
+          context = VulgateHelpers.makeVulgateContext(patches, region).some,
           patches = patches,
           tiers = tiers
         )
