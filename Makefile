@@ -9,8 +9,11 @@ devtunnel:
   # TODO(igm): find a cleaner way of doing this
 
   # Vulgate
+	lsof -twni tcp:6205 | xargs kill -9
 	ssh -i ~/legends_aws.pem -fNL 6205:localhost:6205 ubuntu@dev.asuna.io
+
   # Cassandra
+	lsof -twni tcp:9042 | xargs kill -9
 	ssh -i ~/legends_aws.pem -fNL 9042:localhost:9042 ubuntu@dev.asuna.io
 
 run:
