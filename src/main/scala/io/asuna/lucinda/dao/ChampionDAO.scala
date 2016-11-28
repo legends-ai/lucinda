@@ -87,18 +87,15 @@ class ChampionDAO(
         champion, factors.tiers.toSet, region,
         role, enemy, minPlayRate
       )
-    } yield {
-      (
-        factors,
-        Champion(
-          metadata = Champion.Metadata(
-            staticInfo = factors.focus
-              // TODO(igm): patch start and end
-          ).some,
-          matchAggregate = matchAggregate.some
-        )
+
+      champion = Champion(
+        metadata = Champion.Metadata(
+          staticInfo = factors.focus
+            // TODO(igm): patch start and end
+        ).some,
+        matchAggregate = matchAggregate.some
       )
-    }
+    } yield (factors, champion)
   }
 
   private def makeMatchups(championData: Map[Int, Static.Champion], enemy: ChampionStatistics, focus: ChampionStatistics): Seq[MatchupOverview] = {
