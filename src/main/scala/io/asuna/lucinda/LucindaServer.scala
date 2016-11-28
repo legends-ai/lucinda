@@ -55,7 +55,7 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
           tiers = req.tier
         )
       )
-      statistics <- championStatisticsDAO.getWithRoles(factors, req.region)
+      statistics <- championStatisticsDAO.getWithRoles(factors, req.region, forceRefresh = req.forceRefresh)
     } yield GetStatisticsResponse(
       statistics = statistics
     )
@@ -70,7 +70,7 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
           tiers = req.tier
         )
       )
-      champ <- championDAO.getChampion(factors, req.championId, req.region, req.role, req.minPlayRate)
+      champ <- championDAO.getChampion(factors, req.championId, req.region, req.role, req.minPlayRate, forceRefresh = req.forceRefresh)
     } yield champ
   }
 
@@ -83,7 +83,7 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
           tiers = req.tier
         )
       )
-      matchup <- championDAO.getMatchup(factors, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId)
+      matchup <- championDAO.getMatchup(factors, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId, forceRefresh = req.forceRefresh)
     } yield matchup
   }
 

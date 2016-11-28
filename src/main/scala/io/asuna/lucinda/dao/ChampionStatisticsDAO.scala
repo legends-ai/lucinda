@@ -30,12 +30,12 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
   /**
     * Gets a RoleStatistics object.
     */
-  def getWithRoles(factors: AggregationFactors, region: Region): Future[Seq[RoleStatistics]] = {
+  def getWithRoles(factors: AggregationFactors, region: Region, forceRefresh: Boolean = false): Future[Seq[RoleStatistics]] = {
     // TODO(igm): locale
     for {
       roleStats <- Future.sequence(
         (Role.values zip factors.patches) map { case (role, patch) =>
-          get(factors.champions.toSet, factors.tiers.toSet, patch, region, role).map((role, _))
+          get(factors.champions.toSet, factors.tiers.toSet, patch, region, role, forceRefresh = forceRefresh).map((role, _))
         }
       )
     } yield roleStats.map { case (role, statistics) =>
@@ -51,21 +51,21 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     */
   def get(
     champions: Set[Int], tiers: Set[Int], patch: String, region: Region,
-    role: Role, enemy: Int = -1, reverse: Boolean = false
+    role: Role, enemy: Int = -1, reverse: Boolean = false, forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
 
     val id = ChampionStatisticsId(tiers, patch, region, role, enemy)
     val key = id.toString
     redis.get(key) flatMap {
-      // If the key is found, we shall parse it
-      case Some(bytes) => Future(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
-
       // If the key is not found, recalculate it and write it
-      case None => for {
+      case None | _ if forceRefresh => for {
         stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
         result <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
       } yield stats
+
+      // If the key is found, we shall parse it
+      case Some(bytes) => Future(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
     }
   }
 
@@ -74,10 +74,12 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     */
   def getForPatches(
     champions: Set[Int], tiers: Set[Int], patch: Set[String], region: Region,
-    role: Role, enemy: Int = -1, reverse: Boolean = false
+    role: Role, enemy: Int = -1, reverse: Boolean = false, forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     for {
-      statsList <- Future.sequence(patch.map(get(champions, tiers, _, region, role, enemy, reverse)))
+      statsList <- Future.sequence(
+        patch.map(
+          get(champions, tiers, _, region, role, enemy, reverse, forceRefresh = forceRefresh)))
     } yield StatisticsCombiner.combine(statsList.toList)
   }
 

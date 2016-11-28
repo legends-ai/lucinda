@@ -18,25 +18,25 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
 
   def get(
     champions: Set[Int], patches: Set[String], lastFivePatches: Set[String],
-    champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int = -1, minPlayRate: Double
+    champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int = -1, minPlayRate: Double, forceRefresh: Boolean = false
   ): Future[MatchAggregate] = {
     import scala.concurrent.duration._
 
     val id = MatchAggregateId(champion, tiers, region, role, enemy, minPlayRate)
     val key = id.toString
     redis.get(key) flatMap {
-      // If the key is found, we shall parse it
-      case Some(bytes) => Future(MatchAggregate.parseFrom(bytes.toArray[Byte]))
-
-      // If the key is not found, recalculate it and write it
-      case None => for {
+      // If the key is not found or we're using force refresh, recalculate it and write it
+      case None | _ if forceRefresh => for {
         stats <- forceGet(
           champions, patches, lastFivePatches,
-          champion, tiers, region, role, enemy, minPlayRate
+          champion, tiers, region, role, enemy, minPlayRate, forceRefresh
         )
         // TODO(igm): make this time configurable.
         result <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
       } yield stats
+
+      // If the key is found, we shall parse it
+      case Some(bytes) => Future(MatchAggregate.parseFrom(bytes.toArray[Byte]))
     }
   }
 
@@ -48,12 +48,12 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     */
   private def forceGet(
     champions: Set[Int], patches: Set[String], lastFivePatches: Set[String],
-    champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int = -1, minPlayRate: Double
+    champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int = -1, minPlayRate: Double, forceRefresh: Boolean = false
   ): Future[MatchAggregate] = {
     // First, let's retrieve all stats for this combination.
     // TODO(igm): use the cache when it is implemented
     val allStatsFuts = patches.map { patch =>
-      statistics.get(champions, tiers, patch, region, role, enemy).map((patch, _))
+      statistics.get(champions, tiers, patch, region, role, enemy, forceRefresh).map((patch, _))
     }
 
     // This future contains an element of the form Map[String, ChampionStatistics]

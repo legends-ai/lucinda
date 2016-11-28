@@ -24,16 +24,16 @@ class ChampionDAO(
     */
   def getChampion(
     factors: AggregationFactors, champion: Int, region: Region,
-    role: Role, minPlayRate: Double
+    role: Role, minPlayRate: Double, forceRefresh: Boolean = false
   ): Future[Champion] = {
     for {
-      bareChamp <- getWithoutMatchups(factors, champion, region, role, minPlayRate, -1)
+      bareChamp <- getWithoutMatchups(factors, champion, region, role, minPlayRate, -1, forceRefresh = forceRefresh)
 
       // Matchup stuff. This is very expensive but fortunately it's cached.
       enemyStatistics <- statisticsDAO.getForPatches(
-        factors.champions.toSet, factors.tiers.toSet, factors.patches.toSet, region, role, -1)
+        factors.champions.toSet, factors.tiers.toSet, factors.patches.toSet, region, role, -1, forceRefresh = forceRefresh)
       championStatistics <- statisticsDAO.getForPatches(
-        factors.champions.toSet, factors.tiers.toSet, factors.patches.toSet, region, role, -1, reverse = true)
+        factors.champions.toSet, factors.tiers.toSet, factors.patches.toSet, region, role, -1, reverse = true, forceRefresh = forceRefresh)
 
       // Vulgate champion data
       champions <- vulgate.getChampions(
@@ -56,17 +56,17 @@ class ChampionDAO(
     */
   def getMatchup(
     factors: AggregationFactors, focus: Int, region: Region,
-    role: Role, minPlayRate: Double, enemy: Int
+    role: Role, minPlayRate: Double, enemy: Int, forceRefresh: Boolean = false
   ): Future[Matchup] = {
     for {
-      focusChamp <- getWithoutMatchups(factors, focus, region, role, minPlayRate, enemy)
-      enemyChamp <- getWithoutMatchups(factors, enemy, region, role, minPlayRate, focus)
+      focusChamp <- getWithoutMatchups(factors, focus, region, role, minPlayRate, enemy, forceRefresh = forceRefresh)
+      enemyChamp <- getWithoutMatchups(factors, enemy, region, role, minPlayRate, focus, forceRefresh = forceRefresh)
     } yield Matchup(focus = focusChamp.some, enemy = enemyChamp.some)
   }
 
   private def getWithoutMatchups(
     factors: AggregationFactors, champion: Int, region: Region,
-    role: Role, minPlayRate: Double, enemy: Int = -1
+    role: Role, minPlayRate: Double, enemy: Int = -1, forceRefresh: Boolean = false
   ): Future[Champion] = {
     // TODO(igm): locale
     for {
@@ -75,7 +75,7 @@ class ChampionDAO(
       matchAggregate <- matchAggregateDAO.get(
         factors.champions.toSet, factors.patches.toSet, factors.lastFivePatches.toSet,
         champion, factors.tiers.toSet, region,
-        role, enemy, minPlayRate
+        role, enemy, minPlayRate, forceRefresh = forceRefresh
       )
 
       champ = Champion(
