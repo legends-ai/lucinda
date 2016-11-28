@@ -1,6 +1,7 @@
 package io.asuna.lucinda.dao
 
 import io.asuna.lucinda.VulgateHelpers
+import io.asuna.proto.vulgate.VulgateData.AggregationFactors
 import scalaz.Scalaz._
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.statistics.{ StatisticsAggregator, StatisticsCombiner }
@@ -22,27 +23,16 @@ import scala.concurrent.{ ExecutionContext, Future }
 case class ChampionStatisticsId(
   // TODO(igm): support queue type
   tiers: Set[Int], patch: String, region: Region, role: Role, enemy: Int
-) {
-  def keyify: String = upickle.default.write(this)
-}
+)
 
-class ChampionStatisticsDAO(vulgate: Vulgate, db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
+class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
 
   /**
     * Gets a RoleStatistics object.
     */
-  def getWithRoles(
-    tiers: Option[TierRange], patches: Option[PatchRange], region: Region
-  ): Future[Seq[RoleStatistics]] = {
+  def getWithRoles(factors: AggregationFactors, region: Region): Future[Seq[RoleStatistics]] = {
     // TODO(igm): locale
     for {
-      factors <- vulgate.getAggregationFactors(
-        VulgateRpc.GetAggregationFactorsRequest(
-          context = VulgateHelpers.makeVulgateContext(patches, region).some,
-          patches = patches,
-          tiers = tiers
-        )
-      )
       roleStats <- Future.sequence(
         (Role.values zip factors.patches) map { case (role, patch) =>
           get(factors.champions.toSet, factors.tiers.toSet, patch, region, role).map((role, _))
@@ -66,7 +56,7 @@ class ChampionStatisticsDAO(vulgate: Vulgate, db: LucindaDatabase, redis: RedisC
     import scala.concurrent.duration._
 
     val id = ChampionStatisticsId(tiers, patch, region, role, enemy)
-    val key = id.keyify
+    val key = id.toString
     redis.get(key) flatMap {
       // If the key is found, we shall parse it
       case Some(bytes) => Future(ChampionStatistics.parseFrom(bytes.toArray[Byte]))

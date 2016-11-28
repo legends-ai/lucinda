@@ -23,11 +23,11 @@ class ChampionDAO(
     * Gets a Champion.
     */
   def getChampion(
-    tiers: Option[TierRange], patches: Option[PatchRange], champion: Int, region: Region,
+    factors: AggregationFactors, champion: Int, region: Region,
     role: Role, minPlayRate: Double
   ): Future[Champion] = {
     for {
-      (factors, bareChamp) <- getWithoutMatchups(tiers, patches, champion, region, role, minPlayRate, -1)
+      bareChamp <- getWithoutMatchups(factors, champion, region, role, minPlayRate, -1)
 
       // Matchup stuff. This is very expensive but fortunately it's cached.
       enemyStatistics <- statisticsDAO.getForPatches(
@@ -39,7 +39,7 @@ class ChampionDAO(
       champions <- vulgate.getChampions(
         VulgateRpc.GetChampionsRequest(
           // TODO(igm): locale
-          context = VulgateHelpers.makeVulgateContext(patches, region).some,
+          context = VulgateHelpers.makeVulgateContextOfPatch(factors.patches.last, region).some,
 
           // List of all champions we care about.
           // In theory this list will also include the champion requesting the data.
@@ -55,31 +55,21 @@ class ChampionDAO(
     *  Gets a Matchup.
     */
   def getMatchup(
-    tiers: Option[TierRange], patches: Option[PatchRange], focus: Int, region: Region,
+    factors: AggregationFactors, focus: Int, region: Region,
     role: Role, minPlayRate: Double, enemy: Int
   ): Future[Matchup] = {
     for {
-      (_, focusChamp) <- getWithoutMatchups(tiers, patches, focus, region, role, minPlayRate, enemy)
-      (_, enemyChamp) <- getWithoutMatchups(tiers, patches, enemy, region, role, minPlayRate, focus)
+      focusChamp <- getWithoutMatchups(factors, focus, region, role, minPlayRate, enemy)
+      enemyChamp <- getWithoutMatchups(factors, enemy, region, role, minPlayRate, focus)
     } yield Matchup(focus = focusChamp.some, enemy = enemyChamp.some)
   }
 
   private def getWithoutMatchups(
-    tiers: Option[TierRange], patches: Option[PatchRange], champion: Int, region: Region,
+    factors: AggregationFactors, champion: Int, region: Region,
     role: Role, minPlayRate: Double, enemy: Int = -1
-  ): Future[(AggregationFactors, Champion)] = {
+  ): Future[Champion] = {
     // TODO(igm): locale
     for {
-      // Initial vulgate request.
-      factors <- vulgate.getAggregationFactors(
-        VulgateRpc.GetAggregationFactorsRequest(
-          context = VulgateHelpers.makeVulgateContext(patches, region).some,
-          patches = patches,
-          tiers = tiers,
-          champion = champion
-        )
-      )
-
       // The match aggregate. Our main honcho.
       // Contains all data that matters.
       matchAggregate <- matchAggregateDAO.get(
@@ -92,7 +82,7 @@ class ChampionDAO(
         id = champion,
         matchAggregate = matchAggregate.some
       )
-    } yield (factors, champ)
+    } yield champ
   }
 
   private def makeMatchups(championData: Map[Int, Static.Champion], enemy: ChampionStatistics, focus: ChampionStatistics): Seq[MatchupOverview] = {

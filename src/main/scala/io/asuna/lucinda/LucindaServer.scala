@@ -42,24 +42,49 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
     name = "lucinda:aggs"
   )
 
-  lazy val championStatisticsDAO = new ChampionStatisticsDAO(vulgate, db, statsRedis)
+  lazy val championStatisticsDAO = new ChampionStatisticsDAO(db, statsRedis)
   lazy val matchAggregateDAO = new MatchAggregateDAO(db, aggRedis, championStatisticsDAO)
   lazy val championDAO = new ChampionDAO(vulgate, championStatisticsDAO, matchAggregateDAO)
 
   override def getStatistics(req: GetStatisticsRequest) = logFuture {
     for {
-      statistics <- championStatisticsDAO.getWithRoles(req.tier, req.patch, req.region)
+      factors <- vulgate.getAggregationFactors(
+        VulgateRpc.GetAggregationFactorsRequest(
+          context = VulgateHelpers.makeVulgateContext(req.patch, req.region).some,
+          patches = req.patch,
+          tiers = req.tier
+        )
+      )
+      statistics <- championStatisticsDAO.getWithRoles(factors, req.region)
     } yield GetStatisticsResponse(
       statistics = statistics
     )
   }
 
   override def getChampion(req: GetChampionRequest) = logFuture {
-    championDAO.getChampion(req.tier, req.patch, req.championId, req.region, req.role, req.minPlayRate)
+    for {
+      factors <- vulgate.getAggregationFactors(
+        VulgateRpc.GetAggregationFactorsRequest(
+          context = VulgateHelpers.makeVulgateContext(req.patch, req.region).some,
+          patches = req.patch,
+          tiers = req.tier
+        )
+      )
+      champ <- championDAO.getChampion(factors, req.championId, req.region, req.role, req.minPlayRate)
+    } yield champ
   }
 
   override def getMatchup(req: GetMatchupRequest) = logFuture {
-    championDAO.getMatchup(req.tier, req.patch, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId)
+    for {
+      factors <- vulgate.getAggregationFactors(
+        VulgateRpc.GetAggregationFactorsRequest(
+          context = VulgateHelpers.makeVulgateContext(req.patch, req.region).some,
+          patches = req.patch,
+          tiers = req.tier
+        )
+      )
+      matchup <- championDAO.getMatchup(factors, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId)
+    } yield matchup
   }
 
   override def getMatchSum(req: GetMatchSumRequest) = logFuture {

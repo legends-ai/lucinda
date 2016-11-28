@@ -12,9 +12,7 @@ case class MatchAggregateId(
   // TODO(igm): support queue type
   // TODO(igm): don't cache based on minPlayRate -- calculate on the fly
   champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int = -1, minPlayRate: Double
-) {
-  def keyify: String = upickle.default.write(this)
-}
+)
 
 class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: ChampionStatisticsDAO)(implicit ec: ExecutionContext) {
 
@@ -25,7 +23,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     import scala.concurrent.duration._
 
     val id = MatchAggregateId(champion, tiers, region, role, enemy, minPlayRate)
-    val key = id.keyify
+    val key = id.toString
     redis.get(key) flatMap {
       // If the key is found, we shall parse it
       case Some(bytes) => Future(MatchAggregate.parseFrom(bytes.toArray[Byte]))

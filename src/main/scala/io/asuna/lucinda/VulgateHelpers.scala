@@ -20,4 +20,11 @@ object VulgateHelpers {
     )
   }
 
+  def makeVulgateContextOfPatch(patch: String, region: Region, locale: Locale = Locale.en_US) = {
+    VulgateRpc.Context(
+      region = region,
+      release = VulgateRpc.Context.Release.Patch(patch)
+    )
+  }
+
 }
