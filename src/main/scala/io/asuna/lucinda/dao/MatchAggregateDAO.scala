@@ -24,9 +24,12 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
 
     val id = MatchAggregateId(champion, tiers, region, role, enemy, minPlayRate)
     val key = id.toString
-    redis.get(key) flatMap {
+
+    val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
+
+    redisResult flatMap {
       // If the key is not found or we're using force refresh, recalculate it and write it
-      case None | _ if forceRefresh => for {
+      case None => for {
         stats <- forceGet(
           champions, patches, lastFivePatches,
           champion, tiers, region, role, enemy, minPlayRate, forceRefresh
@@ -36,7 +39,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
       } yield stats
 
       // If the key is found, we shall parse it
-      case Some(bytes) => Future(MatchAggregate.parseFrom(bytes.toArray[Byte]))
+      case Some(bytes) => Future.successful(MatchAggregate.parseFrom(bytes.toArray[Byte]))
     }
   }
 

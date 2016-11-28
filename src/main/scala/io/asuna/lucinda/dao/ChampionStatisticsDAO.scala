@@ -57,15 +57,18 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
 
     val id = ChampionStatisticsId(tiers, patch, region, role, enemy)
     val key = id.toString
-    redis.get(key) flatMap {
+
+    val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
+
+    redisResult flatMap {
       // If the key is not found, recalculate it and write it
-      case None | _ if forceRefresh => for {
+      case None => for {
         stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
         result <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
       } yield stats
 
       // If the key is found, we shall parse it
-      case Some(bytes) => Future(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
+      case Some(bytes) => Future.successful(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
     }
   }
 
