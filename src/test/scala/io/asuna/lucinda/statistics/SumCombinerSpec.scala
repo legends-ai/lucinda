@@ -6,8 +6,7 @@ import org.scalatest.prop.PropertyChecks
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.Sums
 
-class SumCombinerSpec extends PropSpec
-    with PropertyChecks with Matchers with MatchSumGeneratorHelper {
+class SumCombinerSpec extends PropSpec with PropertyChecks with Matchers with MatchSumGeneratorHelper {
 
   property("generated sums are grouped by champion id") {
 
@@ -22,10 +21,22 @@ class SumCombinerSpec extends PropSpec
       val dds = sums.durationDistributions.get
       val subscalars = sums.subscalars.get
 
+      scalars.plays.foreach { case (_, plays) =>
+        plays should be >= (0L)
+      }
+
+      // The number of champs that are found for this role.
+      // This should be constant across all maps.
+      val roleChamps = scalars.plays.size
+
+      // Let's ensure that this number is sensible. It should be <= the total champions in the map.
+      roleChamps should be <= (inSums.size)
+
       // Let's first check the integrity of our MatchSum scalars.
       // Let's iterate over all of the properties. We will also supply a function
       // to extract the scalars.
       Seq[(Map[Int, Long], MatchSum.Scalars => Long)](
+        (scalars.plays, _.plays),
         (scalars.wins, _.wins),
         (scalars.goldEarned, _.goldEarned),
         (scalars.kills, _.kills),
@@ -53,9 +64,9 @@ class SumCombinerSpec extends PropSpec
         (scalars.trueDamage, _.trueDamage)
       ).foreach {
         case (map, scalarFn) =>
-          // The size of the map should be equivalent to the size of the input map.
-          // This corresponds to number of champions.
-          map.size should be (inSums.size)
+          // The size of the map should be less than or equal to the size of the input map.
+          // This corresponds to number of champions that have data.
+          map.size should be (roleChamps)
 
           // Now, we will ensure that all of our values in the map are correct.
           // Let's iterate over the key/value pairs in the map:
@@ -101,8 +112,8 @@ class SumCombinerSpec extends PropSpec
           (delta.twentyToThirty, _.twentyToThirty),
           (delta.thirtyToEnd, _.thirtyToEnd)
         ).foreach { case (map, deltaFn) =>
-          // Similarly, we should check that the size of each map is equivalent to the size of the input map.
-          map.size should be (inSums.size)
+          // Similarly, we should check that the size of each map is <= size of the input map.
+          map.size should be (roleChamps)
 
           // Again, we will also iterate over the map in the same fashion.
           map.foreach { case (key, value) =>
@@ -130,7 +141,7 @@ class SumCombinerSpec extends PropSpec
         (dds.twentyToThirty, _.twentyToThirty),
         (dds.thirtyToEnd, _.thirtyToEnd)
       ).foreach { case (map, ddFn) =>
-        map.size should be (inSums.size)
+        map.size should be (roleChamps)
 
           map.foreach { case (key, value) =>
             val inSum = inSums.get(key)
@@ -151,7 +162,7 @@ class SumCombinerSpec extends PropSpec
             ss.plays,
             ss.wins
           ).foreach { map =>
-            map.size should be (inSums.size)
+            map.size should be (roleChamps)
           }
         }
       }
