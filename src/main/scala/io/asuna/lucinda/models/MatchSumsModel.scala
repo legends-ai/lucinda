@@ -22,7 +22,9 @@ abstract class MatchSumsModel extends CassandraTable[ConcreteMatchSumsModel, Mat
   object region extends IntColumn(this) with PartitionKey[Int]
   object role extends IntColumn(this) with PartitionKey[Int]
 
-  object matchSum extends BlobColumn(this)
+  object matchSum extends BlobColumn(this) {
+    override def name = "match_sum"
+  }
 
   override def fromRow(r: Row): MatchSum = {
     val input = CodedInputStream.newInstance(matchSum(r))
