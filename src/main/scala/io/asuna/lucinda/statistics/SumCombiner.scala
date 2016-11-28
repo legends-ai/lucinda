@@ -27,6 +27,9 @@ object SumCombiner {
 
   def combineSums(sums: Map[Int, MatchSum]): Sums = {
     sums.foldLeft(zeroSums) { case (agg, (champion, sum)) =>
+      if (sum.scalars.map(_.plays).getOrElse(0L) == 0L) {
+        return agg
+      }
       Sums(
         scalars = Some(
           agg.scalars.get
