@@ -1,24 +1,23 @@
 package io.asuna.lucinda
 
-import io.asuna.asunasan.Config
+import io.asuna.asunasan.BaseService
 import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
-import io.asuna.proto.vulgate.VulgateData
 import scala.concurrent.{ExecutionContext, Future}
 
 import scalaz.Scalaz._
 import io.asuna.lucinda.dao.{ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO}
 import io.asuna.lucinda.database.{Connector, LucindaDatabase}
-import io.asuna.proto.lucinda.LucindaData._
 import io.asuna.proto.service_lucinda.LucindaGrpc
 import io.asuna.proto.service_lucinda.LucindaRpc._
 import redis.RedisClient
 
-class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
+import scala.concurrent.ExecutionContext.Implicits.global
+
+class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigParser) with LucindaGrpc.Lucinda {
+
+  override val serviceDefinition = LucindaGrpc.bindService(this, implicitly[ExecutionContext])
 
   implicit val akkaSystem = akka.actor.ActorSystem()
-
-  // TODO(igm): find an ec that supports rate limiting. We don't want to fuck up Cassandra.
-  implicit val ec = ExecutionContext.global
 
   // Setup database
   val connector = Connector.fromConfig(config)
@@ -46,7 +45,7 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
   lazy val matchAggregateDAO = new MatchAggregateDAO(db, aggRedis, championStatisticsDAO)
   lazy val championDAO = new ChampionDAO(vulgate, championStatisticsDAO, matchAggregateDAO)
 
-  override def getStatistics(req: GetStatisticsRequest) = logFuture {
+  override def getStatistics(req: GetStatisticsRequest) = endpoint {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -61,7 +60,7 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
     )
   }
 
-  override def getChampion(req: GetChampionRequest) = logFuture {
+  override def getChampion(req: GetChampionRequest) = endpoint {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -74,7 +73,7 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
     } yield champ
   }
 
-  override def getMatchup(req: GetMatchupRequest) = logFuture {
+  override def getMatchup(req: GetMatchupRequest) = endpoint {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -87,18 +86,8 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
     } yield matchup
   }
 
-  override def getMatchSum(req: GetMatchSumRequest) = logFuture {
+  override def getMatchSum(req: GetMatchSumRequest) = endpoint {
     db.matchSums.sum(req.filters.toSet)
-  }
-
-  private[this] def logFuture[T](fut: => Future[T]): Future[T] = {
-    fut.onFailure {
-      case t => {
-        println("An error has occured: " + t.getMessage)
-        t.printStackTrace()
-      }
-    }
-    fut
   }
 
 }
