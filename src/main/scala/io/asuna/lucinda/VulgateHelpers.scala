@@ -3,6 +3,7 @@ package io.asuna.lucinda
 import io.asuna.proto.enums.{ Locale, Region }
 import io.asuna.proto.range.PatchRange
 import io.asuna.proto.vulgate.VulgateData
+import io.asuna.proto.service_vulgate.VulgateRpc
 
 
 object VulgateHelpers {
@@ -10,10 +11,10 @@ object VulgateHelpers {
   def makeVulgateContext(patches: Option[PatchRange], region: Region, locale: Locale = Locale.en_US) = {
     // Default to an empty version if a patch range is not specified. This tells Vulgate to use the latest version.
     val release = patches match {
-      case Some(range) => VulgateData.Context.Release.Patch(range.max)
-      case None => VulgateData.Context.Release.Empty
+      case Some(range) => VulgateRpc.Context.Release.Patch(range.max)
+      case None => VulgateRpc.Context.Release.Empty
     }
-    VulgateData.Context(
+    VulgateRpc.Context(
       region = region,
       release = release
     )

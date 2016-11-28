@@ -211,7 +211,7 @@ object MatchAggregator {
         try {
           Some(f(el))
         } catch {
-          case _ => None
+          case _ : Throwable => None
         }
       }.filter(_ != None).map(_.get)
     }

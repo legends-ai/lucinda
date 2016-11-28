@@ -88,14 +88,11 @@ class ChampionDAO(
         role, enemy, minPlayRate
       )
 
-      champion = Champion(
-        metadata = Champion.Metadata(
-          staticInfo = factors.focus
-            // TODO(igm): patch start and end
-        ).some,
+      champ = Champion(
+        id = champion,
         matchAggregate = matchAggregate.some
       )
-    } yield (factors, champion)
+    } yield (factors, champ)
   }
 
   private def makeMatchups(championData: Map[Int, Static.Champion], enemy: ChampionStatistics, focus: ChampionStatistics): Seq[MatchupOverview] = {
@@ -105,7 +102,7 @@ class ChampionDAO(
     // Now, let's build our result by iterating over this.
     champs.map { champ =>
       MatchupOverview(
-        enemyData = championData.get(champ),
+        enemyId = champ,
         focusStatistics = MatchAggregator.makeStatistics(champ, focus).some,
         enemyStatistics = MatchAggregator.makeStatistics(champ, enemy).some
       )
