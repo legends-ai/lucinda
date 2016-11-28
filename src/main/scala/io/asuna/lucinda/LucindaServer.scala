@@ -46,31 +46,27 @@ class LucindaServer(config: Config[LucindaConfig]) extends LucindaGrpc.Lucinda {
   lazy val matchAggregateDAO = new MatchAggregateDAO(db, aggRedis, championStatisticsDAO)
   lazy val championDAO = new ChampionDAO(vulgate, championStatisticsDAO, matchAggregateDAO)
 
-  override def getStatistics(req: GetStatisticsRequest) = {
-    val fut = for {
+  override def getStatistics(req: GetStatisticsRequest) = logFuture {
+    for {
       statistics <- championStatisticsDAO.getWithRoles(req.tier, req.patch, req.region)
     } yield GetStatisticsResponse(
       statistics = statistics
     )
-    logFuture(fut)
   }
 
-  override def getChampion(req: GetChampionRequest) = {
-    val fut = championDAO.getChampion(req.tier, req.patch, req.championId, req.region, req.role, req.minPlayRate)
-    logFuture(fut)
+  override def getChampion(req: GetChampionRequest) = logFuture {
+    championDAO.getChampion(req.tier, req.patch, req.championId, req.region, req.role, req.minPlayRate)
   }
 
-  override def getMatchup(req: GetMatchupRequest) = {
-    val fut = championDAO.getMatchup(req.tier, req.patch, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId)
-    logFuture(fut)
+  override def getMatchup(req: GetMatchupRequest) = logFuture {
+    championDAO.getMatchup(req.tier, req.patch, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId)
   }
 
-  override def getMatchSum(req: GetMatchSumRequest) = {
-    val fut = db.matchSums.sum(req.filters.toSet)
-    logFuture(fut)
+  override def getMatchSum(req: GetMatchSumRequest) = logFuture {
+    db.matchSums.sum(req.filters.toSet)
   }
 
-  private[this] def logFuture[T](fut: Future[T]): Future[T] = {
+  private[this] def logFuture[T](fut: => Future[T]): Future[T] = {
     fut.onFailure {
       case t => {
         println("An error has occured: " + t.getMessage)
