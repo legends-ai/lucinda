@@ -1,6 +1,7 @@
 package io.asuna.lucinda.matches
 
-import io.asuna.asunasan.legends.MatchSumOperators._
+import cats.kernel.Monoid
+import io.asuna.asunasan.legends.MatchSumHelpers._
 import io.asuna.lucinda.statistics.StatisticsCombiner
 import io.asuna.proto.enums.{Ability, Region, Role}
 import io.asuna.proto.lucinda.LucindaData.{ChampionStatistics, Statistic}
@@ -9,7 +10,6 @@ import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.range.IntRange
-import scalaz.Scalaz._
 
 object MatchAggregator {
 
@@ -20,13 +20,13 @@ object MatchAggregator {
     val allStats = StatisticsCombiner.combine(patchStats.values.toList)
 
     // This is the quotient of the champion for the entire search space.
-    val quot = QuotientGenerator.generate(byPatch.values.foldLeft(MatchSum())(_ + _))
+    val quot = QuotientGenerator.generate(Monoid[MatchSum].combineAll(byPatch.values))
 
     MatchAggregate(
-      roles = makeRoleStats(allStats, byRole).some,
-      statistics = makeStatistics(champion, allStats).some,
-      graphs = makeGraphs(allStats, patchStats, quot, champion).some,
-      collections = makeCollections(quot, minPlayRate).some
+      roles = Some(makeRoleStats(allStats, byRole)),
+      statistics = Some(makeStatistics(champion, allStats)),
+      graphs = Some(makeGraphs(allStats, patchStats, quot, champion)),
+      collections = Some(makeCollections(quot, minPlayRate))
     )
   }
 

@@ -1,8 +1,7 @@
 package io.asuna.lucinda.statistics
 
-import scalaz.outlaws.std.double._
-import scalaz.Monoid
-import scalaz.Scalaz._
+import cats.Monoid
+import cats.implicits._
 import io.asuna.proto.enums.Role
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 
@@ -10,7 +9,7 @@ trait StatisticsMonoids {
 
   implicit object ScalarsMonoid extends Monoid[ChampionStatistics.Sums.Scalars] {
 
-    def append(a: ChampionStatistics.Sums.Scalars, b: => ChampionStatistics.Sums.Scalars): ChampionStatistics.Sums.Scalars = {
+    def combine(a: ChampionStatistics.Sums.Scalars, b: ChampionStatistics.Sums.Scalars): ChampionStatistics.Sums.Scalars = {
       ChampionStatistics.Sums.Scalars(
         plays = a.plays |+| b.plays,
         wins = a.wins |+| b.wins,
@@ -41,12 +40,12 @@ trait StatisticsMonoids {
       )
     }
 
-    def zero = ChampionStatistics.Sums.Scalars()
+    def empty = ChampionStatistics.Sums.Scalars()
   }
 
   implicit object DeltaMonoid extends Monoid[ChampionStatistics.Sums.Deltas.Delta] {
 
-    def append(a: ChampionStatistics.Sums.Deltas.Delta, b: => ChampionStatistics.Sums.Deltas.Delta): ChampionStatistics.Sums.Deltas.Delta = {
+    def combine(a: ChampionStatistics.Sums.Deltas.Delta, b: ChampionStatistics.Sums.Deltas.Delta): ChampionStatistics.Sums.Deltas.Delta = {
       ChampionStatistics.Sums.Deltas.Delta(
         zeroToTen = a.zeroToTen |+| b.zeroToTen,
         tenToTwenty = a.tenToTwenty |+| b.tenToTwenty,
@@ -55,12 +54,12 @@ trait StatisticsMonoids {
       )
     }
 
-    def zero = ChampionStatistics.Sums.Deltas.Delta()
+    def empty = ChampionStatistics.Sums.Deltas.Delta()
   }
 
   implicit object DeltasMonoid extends Monoid[ChampionStatistics.Sums.Deltas] {
 
-    def append(a: ChampionStatistics.Sums.Deltas, b: => ChampionStatistics.Sums.Deltas): ChampionStatistics.Sums.Deltas = {
+    def combine(a: ChampionStatistics.Sums.Deltas, b: ChampionStatistics.Sums.Deltas): ChampionStatistics.Sums.Deltas = {
       ChampionStatistics.Sums.Deltas(
         csDiff = a.csDiff |+| b.csDiff,
         xpDiff = a.xpDiff |+| b.xpDiff,
@@ -73,14 +72,14 @@ trait StatisticsMonoids {
       )
     }
 
-    def zero = ChampionStatistics.Sums.Deltas()
+    def empty = ChampionStatistics.Sums.Deltas()
   }
 
   implicit object DurationDistributionsMonoid extends Monoid[ChampionStatistics.Sums.DurationDistributions] {
 
-    def append(
+    def combine(
       a: ChampionStatistics.Sums.DurationDistributions,
-      b: => ChampionStatistics.Sums.DurationDistributions): ChampionStatistics.Sums.DurationDistributions = {
+      b: ChampionStatistics.Sums.DurationDistributions): ChampionStatistics.Sums.DurationDistributions = {
       ChampionStatistics.Sums.DurationDistributions(
         zeroToTen = a.zeroToTen |+| b.zeroToTen,
         tenToTwenty = a.tenToTwenty |+| b.tenToTwenty,
@@ -89,40 +88,40 @@ trait StatisticsMonoids {
       )
     }
 
-    def zero = ChampionStatistics.Sums.DurationDistributions()
+    def empty = ChampionStatistics.Sums.DurationDistributions()
   }
 
   implicit object SubscalarMonoid extends Monoid[ChampionStatistics.Sums.Subscalars.Subscalar] {
 
-    def append(
+    def combine(
       a: ChampionStatistics.Sums.Subscalars.Subscalar,
-      b: => ChampionStatistics.Sums.Subscalars.Subscalar) : ChampionStatistics.Sums.Subscalars.Subscalar = {
+      b: ChampionStatistics.Sums.Subscalars.Subscalar) : ChampionStatistics.Sums.Subscalars.Subscalar = {
       ChampionStatistics.Sums.Subscalars.Subscalar(
         plays = a.plays |+| b.plays,
         wins = a.wins |+| b.wins
       )
     }
 
-    def zero = ChampionStatistics.Sums.Subscalars.Subscalar()
+    def empty = ChampionStatistics.Sums.Subscalars.Subscalar()
   }
 
   implicit object SubscalarsMonoid extends Monoid[ChampionStatistics.Sums.Subscalars] {
 
-    def append(
+    def combine(
       a: ChampionStatistics.Sums.Subscalars,
-      b: => ChampionStatistics.Sums.Subscalars): ChampionStatistics.Sums.Subscalars = {
+      b: ChampionStatistics.Sums.Subscalars): ChampionStatistics.Sums.Subscalars = {
       ChampionStatistics.Sums.Subscalars(
         bans = a.bans |+| b.bans,
         allies = a.allies |+| b.allies
       )
     }
 
-    def zero = ChampionStatistics.Sums.Subscalars()
+    def empty = ChampionStatistics.Sums.Subscalars()
   }
 
   implicit object SumsMonoid extends Monoid[ChampionStatistics.Sums] {
 
-    def append(a: ChampionStatistics.Sums, b: => ChampionStatistics.Sums): ChampionStatistics.Sums = {
+    def combine(a: ChampionStatistics.Sums, b: ChampionStatistics.Sums): ChampionStatistics.Sums = {
       // TODO(igm): hard part
       ChampionStatistics.Sums(
         scalars = a.scalars |+| b.scalars,
@@ -132,12 +131,12 @@ trait StatisticsMonoids {
       )
     }
 
-    def zero = ChampionStatistics.Sums()
+    def empty = ChampionStatistics.Sums()
   }
 
   implicit object StatisticsMonoid extends Monoid[ChampionStatistics] {
 
-    def append(a: ChampionStatistics, b: => ChampionStatistics): ChampionStatistics = {
+    def combine(a: ChampionStatistics, b: ChampionStatistics): ChampionStatistics = {
       // wow a monoid can calculate things too!
       val sums = a.sums |+| b.sums
       val quotients = sums.map(QuotientsGenerator.generateQuotients)
@@ -151,7 +150,7 @@ trait StatisticsMonoids {
       )
     }
 
-    def zero = ChampionStatistics()
+    def empty = ChampionStatistics()
 
   }
 
@@ -160,7 +159,7 @@ trait StatisticsMonoids {
 object StatisticsCombiner extends StatisticsMonoids {
 
   def combine(aList: List[ChampionStatistics]): ChampionStatistics = {
-    aList.suml
+    aList.combineAll
   }
 
 }

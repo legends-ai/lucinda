@@ -4,27 +4,16 @@ version := "0.1.0"
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
-  // Asuna standard lib
-  "io.asuna" %% "asunasan" % "0.1.1-SNAPSHOT",
+  "io.asuna" %% "asunasan" % "0.3.0",
 
-  // Proto stuff
-  "com.trueaccord.scalapb" %% "scalapb-runtime" % "0.5.39",
-  "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % "0.5.39",
-  "io.grpc" % "grpc-netty" % "1.0.1",
-
-  // Scalatest
-  "org.scalacheck" %% "scalacheck" % "1.13.3" % "test", // prop tests
-  "org.scalactic" %% "scalactic" % "3.0.0" % "test",
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-
+  // Deps
   "com.github.etaty" %% "rediscala" % "1.6.0",
-  "com.github.scopt" %% "scopt" % "3.5.0",
-  "com.lihaoyi" %% "upickle" % "0.4.3",
-  "org.scalaz" %% "scalaz-core" % "7.2.7",
-  "org.typelevel" %% "scalaz-outlaws" % "0.2",
+  "com.websudos" %%  "phantom-dsl" % "1.29.5",  // cassandra
 
-  // Phantom
-  "com.websudos" %%  "phantom-dsl" % "1.29.5"
+  // Testing
+  "org.scalacheck" %% "scalacheck" % "1.13.3" % "test",
+  "org.scalactic" %% "scalactic" % "3.0.0" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )
 
 mainClass in assembly := Some("io.asuna.lucinda.Main")

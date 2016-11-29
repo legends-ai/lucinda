@@ -1,11 +1,14 @@
 package io.asuna.lucinda.models
 
+import cats.implicits._
+import cats.kernel.Monoid
+import cats.kernel.instances.OptionMonoid
 import com.websudos.phantom.dsl._
 import com.google.protobuf.CodedInputStream
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.match_filters.MatchFilters
-import io.asuna.asunasan.legends.MatchSumOperators._
 import scala.concurrent.Future
+import io.asuna.asunasan.legends.MatchSumHelpers._
 
 abstract class MatchSumsModel extends CassandraTable[ConcreteMatchSumsModel, MatchSum] {
 
@@ -48,16 +51,8 @@ abstract class ConcreteMatchSumsModel extends MatchSumsModel with RootConnector 
       .one()
   }
 
-  def sum(filters: Set[MatchFilters]): Future[MatchSum] = {
-    val futures = Future.sequence(filters.map(get(_)))
-    futures.map { (list) =>
-      list.foldLeft(MatchSum()) {
-        case (acc, v) => v match {
-          case Some(x) => acc + x
-          case None => acc
-        }
-      }
-    }
-  }
+  def sum(filters: Set[MatchFilters]): Future[MatchSum] = for {
+    sums <- Future.sequence(filters.map(get(_)))
+  } yield sums.combineAll.orEmpty
 
 }

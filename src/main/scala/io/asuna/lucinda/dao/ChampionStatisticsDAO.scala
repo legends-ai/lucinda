@@ -2,7 +2,6 @@ package io.asuna.lucinda.dao
 
 import io.asuna.lucinda.VulgateHelpers
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
-import scalaz.Scalaz._
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.statistics.{ StatisticsAggregator, StatisticsCombiner }
 import io.asuna.proto.enums.{ Region, Role }
@@ -41,7 +40,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     } yield roleStats.map { case (role, statistics) =>
       RoleStatistics(
         role = role,
-        statistics = statistics.some
+        statistics = Some(statistics)
       )
     }
   }

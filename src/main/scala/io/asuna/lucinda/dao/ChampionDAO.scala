@@ -5,7 +5,6 @@ import io.asuna.lucinda.matches.MatchAggregator
 import io.asuna.proto.charon.CharonData.{ Static }
 import io.asuna.proto.lucinda.LucindaData.{ Champion, Matchup }
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
-import scalaz.Scalaz._
 import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchupOverview
 import io.asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics }
@@ -39,7 +38,7 @@ class ChampionDAO(
       champions <- vulgate.getChampions(
         VulgateRpc.GetChampionsRequest(
           // TODO(igm): locale
-          context = VulgateHelpers.makeVulgateContextOfPatch(factors.patches.last, region).some,
+          context = Some(VulgateHelpers.makeVulgateContextOfPatch(factors.patches.last, region)),
 
           // List of all champions we care about.
           // In theory this list will also include the champion requesting the data.
@@ -61,7 +60,7 @@ class ChampionDAO(
     for {
       focusChamp <- getWithoutMatchups(factors, focus, region, role, minPlayRate, enemy, forceRefresh = forceRefresh)
       enemyChamp <- getWithoutMatchups(factors, enemy, region, role, minPlayRate, focus, forceRefresh = forceRefresh)
-    } yield Matchup(focus = focusChamp.some, enemy = enemyChamp.some)
+    } yield Matchup(focus = Some(focusChamp), enemy = Some(enemyChamp))
   }
 
   private def getWithoutMatchups(
@@ -80,7 +79,7 @@ class ChampionDAO(
 
       champ = Champion(
         id = champion,
-        matchAggregate = matchAggregate.some
+        matchAggregate = Some(matchAggregate)
       )
     } yield champ
   }
@@ -93,8 +92,8 @@ class ChampionDAO(
     champs.map { champ =>
       MatchupOverview(
         enemyId = champ,
-        focusStatistics = MatchAggregator.makeStatistics(champ, focus).some,
-        enemyStatistics = MatchAggregator.makeStatistics(champ, enemy).some
+        focusStatistics = Some(MatchAggregator.makeStatistics(champ, focus)),
+        enemyStatistics = Some(MatchAggregator.makeStatistics(champ, enemy))
       )
     }.toSeq
   }

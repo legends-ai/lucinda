@@ -4,7 +4,6 @@ import io.asuna.asunasan.BaseService
 import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
 import scala.concurrent.{ExecutionContext, Future}
 
-import scalaz.Scalaz._
 import io.asuna.lucinda.dao.{ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO}
 import io.asuna.lucinda.database.{Connector, LucindaDatabase}
 import io.asuna.proto.service_lucinda.LucindaGrpc
@@ -31,13 +30,13 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
   lazy val statsRedis = RedisClient(
     host = config.service.redisHost,
     port = config.service.redisPort,
-    db = 0.some,
+    db = Some(0),
     name = "lucinda:stats"
   )
   lazy val aggRedis = RedisClient(
     host = config.service.redisHost,
     port = config.service.redisPort,
-    db = 1.some,
+    db = Some(1),
     name = "lucinda:aggs"
   )
 
@@ -49,7 +48,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
-          context = VulgateHelpers.makeVulgateContext(req.patch, req.region).some,
+          context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
           patches = req.patch,
           tiers = req.tier
         )
@@ -64,7 +63,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
-          context = VulgateHelpers.makeVulgateContext(req.patch, req.region).some,
+          context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
           patches = req.patch,
           tiers = req.tier
         )
@@ -73,11 +72,12 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
     } yield champ
   }
 
+
   override def getMatchup(req: GetMatchupRequest) = endpoint {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
-          context = VulgateHelpers.makeVulgateContext(req.patch, req.region).some,
+          context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
           patches = req.patch,
           tiers = req.tier
         )
