@@ -111,8 +111,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
         case true => basis.map { filter =>
           filter.copy(championId = filter.enemyId, enemyId = filter.championId)
         }
-        case
-            false => basis
+        case false => basis
       }
       (champ, filterSet)
     }.toMap
