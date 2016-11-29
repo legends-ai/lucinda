@@ -10,6 +10,7 @@ import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.range.IntRange
+import scala.util.{ Success, Try }
 
 object MatchAggregator {
 
@@ -207,13 +208,7 @@ object MatchAggregator {
 
   implicit class SafeMap[T](coll: Traversable[T]) {
     def safelyMap[U](f: T => U): Traversable[U] = {
-      coll.map { el =>
-        try {
-          Some(f(el))
-        } catch {
-          case _ : Throwable => None
-        }
-      }.filter(_ != None).map(_.get)
+      coll.map(el => Try { f(el) }) collect { case Success(x) => x }
     }
   }
 
