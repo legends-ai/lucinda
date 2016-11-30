@@ -64,7 +64,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
       // If the key is not found, recalculate it and write it
       case None => for {
         stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
-        result <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
+        _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
       } yield stats
 
       // If the key is found, we shall parse it
