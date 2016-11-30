@@ -1,5 +1,6 @@
 package io.asuna.lucinda.dao
 
+import io.asuna.lucinda.filters.MatchFilterSet
 import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.lucinda.matches.MatchAggregator
@@ -66,14 +67,14 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     // Next, let's get per-role sums.
     val byRoleFilters = Role.values.map { someRole =>
       (role, patches.flatMap {
-         patch => MatchAggregator.buildFilters(champion, patch, tiers, region, enemy, someRole)
+         patch => MatchFilterSet(champion, patch, tiers, region, enemy, someRole).toFilterSet
        })
     }.toMap
     val byRoleFut = FutureUtil.sequenceMap(byRoleFilters.mapValues(filters => db.matchSums.sum(filters)))
 
     // Next, let's get per-patch sums.
     val byPatchFilters = lastFivePatches.map { patch =>
-      (patch, MatchAggregator.buildFilters(champion, patch, tiers, region, enemy, role))
+      (patch, MatchFilterSet(champion, patch, tiers, region, enemy, role).toFilterSet)
     }.toMap
     val byPatchFut = FutureUtil.sequenceMap(byPatchFilters.mapValues(filters => db.matchSums.sum(filters)))
 

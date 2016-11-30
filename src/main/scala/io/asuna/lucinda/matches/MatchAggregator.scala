@@ -32,22 +32,6 @@ object MatchAggregator {
   }
 
   /**
-    * Build filters for the given champion with the given tiers.
-    */
-  def buildFilters(champion: Int, patch: String, tiers: Set[Int], region: Region, enemy: Int = -1, role: Role): Set[MatchFilters] = {
-    for {
-      tier <- tiers
-    } yield MatchFilters(
-      championId = champion,
-      patch = patch,
-      tier = tier,
-      region = region,
-      enemyId = enemy,
-      role = role
-    )
-  }
-
-  /**
     * Prepares the MatchAggregateRoles object.
     */
   private[this] def makeRoleStats(allStats: ChampionStatistics, roleSums: Map[Role, MatchSum]): MatchAggregate.Roles = {

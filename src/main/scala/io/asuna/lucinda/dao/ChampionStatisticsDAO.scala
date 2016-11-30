@@ -1,5 +1,6 @@
 package io.asuna.lucinda.dao
 
+import io.asuna.lucinda.filters.MatchFilterSet
 import io.asuna.lucinda.VulgateHelpers
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
 import io.asuna.lucinda.FutureUtil
@@ -105,15 +106,13 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     // Here, we build the Set[MatchFilters] for every champion.
     // This is of type Map[Int, Set[MatchFilters]].
     val filtersMap = champions.map { champ =>
-      val basis = StatisticsAggregator.buildFilterSet(champ, patch, tiers, region, role, enemy)
-      val filterSet = if (reverse) {
-        basis.map { filter =>
-          filter.copy(championId = filter.enemyId, enemyId = filter.championId)
-        }
+      val basis = MatchFilterSet(champ, patch, tiers, region, enemy, role)
+      val nextSet = if (reverse) {
+        basis.inverse
       } else {
         basis
       }
-      (champ, filterSet)
+      (champ, nextSet.toFilterSet)
     }.toMap
 
     // Next, we'll compute the MatchSums. This is where the function is no longer
