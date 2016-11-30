@@ -24,6 +24,7 @@ abstract class MatchSumsModel extends CassandraTable[ConcreteMatchSumsModel, Mat
   object tier extends IntColumn(this) with PartitionKey[Int]
   object region extends IntColumn(this) with PartitionKey[Int]
   object role extends IntColumn(this) with PartitionKey[Int]
+  object queue extends StringColumn(this) with PartitionKey[String]
 
   object matchSum extends BlobColumn(this) {
     override def name = "match_sum"
@@ -47,6 +48,7 @@ abstract class ConcreteMatchSumsModel extends MatchSumsModel with RootConnector 
       .and(_.tier eqs filters.tier)
       .and(_.region eqs filters.region.value)
       .and(_.role eqs filters.role.value)
+      .and(_.queue eqs filters.queue)
       .consistencyLevel_=(ConsistencyLevel.ONE)
       .one()
   }
