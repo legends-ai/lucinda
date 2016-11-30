@@ -34,8 +34,11 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     // TODO(igm): locale
     for {
       roleStats <- Future.sequence(
-        (Role.values zip factors.patches) map { case (role, patch) =>
-          get(factors.champions.toSet, factors.tiers.toSet, patch, region, role, forceRefresh = forceRefresh).map((role, _))
+        for (role <- Role.values; patch <- factors.patches) yield {
+          get(
+            factors.champions.toSet, factors.tiers.toSet, patch,
+            region, role, forceRefresh = forceRefresh
+          ).map((role, _))
         }
       )
     } yield roleStats.map { case (role, statistics) =>
