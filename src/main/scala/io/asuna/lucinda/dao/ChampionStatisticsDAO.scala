@@ -105,7 +105,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     // Here, we build the Set[MatchFilters] for every champion.
     // This is of type Map[Int, Set[MatchFilters]].
     val filtersMap = champions.map { champ =>
-      val basis = StatisticsAggregator.buildFilterSet(champ, patch, tiers, region, role, enemy)
+      val basis = MatchFilterSpace(champ, patch, tiers, region, role, enemy)
       val filterSet = if (reverse) {
         basis.map { filter =>
           filter.copy(championId = filter.enemyId, enemyId = filter.championId)
@@ -113,6 +113,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
       } else {
         basis
       }
+
       (champ, filterSet)
     }.toMap
 
