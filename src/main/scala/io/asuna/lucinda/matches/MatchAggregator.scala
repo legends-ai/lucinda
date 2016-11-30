@@ -50,10 +50,10 @@ object MatchAggregator {
   /**
     * Prepares the MatchAggregateRoles object.
     */
-  private def makeRoleStats(allStats: ChampionStatistics, roleSums: Map[Role, MatchSum]): MatchAggregate.Roles = {
+  private[this] def makeRoleStats(allStats: ChampionStatistics, roleSums: Map[Role, MatchSum]): MatchAggregate.Roles = {
     // We get the total champions in role based on number of win rates in map.
     val totalChampionsInRole = allStats.results.flatMap(_.scalars)
-      .map(_.wins).map(_.size).getOrElse(0)
+      .map(_.wins.keys.filter(_ > 0).size).getOrElse(0)
 
     // Number of games played by the champion for each role.
     val gamesByRole = roleSums.mapValues(_.scalars.map(_.plays).getOrElse(0L)).toMap
@@ -62,18 +62,18 @@ object MatchAggregator {
     val totalGames = gamesByRole.values.sum
 
     // Stats by role.
-    val roleStats = gamesByRole.map { case (role, numMatches) =>
-      MatchAggregate.Roles.RoleStats(
-        role = allStats.role,
-        pickRate = numMatches.toDouble / totalGames,
-        numMatches = numMatches.toInt
-      )
-    }.toSeq
+    val roleStats = for {
+      (role, numMatches) <- gamesByRole
+    } yield MatchAggregate.Roles.RoleStats(
+      role = role,
+      pickRate = numMatches.toDouble / totalGames,
+      numMatches = numMatches.toInt
+    )
 
     MatchAggregate.Roles(
       role = allStats.role,
       totalChampionsInRole = totalChampionsInRole,
-      roleStats = roleStats
+      roleStats = roleStats.toSeq
     )
   }
 
