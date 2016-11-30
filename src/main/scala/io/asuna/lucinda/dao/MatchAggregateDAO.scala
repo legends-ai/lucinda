@@ -11,7 +11,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 case class MatchAggregateId(
   // TODO(igm): support queue type
   // TODO(igm): don't cache based on minPlayRate -- calculate on the fly
-  champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int = -1, minPlayRate: Double
+  patches: Set[String], lastFivePatches: Set[String], champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int, minPlayRate: Double
 )
 
 class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: ChampionStatisticsDAO)(implicit ec: ExecutionContext) {
@@ -22,7 +22,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
   ): Future[MatchAggregate] = {
     import scala.concurrent.duration._
 
-    val id = MatchAggregateId(champion, tiers, region, role, enemy, minPlayRate)
+    val id = MatchAggregateId(patches, lastFivePatches, champion, tiers, region, role, enemy, minPlayRate)
     val key = id.toString
 
     val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
