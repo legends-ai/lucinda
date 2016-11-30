@@ -4,6 +4,7 @@ import io.asuna.asunasan.BaseService
 import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
 import scala.concurrent.{ExecutionContext, Future}
 
+import io.asuna.proto.enums.QueueType
 import io.asuna.lucinda.dao.{ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO}
 import io.asuna.lucinda.database.{Connector, LucindaDatabase}
 import io.asuna.proto.service_lucinda.LucindaGrpc
@@ -17,6 +18,8 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
   override val serviceDefinition = LucindaGrpc.bindService(this, implicitly[ExecutionContext])
 
   implicit val akkaSystem = akka.actor.ActorSystem()
+
+  val rankedQueues = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
 
   // Setup database
   val connector = Connector.fromConfig(config)
@@ -68,7 +71,10 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
           tiers = req.tier
         )
       )
-      champ <- championDAO.getChampion(factors, req.championId, req.region, req.role, req.minPlayRate, forceRefresh = req.forceRefresh)
+      champ <- championDAO.getChampion(
+        factors, req.championId, req.region, req.role, rankedQueues,
+        req.minPlayRate, forceRefresh = req.forceRefresh
+      )
     } yield champ
   }
 
@@ -82,7 +88,11 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
           tiers = req.tier
         )
       )
-      matchup <- championDAO.getMatchup(factors, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId, forceRefresh = req.forceRefresh)
+      matchup <- championDAO.getMatchup(
+        factors, req.focusChampionId, req.region, req.role,
+        req.minPlayRate, req.enemyChampionId, rankedQueues,
+        forceRefresh = req.forceRefresh
+      )
     } yield matchup
   }
 

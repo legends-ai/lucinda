@@ -3,7 +3,7 @@ package io.asuna.lucinda.matches
 import cats.kernel.Monoid
 import io.asuna.asunasan.legends.MatchSumHelpers._
 import io.asuna.lucinda.statistics.StatisticsCombiner
-import io.asuna.proto.enums.{Ability, Region, Role}
+import io.asuna.proto.enums.{ Ability, QueueType, Region, Role }
 import io.asuna.proto.lucinda.LucindaData.{ChampionStatistics, Statistic}
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
 import io.asuna.proto.match_filters.MatchFilters
@@ -28,22 +28,6 @@ object MatchAggregator {
       statistics = Some(makeStatistics(champion, allStats)),
       graphs = Some(makeGraphs(allStats, patchStats, quot, champion)),
       collections = Some(makeCollections(quot, minPlayRate))
-    )
-  }
-
-  /**
-    * Build filters for the given champion with the given tiers.
-    */
-  def buildFilters(champion: Int, patch: String, tiers: Set[Int], region: Region, enemy: Int = -1, role: Role): Set[MatchFilters] = {
-    for {
-      tier <- tiers
-    } yield MatchFilters(
-      championId = champion,
-      patch = patch,
-      tier = tier,
-      region = region,
-      enemyId = enemy,
-      role = role
     )
   }
 
