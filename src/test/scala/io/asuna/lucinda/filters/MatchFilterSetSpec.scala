@@ -9,14 +9,14 @@ import io.asuna.proto.enums.{Region, Role, QueueType}
 class MatchFilterSetSpec extends PropSpec
     with PropertyChecks with Matchers with MatchSumGeneratorHelper {
 
-  val queue = QueueType.RANKED_FLEX_SR
+  val queues = Set[QueueType](QueueType.RANKED_FLEX_SR)
 
   property("filters should be correct cardinality") {
     forAll {
       (championId: Int, patch: String, tiers: Set[Int],
        region: Region, role: Role, enemy: Int) =>
 
-      val result = MatchFilterSet(championId, patch, tiers, region, enemy, role, Set(queue)).toFilterSet
+      val result = MatchFilterSet(championId, patch, tiers, region, enemy, role, queues).toFilterSet
       result.size should be (tiers.size)
     }
   }
@@ -26,7 +26,7 @@ class MatchFilterSetSpec extends PropSpec
       (championId: Int, patch: String, tiers: Set[Int],
        region: Region, role: Role, enemy: Int) =>
 
-      val result = MatchFilterSet(championId, patch, tiers, region, enemy, role, Set(queue)).toFilterSet
+      val result = MatchFilterSet(championId, patch, tiers, region, enemy, role, queues).toFilterSet
 
       // constants
       result.filter(_.championId == championId).size should be (result.size)
@@ -46,7 +46,7 @@ class MatchFilterSetSpec extends PropSpec
       (championId: Int, patch: String, tiers: Set[Int],
       region: Region, role: Role, enemy: Int) =>
 
-      val result = MatchFilterSet(championId, patch, tiers, region, enemy, role, Set(queue)).toFilterSet
+      val result = MatchFilterSet(championId, patch, tiers, region, enemy, role, queues).toFilterSet
 
       whenever (!tiers.isEmpty) {
         result.groupBy(_.championId).size should be (1)
@@ -62,7 +62,7 @@ class MatchFilterSetSpec extends PropSpec
   property("Empty result for empty tiers") {
     forAll {
       (championId: Int, patch: String, region: Region, role: Role, enemy: Int) =>
-      val result = MatchFilterSet(championId, patch, Set(), region, enemy, role, Set(queue)).toFilterSet
+      val result = MatchFilterSet(championId, patch, Set[Int](), region, enemy, role, queues).toFilterSet
       result.size should be (0)
     }
   }
