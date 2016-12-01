@@ -64,24 +64,34 @@ class ChampionDAO(
   }
 
   private def getWithoutMatchups(
-    factors: AggregationFactors, champion: Int, region: Region,
-    role: Role, minPlayRate: Double, enemy: Int = -1, forceRefresh: Boolean = false
+    factors: AggregationFactors,
+    champion: Int,
+    region: Region,
+    role: Role,
+    minPlayRate: Double,
+    enemy: Int,
+    forceRefresh: Boolean = false
   ): Future[Champion] = {
     // TODO(igm): locale
     for {
       // The match aggregate. Our main honcho.
       // Contains all data that matters.
       matchAggregate <- matchAggregateDAO.get(
-        factors.champions.toSet, factors.patches.toSet, factors.lastFivePatches.toSet,
-        champion, factors.tiers.toSet, region,
-        role, enemy, minPlayRate, forceRefresh = forceRefresh
+        champions = factors.champions.toSet,
+        patches = factors.patches.toSet,
+        lastFivePatches = factors.lastFivePatches,
+        champion = champion,
+        tiers = factors.tiers.toSet,
+        region = region,
+        role = role,
+        enemy = enemy,
+        minPlayRate = minPlayRate,
+        forceRefresh = forceRefresh
       )
-
-      champ = Champion(
-        id = champion,
-        matchAggregate = Some(matchAggregate)
-      )
-    } yield champ
+    } yield Champion(
+      id = champion,
+      matchAggregate = Some(matchAggregate)
+    )
   }
 
   private def makeMatchups(championData: Map[Int, Static.Champion], enemy: ChampionStatistics, focus: ChampionStatistics): Seq[MatchupOverview] = {

@@ -12,18 +12,42 @@ import scala.concurrent.{ ExecutionContext, Future }
 case class MatchAggregateId(
   // TODO(igm): support queue type
   // TODO(igm): don't cache based on minPlayRate -- calculate on the fly
-  patches: Set[String], lastFivePatches: Set[String], champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int, minPlayRate: Double
+  patches: Set[String],
+  lastFivePatches: Seq[String],
+  champion: Int,
+  tiers: Set[Int],
+  region: Region,
+  role: Role,
+  enemy: Int,
+  minPlayRate: Double
 )
 
 class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: ChampionStatisticsDAO)(implicit ec: ExecutionContext) {
 
   def get(
-    champions: Set[Int], patches: Set[String], lastFivePatches: Set[String],
-    champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int = -1, minPlayRate: Double, forceRefresh: Boolean = false
+    champions: Set[Int],
+    patches: Set[String],
+    lastFivePatches: Seq[String],
+    champion: Int,
+    tiers: Set[Int],
+    region: Region,
+    role: Role,
+    enemy: Int = -1,
+    minPlayRate: Double,
+    forceRefresh: Boolean = false
   ): Future[MatchAggregate] = {
     import scala.concurrent.duration._
 
-    val id = MatchAggregateId(patches, lastFivePatches, champion, tiers, region, role, enemy, minPlayRate)
+    val id = MatchAggregateId(
+      patches = patches,
+      lastFivePatches = lastFivePatches,
+      champion = champion,
+      tiers = tiers,
+      region = region,
+      role = role,
+      enemy = enemy,
+      minPlayRate = minPlayRate
+    )
     val key = id.toString
 
     val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
@@ -32,8 +56,16 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
       // If the key is not found or we're using force refresh, recalculate it and write it
       case None => for {
         stats <- forceGet(
-          champions, patches, lastFivePatches,
-          champion, tiers, region, role, enemy, minPlayRate, forceRefresh
+          champions = champions,
+          patches = patches,
+          lastFivePatches = lastFivePatches,
+          champion = champion,
+          tiers = tiers,
+          region = region,
+          role = role,
+          enemy = enemy,
+          minPlayRate = minPlayRate,
+          forceRefresh = forceRefresh
         )
         // TODO(igm): make this time configurable.
         result <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
@@ -51,8 +83,16 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     * @param lastFivePatches -- The last five patches of the game.
     */
   private def forceGet(
-    champions: Set[Int], patches: Set[String], lastFivePatches: Set[String],
-    champion: Int, tiers: Set[Int], region: Region, role: Role, enemy: Int = -1, minPlayRate: Double, forceRefresh: Boolean = false
+    champions: Set[Int],
+    patches: Set[String],
+    lastFivePatches: Seq[String],
+    champion: Int,
+    tiers: Set[Int],
+    region: Region,
+    role: Role,
+    enemy: Int,
+    minPlayRate: Double,
+    forceRefresh: Boolean
   ): Future[MatchAggregate] = {
     // First, let's retrieve all stats for this combination.
     val allStatsFuts = patches.map { patch =>
