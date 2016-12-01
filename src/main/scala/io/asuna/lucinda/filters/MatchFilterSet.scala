@@ -10,7 +10,7 @@ case class MatchFilterSet(
   region: Region,
   enemy: Int,
   role: Role,
-  queues: Set[QueueType] = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
+  queues: Set[QueueType]
 ) {
 
   def toFilterSet: Set[MatchFilters] = {
@@ -36,6 +36,42 @@ case class MatchFilterSet(
 
 object MatchFilterSet {
 
+  val defaultQueues = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
+
+  def apply(
+    champion: Int,
+    patches: Set[String],
+    tiers: Set[Int],
+    region: Region,
+    enemy: Int,
+    role: Role
+  ): MatchFilterSet = MatchFilterSet(
+    champion = champion,
+    patches = patches,
+    tiers = tiers,
+    region = region,
+    enemy = enemy,
+    role = role,
+    queues = defaultQueues
+  )
+
+  def apply(
+    champion: Int,
+    patch: String,
+    tiers: Set[Int],
+    region: Region,
+    enemy: Int,
+    role: Role
+  ): MatchFilterSet = MatchFilterSet(
+    champion = champion,
+    patches = Set(patch),
+    tiers = tiers,
+    region = region,
+    enemy = enemy,
+    role = role,
+    queues = defaultQueues
+  )
+
   def apply(
     champion: Int,
     patch: String,
@@ -43,7 +79,7 @@ object MatchFilterSet {
     region: Region,
     enemy: Int,
     role: Role,
-    queues: Set[QueueType] = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
+    queues: Set[QueueType]
   ): MatchFilterSet = MatchFilterSet(
     champion = champion,
     patches = Set(patch),
