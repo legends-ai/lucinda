@@ -9,7 +9,6 @@ import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.range.{ PatchRange, TierRange }
-import io.asuna.proto.service_lucinda.LucindaRpc.GetStatisticsResponse.RoleStatistics
 import io.asuna.proto.service_vulgate.VulgateGrpc.Vulgate
 import io.asuna.proto.service_vulgate.VulgateRpc
 import io.asuna.proto.vulgate.VulgateData
@@ -28,33 +27,40 @@ case class ChampionStatisticsId(
 class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
 
   /**
-    * Gets a RoleStatistics object.
+    * Get uses AggregationFactors to fetch.
     */
-  def getWithRoles(factors: AggregationFactors, region: Region, forceRefresh: Boolean = false): Future[Seq[RoleStatistics]] = {
-    // TODO(igm): locale
-    for {
-      roleStats <- Future.sequence(
-        for (role <- Role.values; patch <- factors.patches) yield {
-          get(
-            factors.champions.toSet, factors.tiers.toSet, patch,
-            region, role, forceRefresh = forceRefresh
-          ).map((role, _))
-        }
-      )
-    } yield roleStats.map { case (role, statistics) =>
-      RoleStatistics(
-        role = role,
-        statistics = Some(statistics)
-      )
-    }
+  def get(
+    factors: AggregationFactors,
+    region: Region,
+    role: Role,
+    enemy: Int = -1,
+    reverse: Boolean = false,
+    forceRefresh: Boolean = false
+  ): Future[ChampionStatistics] = {
+    getForPatches(
+      champions = factors.champions.toSet,
+      tiers = factors.tiers.toSet,
+      patches = factors.patches.toSet,
+      region = region,
+      role = role,
+      enemy = enemy,
+      reverse = reverse,
+      forceRefresh = forceRefresh
+    )
   }
 
   /**
     * Gets a ChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
     */
-  def get(
-    champions: Set[Int], tiers: Set[Int], patch: String, region: Region,
-    role: Role, enemy: Int = -1, reverse: Boolean = false, forceRefresh: Boolean = false
+  def getSingle(
+    champions: Set[Int],
+    tiers: Set[Int],
+    patch: String,
+    region: Region,
+    role: Role,
+    enemy: Int = -1,
+    reverse: Boolean = false,
+    forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
 
@@ -78,14 +84,20 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
   /**
     * Runs get across multiple patches and aggregates into one ChampionStatistics object.
     */
-  def getForPatches(
-    champions: Set[Int], tiers: Set[Int], patch: Set[String], region: Region,
-    role: Role, enemy: Int = -1, reverse: Boolean = false, forceRefresh: Boolean = false
+  private[this] def getForPatches(
+    champions: Set[Int],
+    tiers: Set[Int],
+    patches: Set[String],
+    region: Region,
+    role: Role,
+    enemy: Int = -1,
+    reverse: Boolean = false,
+    forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     for {
       statsList <- Future.sequence(
-        patch.map(
-          get(champions, tiers, _, region, role, enemy, reverse, forceRefresh = forceRefresh)))
+        patches.map(patch =>
+          getSingle(champions, tiers, patch, region, role, enemy, reverse, forceRefresh = forceRefresh)))
     } yield StatisticsCombiner.combine(statsList.toList)
   }
 

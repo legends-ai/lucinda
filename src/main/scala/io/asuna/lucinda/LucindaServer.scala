@@ -53,9 +53,14 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
           tiers = req.tier
         )
       )
-      statistics <- championStatisticsDAO.getWithRoles(factors, req.region, forceRefresh = req.forceRefresh)
+      statistics <- championStatisticsDAO.get(
+        factors = factors,
+        region = req.region,
+        role = req.role,
+        forceRefresh = req.forceRefresh
+      )
     } yield GetStatisticsResponse(
-      statistics = statistics
+      statistics = Some(statistics)
     )
   }
 

@@ -29,10 +29,25 @@ class ChampionDAO(
       bareChamp <- getWithoutMatchups(factors, champion, region, role, minPlayRate, -1, forceRefresh = forceRefresh)
 
       // Matchup stuff. This is very expensive but fortunately it's cached.
-      enemyStatistics <- statisticsDAO.getForPatches(
-        factors.champions.toSet, factors.tiers.toSet, factors.patches.toSet, region, role, -1, forceRefresh = forceRefresh)
-      championStatistics <- statisticsDAO.getForPatches(
-        factors.champions.toSet, factors.tiers.toSet, factors.patches.toSet, region, role, -1, reverse = true, forceRefresh = forceRefresh)
+      // Enemy statistics against the champion.
+      enemyStatistics <- statisticsDAO.get(
+        factors = factors,
+        region = region,
+        role = role,
+        enemy = champion,
+        reverse = false,
+        forceRefresh = forceRefresh
+      )
+
+      // Champion statistics against each enemy.
+      championStatistics <- statisticsDAO.get(
+        factors = factors,
+        region = region,
+        role = role,
+        enemy = champion,
+        reverse = true,
+        forceRefresh = forceRefresh
+      )
 
       // Vulgate champion data
       champions <- vulgate.getChampions(

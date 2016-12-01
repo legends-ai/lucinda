@@ -96,7 +96,9 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
   ): Future[MatchAggregate] = {
     // First, let's retrieve all stats for this combination.
     val allStatsFuts = patches.map { patch =>
-      statistics.get(champions, tiers, patch, region, role, enemy, forceRefresh).map((patch, _))
+      statistics.getSingle(
+        champions, tiers, patch, region, role, enemy, forceRefresh
+      ).map((patch, _))
     }
 
     // This future contains an element of the form Map[String, ChampionStatistics]
