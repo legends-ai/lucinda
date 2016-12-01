@@ -28,26 +28,27 @@ object SumCombiner {
   def combineSums(sums: Map[Int, MatchSum]): Sums = {
     sums.foldLeft(zeroSums) { case (agg, (champion, sum)) =>
       if (sum.scalars.map(_.plays).getOrElse(0L) == 0L) {
-        return agg
-      }
-      Sums(
-        scalars = Some(
-          agg.scalars.get
-            .append(champion, sum.scalars.getOrElse(MatchSum.Scalars()))
-        ),
-        deltas = Some(
-          agg.deltas.get
-            .append(champion, sum.deltas.getOrElse(MatchSum.Deltas()))
-        ),
-        durationDistributions = Some(
-          agg.durationDistributions.get
-            .append(champion, sum.durationDistribution.getOrElse(MatchSum.DurationDistribution()))
-        ),
-        subscalars = Some(
-          agg.subscalars.get
-            .append(champion, bans = sum.bans, allies = sum.allies)
+        agg
+      } else {
+        Sums(
+          scalars = Some(
+            agg.scalars.get
+              .append(champion, sum.scalars.getOrElse(MatchSum.Scalars()))
+          ),
+          deltas = Some(
+            agg.deltas.get
+              .append(champion, sum.deltas.getOrElse(MatchSum.Deltas()))
+          ),
+          durationDistributions = Some(
+            agg.durationDistributions.get
+              .append(champion, sum.durationDistribution.getOrElse(MatchSum.DurationDistribution()))
+          ),
+          subscalars = Some(
+            agg.subscalars.get
+              .append(champion, bans = sum.bans, allies = sum.allies)
+          )
         )
-      )
+      }
     }
   }
 
