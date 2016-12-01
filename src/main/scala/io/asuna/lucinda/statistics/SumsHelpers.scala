@@ -15,7 +15,7 @@ object SumsHelpers {
         wins = a.wins |+| b.wins,
         goldEarned = a.goldEarned |+| b.goldEarned,
         kills = a.kills |+| b.kills,
-        deaths = a.deaths |+| b.kills,
+        deaths = a.deaths |+| b.deaths,
         assists = a.assists |+| b.assists,
         damageDealt = a.damageDealt |+| b.damageDealt,
         damageTaken = a.damageTaken |+| b.damageTaken,
@@ -72,7 +72,16 @@ object SumsHelpers {
       )
     }
 
-    def empty = ChampionStatistics.Sums.Deltas()
+    def empty = ChampionStatistics.Sums.Deltas(
+      csDiff = Some(DeltaMonoid.empty),
+      xpDiff = Some(DeltaMonoid.empty),
+      damageTakenDiff = Some(DeltaMonoid.empty),
+      xpPerMin = Some(DeltaMonoid.empty),
+      goldPerMin = Some(DeltaMonoid.empty),
+      towersPerMin = Some(DeltaMonoid.empty),
+      wardsPlaced = Some(DeltaMonoid.empty),
+      damageTaken = Some(DeltaMonoid.empty)
+    )
   }
 
   implicit object DurationDistributionsMonoid extends Monoid[ChampionStatistics.Sums.DurationDistributions] {
@@ -131,7 +140,12 @@ object SumsHelpers {
       )
     }
 
-    def empty = ChampionStatistics.Sums()
+    def empty = ChampionStatistics.Sums(
+      scalars = Some(ScalarsMonoid.empty),
+      deltas = Some(DeltasMonoid.empty),
+      durationDistributions = Some(DurationDistributionsMonoid.empty),
+      subscalars = Some(SubscalarsMonoid.empty)
+    )
   }
 
 }
