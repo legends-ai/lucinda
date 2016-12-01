@@ -126,7 +126,7 @@ object SumCombiner {
         bans = agg.bans.transform { (key, subscalars) =>
           subscalars.append(champion, bans.getOrElse(key, MatchSum.Subscalars()))
         },
-        allies = agg.bans.transform { (key, subscalars) =>
+        allies = agg.allies.transform { (key, subscalars) =>
           subscalars.append(champion, allies.getOrElse(key, MatchSum.Subscalars()))
         }
       )
