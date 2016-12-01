@@ -59,9 +59,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
         role = req.role,
         forceRefresh = req.forceRefresh
       )
-    } yield GetStatisticsResponse(
-      statistics = Some(statistics)
-    )
+    } yield statistics
   }
 
   override def getChampion(req: GetChampionRequest) = endpoint {
