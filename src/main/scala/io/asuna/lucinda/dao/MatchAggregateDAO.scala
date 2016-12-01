@@ -65,9 +65,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
 
     // Next, let's get per-role sums.
     val byRoleFilters = Role.values.map { someRole =>
-      (role, patches.flatMap {
-         patch => MatchFilterSet(champion, patch, tiers, region, enemy, someRole).toFilterSet
-       })
+      (someRole, MatchFilterSet(champion, patches, tiers, region, enemy, someRole).toFilterSet)
     }.toMap
     val byRoleFut = FutureUtil.sequenceMap(byRoleFilters.mapValues(filters => db.matchSums.sum(filters)))
 

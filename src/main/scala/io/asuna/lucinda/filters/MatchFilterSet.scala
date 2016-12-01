@@ -5,7 +5,7 @@ import io.asuna.proto.enums.{ QueueType, Region, Role }
 
 case class MatchFilterSet(
   champion: Int,
-  patch: String,
+  patches: Set[String],
   tiers: Set[Int],
   region: Region,
   enemy: Int,
@@ -15,6 +15,7 @@ case class MatchFilterSet(
 
   def toFilterSet: Set[MatchFilters] = {
     for {
+      patch <- patches
       tier <- tiers
       queue <- queues
     } yield MatchFilters(
@@ -30,5 +31,27 @@ case class MatchFilterSet(
   def inverse = {
     copy(champion = enemy, enemy = champion)
   }
+
+}
+
+object MatchFilterSet {
+
+  def apply(
+    champion: Int,
+    patch: String,
+    tiers: Set[Int],
+    region: Region,
+    enemy: Int,
+    role: Role,
+    queues: Set[QueueType] = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
+  ): MatchFilterSet = MatchFilterSet(
+    champion = champion,
+    patches = Set(patch),
+    tiers = tiers,
+    reegion = region,
+    enemy = enemy,
+    role = role,
+    queues = queues
+  )
 
 }
