@@ -11,19 +11,19 @@ object VulgateHelpers {
   def makeVulgateContext(patches: Option[PatchRange], region: Region, locale: Locale = Locale.en_US) = {
     // Default to an empty version if a patch range is not specified. This tells Vulgate to use the latest version.
     val release = patches match {
-      case Some(range) => VulgateRpc.Context.Release.Patch(range.max)
-      case None => VulgateRpc.Context.Release.Empty
+      case Some(range) => VulgateData.Context.Release.Patch(range.max)
+      case None => VulgateData.Context.Release.Empty
     }
-    VulgateRpc.Context(
+    VulgateData.Context(
       region = region,
       release = release
     )
   }
 
   def makeVulgateContextOfPatch(patch: String, region: Region, locale: Locale = Locale.en_US) = {
-    VulgateRpc.Context(
+    VulgateData.Context(
       region = region,
-      release = VulgateRpc.Context.Release.Patch(patch)
+      release = VulgateData.Context.Release.Patch(patch)
     )
   }
 
