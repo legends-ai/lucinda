@@ -48,7 +48,7 @@ object MatchFilterSet {
     champion = champion,
     patches = Set(patch),
     tiers = tiers,
-    reegion = region,
+    region = region,
     enemy = enemy,
     role = role,
     queues = queues
