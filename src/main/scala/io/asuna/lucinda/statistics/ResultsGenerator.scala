@@ -83,7 +83,7 @@ object ResultsGenerator {
   }
 
   def makeStat(statsMap: Map[Int, Double]): Map[Int, Statistic] = {
-    val sortedPairs = statsMap.toSeq.sortBy(_._2)
+    val sortedPairs = statsMap.toSeq.sortBy(_._2).reverse
 
     // average of the value
     val average =  statsMap.size match {
