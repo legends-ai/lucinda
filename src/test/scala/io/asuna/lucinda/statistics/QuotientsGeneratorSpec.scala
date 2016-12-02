@@ -21,10 +21,6 @@ class QuotientsGeneratorSpec extends PropSpec
       if (!quotients.deltas.isDefined) {
         fail("Deltas not defined")
       }
-
-      if (!quotients.derivatives.isDefined) {
-        fail("Derivatives not defined")
-      }
     }
   }
 
