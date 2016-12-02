@@ -2,6 +2,7 @@ package io.asuna.lucinda.dao
 
 import io.asuna.lucinda.filters.MatchFilterSet
 import io.asuna.lucinda.database.LucindaDatabase
+import io.asuna.lucinda.matches.AggregationContext
 import io.asuna.lucinda.matches.MatchAggregator
 import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
@@ -95,7 +96,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     forceRefresh: Boolean
   ): Future[MatchAggregate] = {
     // First, let's retrieve all stats for this combination.
-    val allStatsFuts = patches.map { patch =>
+    val allStatsFuts = patches.toList.map { patch =>
       statistics.getSingle(
         champions, tiers, patch, region, role, enemy, forceRefresh
       ).map((patch, _))
@@ -103,7 +104,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
 
     // This future contains an element of the form Map[String, ChampionStatistics]
     // where key is the patch and value is the stats.
-    val allStatsFut = Future.sequence(allStatsFuts).map(_.toMap)
+    val allStatsFut = allStatsFuts.sequence.map(_.toMap)
 
     // Next, let's get per-role sums.
     val byRoleFilters = Role.values.map { someRole =>
@@ -117,12 +118,10 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     }.toMap
     val byPatchFut = byPatchFilters.mapValues(filters => db.matchSums.sum(filters)).sequence
 
+    val ctx = AggregationContext(champion, minPlayRate)
+
     // Finally, we'll execute and build everything.
-    for {
-      allStats <- allStatsFut
-      byRole <- byRoleFut
-      byPatch <- byPatchFut
-    } yield MatchAggregator.makeAggregate(champion, minPlayRate, allStats, byRole, byPatch)
+    (allStatsFut |@| byRoleFut |@| byPatchFut).map(ctx.aggregate)
   }
 
 }
