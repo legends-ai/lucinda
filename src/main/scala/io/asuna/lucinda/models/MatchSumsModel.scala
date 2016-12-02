@@ -53,8 +53,13 @@ abstract class ConcreteMatchSumsModel extends MatchSumsModel with RootConnector 
       .one()
   }
 
-  def sum(filters: Set[MatchFilters]): Future[MatchSum] = for {
-    sums <- Future.sequence(filters.map(get(_)))
-  } yield sums.combineAll.orEmpty
+  def sum(filters: Set[MatchFilters]): Future[MatchSum] = {
+    // Get a list of filters
+    filters.toList
+      // Get the MatchSum of each filter
+      .map(get).sequence
+      // Aggregate using the MatchSum monoid
+      .map(_.combineAll.orEmpty)
+  }
 
 }
