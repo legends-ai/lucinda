@@ -1,6 +1,8 @@
 package io.asuna.lucinda.statistics
 
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.{Quotients, Sums}
+import scala.math.Numeric
+import scala.math.Numeric.Implicits._
 
 object QuotientsGenerator {
 
@@ -83,13 +85,10 @@ object QuotientsGenerator {
     )
   }
 
-  def divideScalars[S, T](
-    divisors: Map[Int, S], scalars: Map[Int, T]
-  )(implicit s: scala.math.Numeric[S], t: scala.math.Numeric[T]): Map[Int, Double] = {
-    val df = divisors.mapValues(x => s.toDouble(x))
-    scalars.mapValues(x => t.toDouble(x)).transform((k, v) =>
-      df.get(k) match {
-        case Some(divisor) if divisor != 0 => v / divisor
+  def divideScalars[S: Numeric, T: Numeric](divisors: Map[Int, S], scalars: Map[Int, T]): Map[Int, Double] = {
+    scalars.transform((k, v) =>
+      divisors.mapValues(_.toDouble).get(k) match {
+        case Some(divisor) if divisor != 0 => v.toDouble / divisor
         case _ => 0
       }
     )
