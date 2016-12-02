@@ -3,7 +3,6 @@ package io.asuna.lucinda.dao
 import io.asuna.lucinda.filters.MatchFilterSet
 import io.asuna.lucinda.VulgateHelpers
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
-import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.statistics.{ StatisticsAggregator, StatisticsCombiner }
 import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
@@ -15,6 +14,7 @@ import io.asuna.proto.vulgate.VulgateData
 import redis.RedisClient
 import io.asuna.lucinda.database.LucindaDatabase
 import scala.concurrent.{ ExecutionContext, Future }
+import cats.implicits._
 
 /**
   * String representation of champ statistics. Used for a redis key.
@@ -95,9 +95,10 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     for {
-      statsList <- Future.sequence(
-        patches.map(patch =>
-          getSingle(champions, tiers, patch, region, role, enemy, reverse, forceRefresh = forceRefresh)))
+      statsList <- patches.toList.map(patch =>
+        getSingle(
+          champions, tiers, patch, region, role, enemy, reverse, forceRefresh = forceRefresh
+        )).sequence
     } yield StatisticsCombiner.combine(statsList.toList)
   }
 
@@ -138,7 +139,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
 
     // Next, we'll extract the Future from the value using some map magic.
     // Thus we end up with a Future[Map[Int, MatchSum]].
-    val sumsMapFut = FutureUtil.sequenceMap(sumsMapFuts)
+    val sumsMapFut = sumsMapFuts.sequence
 
     // Finally, we'll map over the values of this map to generate a Statistics
     // object for each value. Thus we end up with a Future[ChampionStatistics],

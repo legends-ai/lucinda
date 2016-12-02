@@ -1,13 +1,13 @@
 package io.asuna.lucinda.dao
 
 import io.asuna.lucinda.filters.MatchFilterSet
-import io.asuna.lucinda.FutureUtil
 import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.lucinda.matches.MatchAggregator
 import io.asuna.proto.enums.{ Region, Role }
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
 import redis.RedisClient
 import scala.concurrent.{ ExecutionContext, Future }
+import cats.implicits._
 
 case class MatchAggregateId(
   // TODO(igm): support queue type
@@ -109,13 +109,13 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     val byRoleFilters = Role.values.map { someRole =>
       (someRole, MatchFilterSet(champion, patches, tiers, region, enemy, someRole).toFilterSet)
     }.toMap
-    val byRoleFut = FutureUtil.sequenceMap(byRoleFilters.mapValues(filters => db.matchSums.sum(filters)))
+    val byRoleFut = byRoleFilters.mapValues(filters => db.matchSums.sum(filters)).sequence
 
     // Next, let's get per-patch sums.
     val byPatchFilters = lastFivePatches.map { patch =>
       (patch, MatchFilterSet(champion, patch, tiers, region, enemy, role).toFilterSet)
     }.toMap
-    val byPatchFut = FutureUtil.sequenceMap(byPatchFilters.mapValues(filters => db.matchSums.sum(filters)))
+    val byPatchFut = byPatchFilters.mapValues(filters => db.matchSums.sum(filters)).sequence
 
     // Finally, we'll execute and build everything.
     for {
