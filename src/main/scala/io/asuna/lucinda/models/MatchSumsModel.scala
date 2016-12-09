@@ -57,9 +57,9 @@ abstract class ConcreteMatchSumsModel extends MatchSumsModel with RootConnector 
     // Get a list of filters
     filters.toList
       // Get the MatchSum of each filter
-      .map(get).sequence
+      .map(get)
       // Aggregate using the MatchSum monoid
-      .map(_.combineAll.orEmpty)
+      .combineAll.map(_.orEmpty)
   }
 
 }
