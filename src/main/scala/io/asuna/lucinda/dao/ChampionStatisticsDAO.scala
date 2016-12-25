@@ -15,6 +15,7 @@ import redis.RedisClient
 import io.asuna.lucinda.database.LucindaDatabase
 import scala.concurrent.{ ExecutionContext, Future }
 import cats.implicits._
+import io.asuna.lucinda.statistics.StatisticsCombiner._
 
 /**
   * String representation of champ statistics. Used for a redis key.
@@ -99,7 +100,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
         getSingle(
           champions, tiers, patch, region, role, enemy, reverse, forceRefresh = forceRefresh
         )).sequence
-    } yield StatisticsCombiner.combine(statsList.toList)
+    } yield statsList.toList.combineAll
   }
 
   /**

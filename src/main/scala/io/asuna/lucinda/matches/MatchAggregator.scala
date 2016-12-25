@@ -1,6 +1,7 @@
 package io.asuna.lucinda.matches
 
-import cats.kernel.Monoid
+import cats.implicits._
+import cats.Monoid
 import io.asuna.asunasan.legends.MatchSumHelpers._
 import io.asuna.lucinda.statistics.StatisticsCombiner
 import io.asuna.proto.enums.{Ability, Region, Role}
@@ -11,6 +12,7 @@ import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.range.IntRange
 import scala.util.{ Success, Try }
+import io.asuna.lucinda.statistics.StatisticsCombiner._
 
 object MatchAggregator {
 
@@ -18,7 +20,9 @@ object MatchAggregator {
     champion: Int, minPlayRate: Double,
     patchStats: Map[String, ChampionStatistics], byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
   ): MatchAggregate = {
-    val allStats = StatisticsCombiner.combine(patchStats.values.toList)
+    // First, we will combine all statistics objects from all patches in the range.
+    // This uses the StatisticsMonoid.
+    val allStats = patchStats.values.toList.combineAll
 
     // This is the quotient of the champion for the entire search space.
     val quot = QuotientGenerator.generate(Monoid[MatchSum].combineAll(byPatch.values))

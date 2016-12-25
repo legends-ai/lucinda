@@ -27,8 +27,4 @@ object StatisticsCombiner {
 
   }
 
-  def combine(aList: List[ChampionStatistics]): ChampionStatistics = {
-    aList.combineAll
-  }
-
 }
