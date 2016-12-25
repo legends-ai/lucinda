@@ -1,21 +1,18 @@
 package io.asuna.lucinda.dao
 
+import scala.concurrent.{ExecutionContext, Future}
+
+import cats.implicits._
+import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.lucinda.filters.MatchFilterSet
-import io.asuna.lucinda.VulgateHelpers
-import io.asuna.proto.vulgate.VulgateData.AggregationFactors
-import io.asuna.lucinda.statistics.{ StatisticsAggregator, StatisticsCombiner }
-import io.asuna.proto.enums.{ Region, Role }
+import io.asuna.lucinda.statistics.{StatisticsAggregator, StatisticsCombiner}
+import io.asuna.lucinda.statistics.StatisticsCombiner._
+import io.asuna.proto.enums.{Region, Role}
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.match_filters.MatchFilters
-import io.asuna.proto.range.{ PatchRange, TierRange }
-import io.asuna.proto.service_vulgate.VulgateGrpc.Vulgate
-import io.asuna.proto.service_vulgate.VulgateRpc
 import io.asuna.proto.vulgate.VulgateData
+import io.asuna.proto.vulgate.VulgateData.AggregationFactors
 import redis.RedisClient
-import io.asuna.lucinda.database.LucindaDatabase
-import scala.concurrent.{ ExecutionContext, Future }
-import cats.implicits._
-import io.asuna.lucinda.statistics.StatisticsCombiner._
 
 /**
   * String representation of champ statistics. Used for a redis key.
