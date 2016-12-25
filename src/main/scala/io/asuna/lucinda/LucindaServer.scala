@@ -1,6 +1,7 @@
 package io.asuna.lucinda
 
 import io.asuna.asunasan.BaseService
+import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -59,7 +60,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
         role = req.role,
         forceRefresh = req.forceRefresh
       )
-    } yield statistics
+    } yield statistics.results.getOrElse(ChampionStatistics.Results())
   }
 
   override def getChampion(req: GetChampionRequest) = endpoint {
