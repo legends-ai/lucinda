@@ -1,7 +1,8 @@
 package io.asuna.lucinda
 
 import io.asuna.asunasan.BaseService
-import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
+import io.asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics, Matchup }
+import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,7 +46,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
   lazy val matchAggregateDAO = new MatchAggregateDAO(db, aggRedis, championStatisticsDAO)
   lazy val championDAO = new ChampionDAO(vulgate, championStatisticsDAO, matchAggregateDAO)
 
-  override def getStatistics(req: GetStatisticsRequest) = endpoint {
+  override def getStatistics(req: GetStatisticsRequest): Future[ChampionStatistics.Results] = endpoint {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -63,7 +64,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
     } yield statistics.results.getOrElse(ChampionStatistics.Results())
   }
 
-  override def getChampion(req: GetChampionRequest) = endpoint {
+  override def getChampion(req: GetChampionRequest): Future[Champion] = endpoint {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -77,7 +78,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
   }
 
 
-  override def getMatchup(req: GetMatchupRequest) = endpoint {
+  override def getMatchup(req: GetMatchupRequest): Future[Matchup] = endpoint {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -90,7 +91,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
     } yield matchup
   }
 
-  override def getMatchSum(req: GetMatchSumRequest) = endpoint {
+  override def getMatchSum(req: GetMatchSumRequest): Future[MatchSum] = endpoint {
     db.matchSums.sum(req.filters.toSet)
   }
 
