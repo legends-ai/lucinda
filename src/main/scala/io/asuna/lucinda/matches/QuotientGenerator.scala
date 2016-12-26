@@ -1,7 +1,9 @@
 package io.asuna.lucinda.matches
 
+import cats.implicits._
 import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
+import io.asuna.asunasan.legends.MatchSumHelpers._
 
 object QuotientGenerator {
 
@@ -57,7 +59,7 @@ object QuotientGenerator {
       keystones = divideSubscalarMap(justPlays, sum.keystones),
       summoners = divideSubscalarMap(justPlays, sum.summoners),
       trinkets = divideSubscalarMap(justPlays, sum.trinkets),
-      skillOrders = divideSubscalarMap(justPlays, sum.skillOrders),
+      skillOrders = divideSubscalarMap(justPlays, mergeSkillOrders(sum.skillOrders)),
       durations = divideSubscalarMap(justPlays, sum.durations),
       bans = divideSubscalarMap(justPlays, sum.bans),
       allies = divideSubscalarMap(justPlays, sum.allies),
@@ -95,6 +97,17 @@ object QuotientGenerator {
         wins = divideScalar(subscalars.wins, total),
         playCount = subscalars.plays
       )
+    }
+  }
+
+  /**
+    * Merges skill orders lesser than 18 in length.
+    */
+  private[this] def mergeSkillOrders(skillOrders: Map[String, MatchSum.Subscalars]): Map[String, MatchSum.Subscalars] = {
+    // TODO(igm): this is pretty inefficient. we can use a trie for slightly faster calculations.
+    // Verify if this is worth it.
+    skillOrders.filterKeys(_.length() == 18).transform { (skillOrder, _) =>
+      skillOrders.filterKeys(skillOrder startsWith _).values.toList.combineAll
     }
   }
 
