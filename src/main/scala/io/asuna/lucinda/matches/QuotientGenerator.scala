@@ -103,7 +103,7 @@ object QuotientGenerator {
   /**
     * Merges skill orders lesser than 18 in length.
     */
-  private[this] def mergeSkillOrders(skillOrders: Map[String, MatchSum.Subscalars]): Map[String, MatchSum.Subscalars] = {
+  def mergeSkillOrders(skillOrders: Map[String, MatchSum.Subscalars]): Map[String, MatchSum.Subscalars] = {
     // TODO(igm): this is pretty inefficient. we can use a trie for slightly faster calculations.
     // Verify if this is worth it.
     skillOrders.filterKeys(_.length() == 18).transform { (skillOrder, _) =>
