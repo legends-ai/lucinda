@@ -27,6 +27,10 @@ class QuotientGeneratorSpec extends PropSpec
       val merged = QuotientGenerator.mergeSkillOrders(skillOrders)
 
       merged.size should be (skillOrders.filterKeys(_.length() == 18).size)
+
+      // All merged keys should be present in skillOrders.
+      val mergedKeys = merged.keys.toSet
+      skillOrders.keys.toSet.intersect(mergedKeys) should be (mergedKeys)
     }
 
   }
