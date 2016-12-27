@@ -5,15 +5,15 @@ import org.scalatest.{ Matchers, PropSpec }
 import org.scalatest.prop.PropertyChecks
 
 import io.asuna.proto.match_sum.MatchSum
-import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.{Results, Quotients}
+import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.{Results, Quotients, Sums}
 
 class ResultsGeneratorSpec extends PropSpec
     with PropertyChecks with Matchers with MatchSumGeneratorHelper {
 
   property("generated results have unique rankings") {
 
-    forAll { (quotients: Quotients) =>
-      val results = ResultsGenerator.generateResults(quotients)
+    forAll { (sums: Sums, quotients: Quotients) =>
+      val results = ResultsGenerator(sums, quotients).generate
 
       testStatsMap(results.scalars.get.wins)
     }

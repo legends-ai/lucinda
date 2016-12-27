@@ -13,7 +13,7 @@ object StatisticsAggregator {
   def makeStatistics(role: Role, rawSums: Map[Int, MatchSum]): ChampionStatistics = {
     val sums = SumCombiner.combineSums(rawSums)
     val quotients = QuotientsGenerator.generateQuotients(sums)
-    val results = ResultsGenerator.generateResults(quotients)
+    val results = ResultsGenerator(sums, quotients).generate
     ChampionStatistics(
       role = role,
       results = Some(results),

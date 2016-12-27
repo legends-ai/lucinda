@@ -13,7 +13,7 @@ object StatisticsCombiner {
       // wow a monoid can calculate things too!
       val sums = a.sums |+| b.sums
       val quotients = sums.map(QuotientsGenerator.generateQuotients)
-      val results = quotients.map(ResultsGenerator.generateResults)
+      val results = (sums |@| quotients).map(ResultsGenerator).map(_.generate)
       ChampionStatistics(
         // Roles should be the same. If they're not, fuck my ass.
         role = a.role,

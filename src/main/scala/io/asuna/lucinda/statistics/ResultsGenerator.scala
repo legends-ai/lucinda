@@ -1,17 +1,19 @@
 package io.asuna.lucinda.statistics
 
+import cats.implicits._
 import io.asuna.proto.lucinda.LucindaData.Statistic
-import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.{Results, Quotients}
+import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.{Results, Sums, Quotients}
 
 /**
   * Generats the Results part of the statistics.
   */
-object ResultsGenerator {
+case class ResultsGenerator(sums: Sums, quotients: Quotients) {
 
-  def generateResults(quotients: Quotients): Results = {
+  def generate(): Results = {
     Results(
-      scalars = Some(makeScalars(quotients.scalars.getOrElse(Quotients.Scalars()))),
-      deltas = Some(makeDeltas(quotients.deltas.getOrElse(Quotients.Deltas())))
+      scalars = quotients.scalars.map(makeScalars),
+      deltas = quotients.deltas.map(makeDeltas),
+      derivatives = Some(derivatives)
     )
   }
 
@@ -95,6 +97,26 @@ object ResultsGenerator {
         percentile = 1 - index.toDouble / statsMap.size
       )
     }
+  }
+
+  def derivatives: Results.Derivatives = {
+    val pickRateMap = for {
+      plays <- sums.scalars.map(_.plays)
+    } yield {
+      val total = plays.values.sum
+      plays.mapValues(_.toDouble / total)
+    }
+    val banRateMap = for {
+      banCount <- sums.subscalars.map(_.bans.mapValues(_.plays))
+    } yield {
+      val bans = banCount.values.toList.combineAll
+      val total = bans.values.sum
+      bans.mapValues(_.toDouble / total)
+    }
+    Results.Derivatives(
+      picks = makeStat(pickRateMap.orEmpty),
+      bans = makeStat(banRateMap.orEmpty)
+    )
   }
 
 }
