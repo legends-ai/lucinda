@@ -25,7 +25,7 @@ object MatchAggregator {
     val allStats = patchStats.values.toList.combineAll
 
     // This is the quotient of the champion for the entire search space.
-    val quot = QuotientGenerator.generate(Monoid[MatchSum].combineAll(byPatch.values))
+    val quot = QuotientGenerator.generate(byPatch.values.toList.combineAll)
 
     MatchAggregate(
       roles = Some(makeRoleStats(allStats, byRole)),
