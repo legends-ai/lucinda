@@ -95,7 +95,7 @@ object QuotientGenerator {
       MatchQuotient.Subscalars(
         plays = divideScalar(subscalars.plays, total),
         wins = divideScalar(subscalars.wins, total),
-        playCount = subscalars.plays
+        playCount = subscalars.plays.toInt
       )
     }
   }
