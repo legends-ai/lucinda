@@ -75,7 +75,7 @@ object MatchAggregator {
     if (!delta.isDefined) {
       return None
     }
-    Option(MatchAggregate.Statistics.Deltas.Delta(
+    Some(MatchAggregate.Statistics.Deltas.Delta(
       zeroToTen = get(_.zeroToTen),
       tenToTwenty = get(_.tenToTwenty),
       twentyToThirty = get(_.twentyToThirty),
@@ -149,8 +149,8 @@ object MatchAggregator {
     )
 
     MatchAggregate.Statistics(
-      scalars = Option(scalarsStats),
-      deltas = Option(deltasStats)
+      scalars = Some(scalarsStats),
+      deltas = Some(deltasStats)
     )
   }
 
@@ -168,7 +168,7 @@ object MatchAggregator {
     val results = roleStats.results
     MatchAggregate.Graphs(
       // Win/pick/ban distribution across all champions.
-      distribution = Option(MatchAggregate.Graphs.Distribution(
+      distribution = Some(MatchAggregate.Graphs.Distribution(
         winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.value)).getOrElse(Map()),
         pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.value)).getOrElse(Map()),
         banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.value)).getOrElse(Map())
@@ -187,7 +187,7 @@ object MatchAggregator {
 
       byGameLength = quot.durations.map { case (duration, stats) =>
         MatchAggregate.Graphs.ByGameLength(
-          gameLength = Option(IntRange(min = duration, max = duration)),
+          gameLength = Some(IntRange(min = duration, max = duration)),
           winRate = stats.wins
         )
       }.toSeq
@@ -211,7 +211,7 @@ object MatchAggregator {
         .safelyMap { case (runeSet, subscalars) =>
           MatchAggregate.Collections.RuneSet(
             runes = deserializeBonusSet(runeSet),
-            subscalars = Option(subscalars)
+            subscalars = Some(subscalars)
           )
       }.toSeq,
 
@@ -220,7 +220,7 @@ object MatchAggregator {
         .safelyMap { case (masterySet, subscalars) =>
           MatchAggregate.Collections.MasterySet(
             masteries = deserializeBonusSet(masterySet),
-            subscalars = Option(subscalars)
+            subscalars = Some(subscalars)
           )
       }.toSeq,
 
@@ -231,7 +231,7 @@ object MatchAggregator {
           MatchAggregate.Collections.SummonerSet(
             spell1 = spell1,
             spell2 = spell2,
-            subscalars = Option(subscalars)
+            subscalars = Some(subscalars)
           )
       }.toSeq,
 
@@ -240,7 +240,7 @@ object MatchAggregator {
         .safelyMap { case (skillOrder, subscalars) =>
           MatchAggregate.Collections.SkillOrder(
             skillOrder = deserializeSkillOrder(skillOrder),
-            subscalars = Option(subscalars)
+            subscalars = Some(subscalars)
           )
       }.toSeq,
 
@@ -249,7 +249,7 @@ object MatchAggregator {
         .safelyMap { case (build, subscalars) =>
           MatchAggregate.Collections.Build(
             build = deserializeBuild(build),
-            subscalars = Option(subscalars)
+            subscalars = Some(subscalars)
           )
       }.toSeq,
 
@@ -258,7 +258,7 @@ object MatchAggregator {
         .safelyMap { case (build, subscalars) =>
           MatchAggregate.Collections.Build(
             build = deserializeBuild(build),
-            subscalars = Option(subscalars)
+            subscalars = Some(subscalars)
           )
       }.toSeq
     )
