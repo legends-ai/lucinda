@@ -94,7 +94,7 @@ object QuotientGenerator {
     map.mapValues { subscalars =>
       MatchQuotient.Subscalars(
         plays = divideScalar(subscalars.plays, total),
-        wins = divideScalar(subscalars.wins, total),
+        wins = divideScalar(subscalars.wins, Some(subscalars.plays.toLong)),
         playCount = subscalars.plays.toInt
       )
     }
