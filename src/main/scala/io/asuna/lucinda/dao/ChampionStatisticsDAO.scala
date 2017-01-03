@@ -18,13 +18,33 @@ import redis.RedisClient
   * String representation of champ statistics. Used for a redis key.
   */
 case class ChampionStatisticsId(
-  tiers: Set[Int],
+  tiers: List[Int],
   patch: String,
   region: Region,
   role: Role,
   enemy: Int,
-  queues: Set[QueueType]
+  queues: List[QueueType]
 )
+
+object ChampionStatisticsId {
+
+  def fromSets(
+    tiers: Set[Int],
+    patch: String,
+    region: Region,
+    role: Role,
+    enemy: Int,
+    queues: Set[QueueType]
+  ): ChampionStatisticsId = ChampionStatisticsId(
+    tiers = tiers.toList.sorted,
+    patch = patch,
+    region = region,
+    role = role,
+    enemy = enemy,
+    queues = queues.toList.sortBy(_.value)
+  )
+
+}
 
 class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
 
@@ -69,7 +89,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
   ): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
 
-    val id = ChampionStatisticsId(tiers, patch, region, role, enemy, queues)
+    val id = ChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
     val key = id.toString
 
     val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)

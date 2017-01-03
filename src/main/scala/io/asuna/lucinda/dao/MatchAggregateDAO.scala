@@ -10,18 +10,46 @@ import scala.concurrent.{ ExecutionContext, Future }
 import cats.implicits._
 
 case class MatchAggregateId(
-  // TODO(igm): support queue type
   // TODO(igm): don't cache based on minPlayRate -- calculate on the fly
-  patches: Set[String],
+  patches: List[String],
   lastFivePatches: List[String],
   champion: Int,
-  tiers: Set[Int],
+  tiers: List[Int],
   region: Region,
   role: Role,
   enemy: Int,
-  queues: Set[QueueType],
+  queues: List[QueueType],
   minPlayRate: Double
 )
+
+object MatchAggregateId {
+
+  /**
+    * Since List has a deterministic print order, we convert Sets to Lists.
+    */
+  def fromSets(
+    patches: Set[String],
+    lastFivePatches: List[String],
+    champion: Int,
+    tiers: Set[Int],
+    region: Region,
+    role: Role,
+    enemy: Int,
+    queues: Set[QueueType],
+    minPlayRate: Double
+  ): MatchAggregateId = MatchAggregateId(
+    patches = patches.toList.sorted,
+    lastFivePatches = lastFivePatches,
+    champion = champion,
+    tiers = tiers.toList.sorted,
+    region = region,
+    role = role,
+    enemy = enemy,
+    queues = queues.toList.sortBy(_.value),
+    minPlayRate = minPlayRate
+  )
+
+}
 
 class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: ChampionStatisticsDAO)(implicit ec: ExecutionContext) {
 
@@ -40,7 +68,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
   ): Future[MatchAggregate] = {
     import scala.concurrent.duration._
 
-    val id = MatchAggregateId(
+    val id = MatchAggregateId.fromSets(
       patches = patches,
       lastFivePatches = lastFivePatches,
       champion = champion,
