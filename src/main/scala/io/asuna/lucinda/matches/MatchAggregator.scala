@@ -54,7 +54,7 @@ object MatchAggregator {
       (role, numMatches) <- gamesByRole
     } yield MatchAggregate.Roles.RoleStats(
       role = role,
-      pickRate = numMatches.toDouble / totalGames,
+      pickRate = if (totalGames == 0) 0 else (numMatches.toDouble / totalGames),
       numMatches = numMatches.toInt
     )
 
