@@ -1,6 +1,7 @@
 package io.asuna.lucinda
 
 import io.asuna.asunasan.BaseService
+import io.asuna.proto.enums.QueueType
 import io.asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics, Matchup }
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
@@ -27,6 +28,9 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
   // Setup vulgate connection
   val vulgateConn = config.asuna.vulgate.conn
   val vulgate = VulgateGrpc.stub(vulgateConn)
+
+  // Default queues lucinda will serve. TODO(igm): support queue in the requests
+  val defaultQueues = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
 
   // Next, let's init all of our dependencies.
   lazy val statsRedis = RedisClient(
@@ -59,6 +63,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
         factors = factors,
         region = req.region,
         role = req.role,
+        queues = defaultQueues,
         forceRefresh = req.forceRefresh
       )
     } yield statistics.results.getOrElse(ChampionStatistics.Results())
@@ -73,7 +78,8 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
           tiers = req.tier
         )
       )
-      champ <- championDAO.getChampion(factors, req.championId, req.region, req.role, req.minPlayRate, forceRefresh = req.forceRefresh)
+      champ <- championDAO.getChampion(
+        factors, req.championId, req.region, req.role, defaultQueues, req.minPlayRate, forceRefresh = req.forceRefresh)
     } yield champ
   }
 
@@ -87,7 +93,9 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
           tiers = req.tier
         )
       )
-      matchup <- championDAO.getMatchup(factors, req.focusChampionId, req.region, req.role, req.minPlayRate, req.enemyChampionId, forceRefresh = req.forceRefresh)
+      matchup <- championDAO.getMatchup(
+        factors, req.focusChampionId, req.region,
+        req.role, defaultQueues, req.minPlayRate, req.enemyChampionId, forceRefresh = req.forceRefresh)
     } yield matchup
   }
 

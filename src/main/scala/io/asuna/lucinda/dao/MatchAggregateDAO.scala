@@ -3,8 +3,7 @@ package io.asuna.lucinda.dao
 import io.asuna.lucinda.filters.MatchFilterSet
 import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.lucinda.matches.AggregationContext
-import io.asuna.lucinda.matches.MatchAggregator
-import io.asuna.proto.enums.{ Region, Role }
+import io.asuna.proto.enums.{ QueueType, Region, Role }
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
 import redis.RedisClient
 import scala.concurrent.{ ExecutionContext, Future }
@@ -14,12 +13,13 @@ case class MatchAggregateId(
   // TODO(igm): support queue type
   // TODO(igm): don't cache based on minPlayRate -- calculate on the fly
   patches: Set[String],
-  lastFivePatches: Seq[String],
+  lastFivePatches: List[String],
   champion: Int,
   tiers: Set[Int],
   region: Region,
   role: Role,
   enemy: Int,
+  queues: Set[QueueType],
   minPlayRate: Double
 )
 
@@ -28,11 +28,12 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
   def get(
     champions: Set[Int],
     patches: Set[String],
-    lastFivePatches: Seq[String],
+    lastFivePatches: List[String],
     champion: Int,
     tiers: Set[Int],
     region: Region,
     role: Role,
+    queues: Set[QueueType],
     enemy: Int = -1,
     minPlayRate: Double,
     forceRefresh: Boolean = false
@@ -47,6 +48,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
       region = region,
       role = role,
       enemy = enemy,
+      queues = queues,
       minPlayRate = minPlayRate
     )
     val key = id.toString
@@ -65,6 +67,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
           region = region,
           role = role,
           enemy = enemy,
+          queues = queues,
           minPlayRate = minPlayRate,
           forceRefresh = forceRefresh
         )
@@ -92,13 +95,14 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     region: Region,
     role: Role,
     enemy: Int,
+    queues: Set[QueueType],
     minPlayRate: Double,
     forceRefresh: Boolean
   ): Future[MatchAggregate] = {
     // First, let's retrieve all stats for this combination.
     val allStatsFuts = patches.toList.map { patch =>
       statistics.getSingle(
-        champions, tiers, patch, region, role, enemy, forceRefresh
+        champions, tiers, patch, region, role, queues, enemy, forceRefresh
       ).map((patch, _))
     }
 

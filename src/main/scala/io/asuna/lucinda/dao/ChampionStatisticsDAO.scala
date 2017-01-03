@@ -1,16 +1,16 @@
 package io.asuna.lucinda.dao
 
+import io.asuna.lucinda.statistics.StatisticsCombiner._
+import io.asuna.lucinda.statistics.StatisticsAggregator
+import io.asuna.proto.enums.QueueType
 import scala.concurrent.{ExecutionContext, Future}
 
 import cats.implicits._
 import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.lucinda.filters.MatchFilterSet
-import io.asuna.lucinda.statistics.{StatisticsAggregator, StatisticsCombiner}
-import io.asuna.lucinda.statistics.StatisticsCombiner._
 import io.asuna.proto.enums.{Region, Role}
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.match_filters.MatchFilters
-import io.asuna.proto.vulgate.VulgateData
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
 import redis.RedisClient
 
@@ -18,8 +18,12 @@ import redis.RedisClient
   * String representation of champ statistics. Used for a redis key.
   */
 case class ChampionStatisticsId(
-  // TODO(igm): support queue type
-  tiers: Set[Int], patch: String, region: Region, role: Role, enemy: Int
+  tiers: Set[Int],
+  patch: String,
+  region: Region,
+  role: Role,
+  enemy: Int,
+  queues: Set[QueueType]
 )
 
 class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
@@ -31,6 +35,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     factors: AggregationFactors,
     region: Region,
     role: Role,
+    queues: Set[QueueType],
     enemy: Int = -1,
     reverse: Boolean = false,
     forceRefresh: Boolean = false
@@ -41,6 +46,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
       patches = factors.patches.toSet,
       region = region,
       role = role,
+      queues = queues,
       enemy = enemy,
       reverse = reverse,
       forceRefresh = forceRefresh
@@ -56,13 +62,14 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     patch: String,
     region: Region,
     role: Role,
+    queues: Set[QueueType],
     enemy: Int = -1,
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
 
-    val id = ChampionStatisticsId(tiers, patch, region, role, enemy)
+    val id = ChampionStatisticsId(tiers, patch, region, role, enemy, queues)
     val key = id.toString
 
     val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
@@ -88,6 +95,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     patches: Set[String],
     region: Region,
     role: Role,
+    queues: Set[QueueType],
     enemy: Int = -1,
     reverse: Boolean = false,
     forceRefresh: Boolean = false
@@ -95,7 +103,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     for {
       statsList <- patches.toList.map(patch =>
         getSingle(
-          champions, tiers, patch, region, role, enemy, reverse, forceRefresh = forceRefresh
+          champions, tiers, patch, region, role, queues, enemy, reverse, forceRefresh = forceRefresh
         )).sequence
     } yield statsList.toList.combineAll
   }

@@ -3,6 +3,7 @@ package io.asuna.lucinda.dao
 import io.asuna.lucinda.VulgateHelpers
 import io.asuna.lucinda.matches.MatchAggregator
 import io.asuna.proto.charon.CharonData.{ Static }
+import io.asuna.proto.enums.QueueType
 import io.asuna.proto.lucinda.LucindaData.{ Champion, Matchup }
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
 import io.asuna.proto.enums.{ Region, Role }
@@ -22,11 +23,17 @@ class ChampionDAO(
     * Gets a Champion.
     */
   def getChampion(
-    factors: AggregationFactors, champion: Int, region: Region,
-    role: Role, minPlayRate: Double, forceRefresh: Boolean = false
+    factors: AggregationFactors,
+    champion: Int,
+    region: Region,
+    role: Role,
+    queues: Set[QueueType],
+    minPlayRate: Double,
+    forceRefresh: Boolean = false
   ): Future[Champion] = {
     for {
-      bareChamp <- getWithoutMatchups(factors, champion, region, role, minPlayRate, -1, forceRefresh = forceRefresh)
+      bareChamp <- getWithoutMatchups(
+        factors, champion, region, role, queues, minPlayRate, -1, forceRefresh = forceRefresh)
 
       // Matchup stuff. This is very expensive but fortunately it's cached.
       // Enemy statistics against the champion.
@@ -35,6 +42,7 @@ class ChampionDAO(
         region = region,
         role = role,
         enemy = champion,
+        queues = queues,
         reverse = false,
         forceRefresh = forceRefresh
       )
@@ -45,6 +53,7 @@ class ChampionDAO(
         region = region,
         role = role,
         enemy = champion,
+        queues = queues,
         reverse = true,
         forceRefresh = forceRefresh
       )
@@ -70,11 +79,13 @@ class ChampionDAO(
     */
   def getMatchup(
     factors: AggregationFactors, focus: Int, region: Region,
-    role: Role, minPlayRate: Double, enemy: Int, forceRefresh: Boolean = false
+    role: Role, queues: Set[QueueType], minPlayRate: Double, enemy: Int, forceRefresh: Boolean = false
   ): Future[Matchup] = {
     for {
-      focusChamp <- getWithoutMatchups(factors, focus, region, role, minPlayRate, enemy, forceRefresh = forceRefresh)
-      enemyChamp <- getWithoutMatchups(factors, enemy, region, role, minPlayRate, focus, forceRefresh = forceRefresh)
+      focusChamp <- getWithoutMatchups(
+        factors, focus, region, role, queues, minPlayRate, enemy, forceRefresh = forceRefresh)
+      enemyChamp <- getWithoutMatchups(
+        factors, enemy, region, role, queues, minPlayRate, focus, forceRefresh = forceRefresh)
     } yield Matchup(focus = Some(focusChamp), enemy = Some(enemyChamp))
   }
 
@@ -83,6 +94,7 @@ class ChampionDAO(
     champion: Int,
     region: Region,
     role: Role,
+    queues: Set[QueueType],
     minPlayRate: Double,
     enemy: Int,
     forceRefresh: Boolean = false
@@ -94,12 +106,13 @@ class ChampionDAO(
       matchAggregate <- matchAggregateDAO.get(
         champions = factors.champions.toSet,
         patches = factors.patches.toSet,
-        lastFivePatches = factors.lastFivePatches,
+        lastFivePatches = factors.lastFivePatches.toList,
         champion = champion,
         tiers = factors.tiers.toSet,
         region = region,
         role = role,
         enemy = enemy,
+        queues = queues,
         minPlayRate = minPlayRate,
         forceRefresh = forceRefresh
       )
