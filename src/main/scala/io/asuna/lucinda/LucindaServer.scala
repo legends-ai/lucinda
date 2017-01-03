@@ -63,7 +63,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
         factors = factors,
         region = req.region,
         role = req.role,
-        queues = defaultQueues,
+        queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
         forceRefresh = req.forceRefresh
       )
     } yield statistics.results.getOrElse(ChampionStatistics.Results())
@@ -79,7 +79,9 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
         )
       )
       champ <- championDAO.getChampion(
-        factors, req.championId, req.region, req.role, defaultQueues, req.minPlayRate, forceRefresh = req.forceRefresh)
+        factors, req.championId, req.region, req.role,
+        queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
+        req.minPlayRate, forceRefresh = req.forceRefresh)
     } yield champ
   }
 
@@ -95,7 +97,9 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
       )
       matchup <- championDAO.getMatchup(
         factors, req.focusChampionId, req.region,
-        req.role, defaultQueues, req.minPlayRate, req.enemyChampionId, forceRefresh = req.forceRefresh)
+        req.role,
+        queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
+        req.minPlayRate, req.enemyChampionId, forceRefresh = req.forceRefresh)
     } yield matchup
   }
 
