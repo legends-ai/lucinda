@@ -265,14 +265,14 @@ object MatchAggregator {
   }
 
   def deserializeBonusSet(serialized: String): Map[Int, Int] = {
-    serialized.split("|").map { part =>
+    serialized.split("\\|").map { part =>
       var element = part.split(":").map(_.toInt)
       (element(0), element(1))
     }.toMap
   }
 
   def deserializeSummoners(serialized: String): (Int, Int) = {
-    val Array(a, b) = serialized.split("|")
+    val Array(a, b) = serialized.split("\\|")
     (a.toInt, b.toInt)
   }
 
@@ -289,7 +289,7 @@ object MatchAggregator {
   }
 
   def deserializeBuild(serialized: String): Seq[Int] = {
-    serialized.split("|").map(_.toInt)
+    serialized.split("\\|").map(_.toInt)
   }
 
 }
