@@ -1,13 +1,10 @@
 package io.asuna.lucinda.matches
 
 import cats.implicits._
-import cats.Monoid
 import io.asuna.asunasan.legends.MatchSumHelpers._
-import io.asuna.lucinda.statistics.StatisticsCombiner
 import io.asuna.proto.enums.{Ability, Region, Role}
 import io.asuna.proto.lucinda.LucindaData.{ChampionStatistics, Statistic}
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
-import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.match_quotient.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.range.IntRange
@@ -169,9 +166,9 @@ object MatchAggregator {
     MatchAggregate.Graphs(
       // Win/pick/ban distribution across all champions.
       distribution = Some(MatchAggregate.Graphs.Distribution(
-        winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.value)).getOrElse(Map()),
-        pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.value)).getOrElse(Map()),
-        banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.value)).getOrElse(Map())
+        winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.value)).orEmpty,
+        pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.value)).orEmpty,
+        banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.value)).orEmpty
       )),
 
       // Per-patch statistics.
@@ -179,9 +176,9 @@ object MatchAggregator {
       byPatch = patchStats.mapValues(_.results).map { case (patch, patchResults) =>
         MatchAggregate.Graphs.ByPatch(
           patch = patch,
-          winRate = patchResults.flatMap(_.scalars).flatMap(_.wins.mapValues(_.value).get(id)).getOrElse(0),
-          pickRate = patchResults.flatMap(_.derivatives).flatMap(_.picks.mapValues(_.value).get(id)).getOrElse(0),
-          banRate = patchResults.flatMap(_.derivatives).flatMap(_.bans.mapValues(_.value).get(id)).getOrElse(0)
+          winRate = patchResults.flatMap(_.scalars).flatMap(_.wins.mapValues(_.value).get(id)).orEmpty,
+          pickRate = patchResults.flatMap(_.derivatives).flatMap(_.picks.mapValues(_.value).get(id)).orEmpty,
+          banRate = patchResults.flatMap(_.derivatives).flatMap(_.bans.mapValues(_.value).get(id)).orEmpty
         )
       }.toSeq,
 
