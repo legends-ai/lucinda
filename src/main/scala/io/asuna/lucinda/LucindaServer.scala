@@ -26,7 +26,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
   val db = new LucindaDatabase(connector)
 
   // Setup vulgate connection
-  val vulgateConn = config.asuna.vulgate.conn
+  val vulgateConn = config.asuna.services("vulgate").conn
   val vulgate = VulgateGrpc.stub(vulgateConn)
 
   // Default queues lucinda will serve. TODO(igm): support queue in the requests

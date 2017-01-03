@@ -4,7 +4,7 @@ version := "0.1.0"
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
-  "io.asuna" %% "asunasan" % "0.7.7",
+  "io.asuna" %% "asunasan" % "0.8.1",
 
   // Deps
   "com.github.etaty" %% "rediscala" % "1.6.0",
@@ -65,3 +65,10 @@ imageNames in docker := Seq(
   ImageName(s"${base}/${name.value}:latest"),
   ImageName(s"${base}/${name.value}:${version.value}")
 )
+
+lazy val root = (project in file(".")).
+  enablePlugins(BuildInfoPlugin).
+  settings(
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "buildinfo"
+  )

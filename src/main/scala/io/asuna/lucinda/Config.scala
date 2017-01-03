@@ -1,6 +1,7 @@
 package io.asuna.lucinda
 
-import io.asuna.asunasan.{ AsunaServiceType, Config, ConfigParser }
+import buildinfo.BuildInfo
+import io.asuna.asunasan.{ Config, ConfigParser }
 
 case class LucindaConfig(
   cassandraHosts: Seq[String] = List("localhost"),
@@ -9,9 +10,9 @@ case class LucindaConfig(
 )
 
 object LucindaConfigParser extends ConfigParser[LucindaConfig](
-  myService = AsunaServiceType.Lucinda,
-  version = "0.1.0",
-  dependencies = Set(AsunaServiceType.Vulgate),
+  myService = BuildInfo.name,
+  version = BuildInfo.version,
+  dependencies = Set("vulgate"),
   port = 45045,
   healthPort = 45046,
   initial = LucindaConfig()
