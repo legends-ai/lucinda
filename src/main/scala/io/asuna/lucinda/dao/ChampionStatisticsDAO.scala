@@ -90,25 +90,35 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
-    if (!prevPatch.isDefined) {
-      forceGet(champions, tiers, patch, region, role, enemy, reverse)
-    } else {
-      val id = ChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
-      val key = id.toString
+    role match {
+      case Role.UNDEFINED_ROLE => {
+        Role.values.toList.map { theRole =>
+          getSingle(champions, tiers, patch, prevPatch, region, role, queues, enemy, reverse, forceRefresh)
+        }.combineAll
+      }
 
-      val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
+      case _ => {
+        if (!prevPatch.isDefined) {
+          forceGet(champions, tiers, patch, region, role, enemy, reverse)
+        } else {
+          val id = ChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
+          val key = id.toString
 
-      redisResult flatMap {
-        // If the key is not found, recalculate it and write it
-        case None => for {
-          // TODO(igm): don't force get the previous patch, but instead read it back from redis
-          prev <- forceGet(champions, tiers, prevPatch.get, region, role, enemy, reverse)
-          stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
-          _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
-        } yield ChangeMarker.mark(stats, prev)
+          val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
 
-        // If the key is found, we shall parse it
-        case Some(bytes) => Future.successful(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
+          redisResult flatMap {
+            // If the key is not found, recalculate it and write it
+            case None => for {
+              // TODO(igm): don't force get the previous patch, but instead read it back from redis
+              prev <- forceGet(champions, tiers, prevPatch.get, region, role, enemy, reverse)
+              stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
+              _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
+            } yield ChangeMarker.mark(stats, prev)
+
+            // If the key is found, we shall parse it
+            case Some(bytes) => Future.successful(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
+          }
+        }
       }
     }
   }
