@@ -2,6 +2,7 @@ package io.asuna.lucinda.matches
 
 import cats.implicits._
 import io.asuna.asunasan.legends.MatchSumHelpers._
+import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate.Graphs.GoldPerTime
 import io.asuna.proto.enums.{Ability, Region, Role}
 import io.asuna.proto.lucinda.LucindaData.{ChampionStatistics, Statistic}
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
@@ -198,7 +199,29 @@ object MatchAggregator {
 
       physicalDamage = results.flatMap(_.scalars).flatMap(_.physicalDamage.get(id)).map(_.value).orEmpty,
       magicDamage = results.flatMap(_.scalars).flatMap(_.magicDamage.get(id)).map(_.value).orEmpty,
-      trueDamage = results.flatMap(_.scalars).flatMap(_.trueDamage.get(id)).map(_.value).orEmpty
+      trueDamage = results.flatMap(_.scalars).flatMap(_.trueDamage.get(id)).map(_.value).orEmpty,
+
+      goldOverTime = {
+        val gpm = quot.deltas.flatMap(_.goldPerMin)
+        List(
+          GoldPerTime(
+            gold = gpm.map(_.zeroToTen).orEmpty,
+            time = Some(IntRange(min = 0, max = 10))
+          ),
+          GoldPerTime(
+            gold = gpm.map(_.tenToTwenty).orEmpty,
+            time = Some(IntRange(min = 10, max = 20))
+          ),
+          GoldPerTime(
+            gold = gpm.map(_.twentyToThirty).orEmpty,
+            time = Some(IntRange(min = 20, max = 30))
+          ),
+          GoldPerTime(
+            gold = gpm.map(_.thirtyToEnd).orEmpty,
+            time = Some(IntRange(min = 30, max = 40))
+          )
+        )
+      }
     )
   }
 
@@ -269,6 +292,7 @@ object MatchAggregator {
             subscalars = Some(subscalars)
           )
       }.toSeq
+
     )
   }
 
