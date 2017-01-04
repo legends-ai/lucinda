@@ -139,8 +139,13 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     *  This does not take caching into account.
     */
   private def forceGet(
-    champions: Set[Int], tiers: Set[Int], patch: String, region: Region,
-    role: Role, enemy: Int, reverse: Boolean
+    champions: Set[Int],
+    tiers: Set[Int],
+    patch: String,
+    region: Region,
+    role: Role,
+    enemy: Int,
+    reverse: Boolean
   ): Future[ChampionStatistics] = {
     // A lot goes on in this function, especially since we're dealing with Futures.
     // I'll try to explain every step in detail.
