@@ -17,11 +17,16 @@ object MatchAggregator {
     champion: Int,
     minPlayRate: Double,
     patchStats: Map[String, ChampionStatistics],
-    byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
+    byRole: Map[Role, MatchSum],
+    byPatch: Map[String, MatchSum]
   ): MatchAggregate = {
     // First, we will combine all statistics objects from all patches in the range.
     // This uses the StatisticsMonoid.
-    val allStats = patchStats.values.toList.combineAll
+    val allPatches = patchStats.values.toList
+    val allStats = allPatches.headOption match {
+      case Some(patch) => allPatches.combineAll.copy(role = patch.role)
+      case None => allPatches.combineAll
+    }
 
     // This is the quotient of the champion for the entire search space.
     val quot = QuotientGenerator.generate(byPatch.values.toList.combineAll)
