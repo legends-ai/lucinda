@@ -127,33 +127,49 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     minPlayRate: Double,
     forceRefresh: Boolean
   ): Future[MatchAggregate] = {
-    // First, let's retrieve all stats for this combination.
-    val allStatsFuts = patches.toList.map { patch =>
-      statistics.getSingle(
-        champions, tiers, patch, region, role, queues, enemy, forceRefresh
-      ).map((patch, _))
-    }
-
-    // This future contains an element of the form Map[String, ChampionStatistics]
-    // where key is the patch and value is the stats.
-    val allStatsFut = allStatsFuts.sequence.map(_.toMap)
-
-    // Next, let's get per-role sums.
+    // First, let's get per-role sums.
     val byRoleFilters = Role.values.map { someRole =>
       (someRole, MatchFilterSet(champion, patches, tiers, region, enemy, someRole).toFilterSet)
     }.toMap
-    val byRoleFut = byRoleFilters.mapValues(filters => db.matchSums.sum(filters)).sequence
+    val byRoleFuts = byRoleFilters.mapValues(filters => db.matchSums.sum(filters))
 
-    // Next, let's get per-patch sums.
-    val byPatchFilters = lastFivePatches.map { patch =>
-      (patch, MatchFilterSet(champion, patch, tiers, region, enemy, role).toFilterSet)
-    }.toMap
-    val byPatchFut = byPatchFilters.mapValues(filters => db.matchSums.sum(filters)).sequence
+    for {
+      byRole <- byRoleFuts.sequence
 
-    val ctx = AggregationContext(champion, minPlayRate)
+      // Now, let's find the role we want to use to fetch other data.
+      // If the Role was not specified, we'll return the most popular role.
+      chosenRole = if (role == Role.UNDEFINED_ROLE) {
+        // Sort the list by number of plays, getting the Role with the most plays.
+        byRole.toList.sortBy(_._2.scalars.map(_.plays).orEmpty).last._1
+      } else role
 
-    // Finally, we'll execute and build everything.
-    (allStatsFut |@| byRoleFut |@| byPatchFut).map(ctx.aggregate)
+      // Next, let's retrieve all stats for this combination.
+      // This is used to get Statistic objects.
+      allStatsFuts = patches.toList.map { patch =>
+        statistics.getSingle(
+          champions, tiers, patch, region, chosenRole, queues, enemy, forceRefresh
+        ).map((patch, _))
+      }
+
+      // This contains an element of the form Map[String, ChampionStatistics]
+      // where key is the patch and value is the stats.
+      allStats <- allStatsFuts.sequence.map(_.toMap)
+
+      // Finally, let's get the patch information.
+      // We'll use a map with the key being the patch.
+      byPatchFilters = lastFivePatches.map { patch =>
+        (patch, MatchFilterSet(champion, patch, tiers, region, enemy, chosenRole).toFilterSet)
+      }.toMap
+
+      // We will then sequence them.
+      byPatch <- byPatchFilters
+        .mapValues(filters => db.matchSums.sum(filters)).sequence
+
+    } yield AggregationContext(champion, minPlayRate).aggregate(
+      patchStats = allStats,
+      byRole = byRole,
+      byPatch = byPatch
+    )
   }
 
 }

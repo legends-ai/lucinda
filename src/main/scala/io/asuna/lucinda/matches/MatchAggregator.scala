@@ -14,8 +14,11 @@ import io.asuna.lucinda.statistics.StatisticsCombiner._
 object MatchAggregator {
 
   def makeAggregate(
-    champion: Int, minPlayRate: Double,
-    patchStats: Map[String, ChampionStatistics], byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
+    champion: Int,
+    minPlayRate: Double,
+    patchStats: Map[String, ChampionStatistics],
+    byRole: Map[Role, MatchSum],
+    byPatch: Map[String, MatchSum]
   ): MatchAggregate = {
     // First, we will combine all statistics objects from all patches in the range.
     // This uses the StatisticsMonoid.
