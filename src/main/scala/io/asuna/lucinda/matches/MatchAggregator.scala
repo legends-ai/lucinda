@@ -17,8 +17,7 @@ object MatchAggregator {
     champion: Int,
     minPlayRate: Double,
     patchStats: Map[String, ChampionStatistics],
-    byRole: Map[Role, MatchSum],
-    byPatch: Map[String, MatchSum]
+    byRole: Map[Role, MatchSum], byPatch: Map[String, MatchSum]
   ): MatchAggregate = {
     // First, we will combine all statistics objects from all patches in the range.
     // This uses the StatisticsMonoid.
@@ -190,7 +189,11 @@ object MatchAggregator {
           gameLength = Some(IntRange(min = duration, max = duration)),
           winRate = stats.wins
         )
-      }.toSeq
+      }.toSeq,
+
+      physicalDamage = results.flatMap(_.scalars).flatMap(_.physicalDamage.get(id)).map(_.value).orEmpty,
+      magicDamage = results.flatMap(_.scalars).flatMap(_.magicDamage.get(id)).map(_.value).orEmpty,
+      trueDamage = results.flatMap(_.scalars).flatMap(_.trueDamage.get(id)).map(_.value).orEmpty
     )
   }
 
