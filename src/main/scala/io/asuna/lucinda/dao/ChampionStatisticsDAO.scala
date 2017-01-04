@@ -1,7 +1,7 @@
 package io.asuna.lucinda.dao
 
 import io.asuna.lucinda.statistics.StatisticsCombiner._
-import io.asuna.lucinda.statistics.StatisticsAggregator
+import io.asuna.lucinda.statistics.{ ChangeMarker, StatisticsAggregator }
 import io.asuna.proto.enums.QueueType
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -64,6 +64,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
       champions = factors.champions.toSet,
       tiers = factors.tiers.toSet,
       patches = factors.patches.toSet,
+      prevPatches = factors.prevPatches,
       region = region,
       role = role,
       queues = queues,
@@ -80,6 +81,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     champions: Set[Int],
     tiers: Set[Int],
     patch: String,
+    prevPatch: Option[String],
     region: Region,
     role: Role,
     queues: Set[QueueType],
@@ -88,21 +90,26 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     import scala.concurrent.duration._
+    if (!prevPatch.isDefined) {
+      forceGet(champions, tiers, patch, region, role, enemy, reverse)
+    } else {
+      val id = ChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
+      val key = id.toString
 
-    val id = ChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
-    val key = id.toString
+      val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
 
-    val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
+      redisResult flatMap {
+        // If the key is not found, recalculate it and write it
+        case None => for {
+          // TODO(igm): don't force get the previous patch, but instead read it back from redis
+          prev <- forceGet(champions, tiers, prevPatch.get, region, role, enemy, reverse)
+          stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
+          _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
+        } yield ChangeMarker.mark(stats, prev)
 
-    redisResult flatMap {
-      // If the key is not found, recalculate it and write it
-      case None => for {
-        stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
-        _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
-      } yield stats
-
-      // If the key is found, we shall parse it
-      case Some(bytes) => Future.successful(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
+        // If the key is found, we shall parse it
+        case Some(bytes) => Future.successful(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
+      }
     }
   }
 
@@ -113,6 +120,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     champions: Set[Int],
     tiers: Set[Int],
     patches: Set[String],
+    prevPatches: Map[String, String],
     region: Region,
     role: Role,
     queues: Set[QueueType],
@@ -123,7 +131,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     for {
       statsList <- patches.toList.map(patch =>
         getSingle(
-          champions, tiers, patch, region, role, queues, enemy, reverse, forceRefresh = forceRefresh
+          champions, tiers, patch, prevPatches.get(patch), region, role, queues, enemy, reverse, forceRefresh = forceRefresh
         )).sequence
     } yield statsList.toList.combineAll
   }

@@ -57,6 +57,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     champions: Set[Int],
     patches: Set[String],
     lastFivePatches: List[String],
+    prevPatches: Map[String, String],
     champion: Int,
     tiers: Set[Int],
     region: Region,
@@ -90,6 +91,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
           champions = champions,
           patches = patches,
           lastFivePatches = lastFivePatches,
+          prevPatches = prevPatches,
           champion = champion,
           tiers = tiers,
           region = region,
@@ -118,6 +120,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
     champions: Set[Int],
     patches: Set[String],
     lastFivePatches: Seq[String],
+    prevPatches: Map[String, String],
     champion: Int,
     tiers: Set[Int],
     region: Region,
@@ -147,7 +150,7 @@ class MatchAggregateDAO(db: LucindaDatabase, redis: RedisClient, statistics: Cha
       // This is used to get Statistic objects.
       allStatsFuts = patches.toList.map { patch =>
         statistics.getSingle(
-          champions, tiers, patch, region, chosenRole, queues, enemy, forceRefresh
+          champions, tiers, patch, prevPatches.get(patch), region, chosenRole, queues, enemy, forceRefresh
         ).map((patch, _))
       }
 

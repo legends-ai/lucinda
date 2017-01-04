@@ -107,6 +107,7 @@ class ChampionDAO(
         champions = factors.champions.toSet,
         patches = factors.patches.toSet,
         lastFivePatches = factors.lastFivePatches.toList,
+        prevPatches = factors.prevPatches,
         champion = champion,
         tiers = factors.tiers.toSet,
         region = region,
