@@ -109,8 +109,9 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
     val banRateMap = for {
       banCount <- sums.subscalars.map(_.bans.mapValues(_.plays))
     } yield {
-      val bans = banCount.values.toList.combineAll
-      val total = bans.values.sum
+      val bans = banCount.mapValues(_.values.toList.combineAll)
+      // 6 bans per match. This finds us the total number of matches.
+      val total = bans.values.sum.toDouble / 6
       bans.mapValues(_.toDouble / total)
     }
     Results.Derivatives(

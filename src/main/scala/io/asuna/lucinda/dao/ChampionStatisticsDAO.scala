@@ -92,8 +92,8 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     import scala.concurrent.duration._
     role match {
       case Role.UNDEFINED_ROLE => {
-        Role.values.toList.map { theRole =>
-          getSingle(champions, tiers, patch, prevPatch, region, role, queues, enemy, reverse, forceRefresh)
+        (Role.values.toSet - Role.UNDEFINED_ROLE).toList.map { theRole =>
+          getSingle(champions, tiers, patch, prevPatch, region, theRole, queues, enemy, reverse, forceRefresh)
         }.combineAll
       }
 
