@@ -96,7 +96,7 @@ object MatchAggregator {
     val derivatives = results.flatMap(_.derivatives)
 
     // We calculate the pick rate stat out here, as we need it to find the gamesPlayed stat.
-    val pickRateStat = getStat(derivatives, champion, _.picks)
+    val pickRateStat = getStat[ChampionStatistics.Results.Derivatives](derivatives, champion, _.picks)
 
     // Number of games played by this champion in this role.
     val gamesPlayed = roleStats.sums.flatMap(_.scalars).flatMap(_.plays.get(champion)).getOrElse(0L)
@@ -115,7 +115,7 @@ object MatchAggregator {
     val scalarsStats = MatchAggregate.Statistics.Scalars(
       winRate = getScalar(_.wins),
       pickRate = pickRateStat,
-      banRate = getStat(derivatives, champion, _.bans),
+      banRate = getStat[ChampionStatistics.Results.Derivatives](derivatives, champion, _.bans),
       gamesPlayed = gamesPlayedStat,
       goldEarned = getScalar(_.goldEarned),
       kills = getScalar(_.kills),
