@@ -145,7 +145,6 @@ trait MatchSumGeneratorHelper {
       runes <- genStrSubscalarsMap
       keystones <- genStrSubscalarsMap
       summoners <- genStrSubscalarsMap
-      trinkets <- genIntSubscalarsMap
       skillOrders <- genStrSubscalarsMap
       durationDistribution <- genDurationDistribution
       bans <- genChampionSubscalarsMap
@@ -153,6 +152,7 @@ trait MatchSumGeneratorHelper {
       enemies <- genChampionSubscalarsMap
       starterItems <- genStrSubscalarsMap
       buildPath <- genStrSubscalarsMap
+      items <- genIntSubscalarsMap
     } yield MatchSum(
       scalars = Option(scalars),
       deltas = Option(deltas),
@@ -160,14 +160,14 @@ trait MatchSumGeneratorHelper {
       runes = runes,
       keystones = keystones,
       summoners = summoners,
-      trinkets = trinkets,
       skillOrders = skillOrders,
       durationDistribution = Option(durationDistribution),
       bans = bans,
       allies = allies,
       enemies = enemies,
       starterItems = starterItems,
-      buildPath = buildPath
+      buildPath = buildPath,
+      items = items
     )
   }
 
