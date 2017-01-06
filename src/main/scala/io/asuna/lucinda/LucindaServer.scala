@@ -8,7 +8,7 @@ import io.asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
 import scala.concurrent.{ExecutionContext, Future}
 
 import io.asuna.lucinda.dao.{ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO}
-import io.asuna.lucinda.database.{Connector, LucindaDatabase}
+import io.asuna.lucinda.database.LucindaDatabase
 import io.asuna.proto.service_lucinda.LucindaGrpc
 import io.asuna.proto.service_lucinda.LucindaRpc._
 import redis.RedisClient
@@ -22,8 +22,7 @@ class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigPa
   implicit val akkaSystem = akka.actor.ActorSystem()
 
   // Setup database
-  val connector = Connector.fromConfig(config)
-  val db = new LucindaDatabase(connector)
+  val db = LucindaDatabase.fromConfig(config)
 
   // Setup vulgate connection
   val vulgateConn = config.asuna.services("vulgate").conn
