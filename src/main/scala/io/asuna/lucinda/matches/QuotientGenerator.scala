@@ -1,7 +1,7 @@
 package io.asuna.lucinda.matches
 
 import cats.implicits._
-import io.asuna.proto.match_quotient.MatchQuotient
+import io.asuna.proto.lucinda.LucindaData.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.asunasan.legends.MatchSumHelpers._
 
@@ -58,7 +58,6 @@ object QuotientGenerator {
       runes = divideSubscalarMap(justPlays, sum.runes),
       keystones = divideSubscalarMap(justPlays, sum.keystones),
       summoners = divideSubscalarMap(justPlays, sum.summoners),
-      trinkets = divideSubscalarMap(justPlays, sum.trinkets),
       skillOrders = divideSubscalarMap(justPlays, mergeSkillOrders(sum.skillOrders)),
       durations = divideSubscalarMap(justPlays, sum.durations),
       bans = divideSubscalarMap(justPlays, sum.bans),
@@ -66,7 +65,8 @@ object QuotientGenerator {
       enemies = divideSubscalarMap(justPlays, sum.enemies),
       starterItems = divideSubscalarMap(justPlays, sum.starterItems),
       buildPath = divideSubscalarMap(justPlays, sum.buildPath),
-      coreBuildList = divideSubscalarMap(justPlays, sum.buildPath)
+      coreBuildList = divideSubscalarMap(justPlays, sum.buildPath),
+      items = divideSubscalarMap(justPlays, sum.items)
     )
   }
 

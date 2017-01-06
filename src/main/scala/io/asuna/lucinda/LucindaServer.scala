@@ -15,9 +15,8 @@ import redis.RedisClient
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class LucindaServer(args: Seq[String]) extends BaseService(args, LucindaConfigParser) with LucindaGrpc.Lucinda {
-
-  override val serviceDefinition = LucindaGrpc.bindService(this, implicitly[ExecutionContext])
+class LucindaServer(args: Seq[String])
+    extends BaseService(args, LucindaConfigParser, LucindaGrpc.bindService) with LucindaGrpc.Lucinda {
 
   implicit val akkaSystem = akka.actor.ActorSystem()
 

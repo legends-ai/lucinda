@@ -6,7 +6,7 @@ import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate.Graphs.GoldPer
 import io.asuna.proto.enums.{Ability, Region, Role}
 import io.asuna.proto.lucinda.LucindaData.{ChampionStatistics, Statistic}
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
-import io.asuna.proto.match_quotient.MatchQuotient
+import io.asuna.proto.lucinda.LucindaData.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.range.IntRange
 import scala.util.{ Success, Try }
