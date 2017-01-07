@@ -106,6 +106,27 @@ class LucindaServer(args: Seq[String])
     db.matchSums.sum(req.filters.toSet)
   }
 
-  override def getAllMatchups(req: GetAllMatchupsRequest): Future[GetAllMatchupsResponse] = ???
+  override def getAllMatchups(req: GetAllMatchupsRequest): Future[GetAllMatchupsResponse] = endpoint {
+    for {
+      factors <- vulgate.getAggregationFactors(
+        VulgateRpc.GetAggregationFactorsRequest(
+          context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
+          patches = req.patch,
+          tiers = req.tier
+        )
+      )
+
+      // Get all of the matchup overviews of this champion
+      matchups <- championDAO.getMatchupOverviews(
+        factors = factors,
+        champion = req.championId,
+        region = req.region,
+        role = req.role,
+        queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
+        minPlayRate = req.minPlayRate,
+        forceRefresh = req.forceRefresh
+      )
+    } yield GetAllMatchupsResponse(matchups = matchups)
+  }
 
 }
