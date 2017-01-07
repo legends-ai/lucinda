@@ -57,14 +57,15 @@ class LucindaServer(args: Seq[String])
           tiers = req.tier
         )
       )
-      statistics <- championStatisticsDAO.get(
+      results <- championStatisticsDAO.getResults(
         factors = factors,
         region = req.region,
         role = req.role,
         queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
-        forceRefresh = req.forceRefresh
+        forceRefresh = req.forceRefresh,
+        minPlayRate = req.minPlayRate
       )
-    } yield statistics.results.getOrElse(ChampionStatistics.Results())
+    } yield results
   }
 
   override def getChampion(req: GetChampionRequest): Future[Champion] = endpoint {

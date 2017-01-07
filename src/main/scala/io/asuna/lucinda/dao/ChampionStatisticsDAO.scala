@@ -13,6 +13,7 @@ import io.asuna.proto.lucinda.LucindaData.ChampionStatistics
 import io.asuna.proto.match_filters.MatchFilters
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
 import redis.RedisClient
+import io.asuna.lucinda.statistics.FilterChampionsHelpers._
 
 /**
   * String representation of champ statistics. Used for a redis key.
@@ -47,6 +48,41 @@ object ChampionStatisticsId {
 }
 
 class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
+
+  /**
+   * Fetches a ChampionStatistics.Results object.
+   */
+  def getResults(
+    factors: AggregationFactors,
+    region: Region,
+    role: Role,
+    queues: Set[QueueType],
+    forceRefresh: Boolean = false,
+    minPlayRate: Double = 0
+  ): Future[ChampionStatistics.Results] = {
+    for {
+      statistics <- get(
+        factors = factors,
+        region = region,
+        role = role,
+        queues = queues,
+        forceRefresh = forceRefresh
+      )
+    } yield {
+      // Get the results object
+      val results = statistics.results.getOrElse(ChampionStatistics.Results())
+
+      // Find the champions that satisfy the min play rate
+      val pickRates = results.derivatives
+        .map(_.picks.mapValues(_.value)).orEmpty
+      val champs = pickRates.filter {
+        case (champ, pickRate) => pickRate >= minPlayRate
+      }.keys
+
+      // Filter maps for keys that contain the champion
+      results.filterChampions(champs.toSet)
+    }
+  }
 
   /**
     * Get uses AggregationFactors to fetch.
