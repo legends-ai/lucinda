@@ -24,7 +24,7 @@ object LucindaConfigParser extends ConfigParser[LucindaConfig](
     .text("List of Cassandra hosts to connect to.")
 
   opt[String]("match_sums_keyspace").valueName("<host>")
-    .action((x, c) => c.copy(service = c.service.copy(redisHost = x)))
+    .action((x, c) => c.copy(service = c.service.copy(matchSumsKeyspace = x)))
     .text("Match sums keyspace to connect to.")
 
   opt[String]("redis_host").valueName("<host>")
