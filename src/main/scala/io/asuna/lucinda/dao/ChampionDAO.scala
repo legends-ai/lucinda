@@ -7,7 +7,6 @@ import io.asuna.proto.enums.QueueType
 import io.asuna.proto.lucinda.LucindaData.{ Champion, Matchup }
 import io.asuna.proto.vulgate.VulgateData.AggregationFactors
 import io.asuna.proto.enums.{ Region, Role }
-import io.asuna.proto.lucinda.LucindaData.Champion.MatchupOverview
 import io.asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics }
 import io.asuna.proto.range.{ PatchRange, TierRange }
 import io.asuna.proto.service_vulgate.VulgateGrpc.Vulgate
@@ -31,47 +30,11 @@ class ChampionDAO(
     minPlayRate: Double,
     forceRefresh: Boolean = false
   ): Future[Champion] = {
-    for {
-      bareChamp <- getWithoutMatchups(
-        factors, champion, region, role, queues, minPlayRate, -1, forceRefresh = forceRefresh)
-
-      // Matchup stuff. This is very expensive but fortunately it's cached.
-      // Enemy statistics against the champion.
-      enemyStatistics <- statisticsDAO.get(
-        factors = factors,
-        region = region,
-        role = role,
-        enemy = champion,
-        queues = queues,
-        reverse = false,
-        forceRefresh = forceRefresh
-      )
-
-      // Champion statistics against each enemy.
-      championStatistics <- statisticsDAO.get(
-        factors = factors,
-        region = region,
-        role = role,
-        enemy = champion,
-        queues = queues,
-        reverse = true,
-        forceRefresh = forceRefresh
-      )
-
-      // Vulgate champion data
-      champions <- vulgate.getChampions(
-        VulgateRpc.GetChampionsRequest(
-          // TODO(igm): locale
-          context = Some(VulgateHelpers.makeVulgateContextOfPatch(factors.patches.last, region)),
-
-          // List of all champions we care about.
-          // In theory this list will also include the champion requesting the data.
-          champions = enemyStatistics.sums.flatMap(_.scalars).map(_.plays.keys).getOrElse(Seq()).toSeq
-        )
-      )
-    } yield {
-      bareChamp.copy(matchups = makeMatchups(champions.champions, enemyStatistics, championStatistics))
-    }
+    getWithoutMatchups(
+      factors, champion, region,
+      role, queues, minPlayRate, -1,
+      forceRefresh = forceRefresh
+    )
   }
 
   /**
@@ -121,20 +84,6 @@ class ChampionDAO(
       id = champion,
       matchAggregate = Some(matchAggregate)
     )
-  }
-
-  private def makeMatchups(championData: Map[Int, Static.Champion], enemy: ChampionStatistics, focus: ChampionStatistics): Seq[MatchupOverview] = {
-    // First, let's get all of the common champions in both data sets.
-    val champs = getChamps(enemy) intersect getChamps(focus)
-
-    // Now, let's build our result by iterating over this.
-    champs.map { champ =>
-      MatchupOverview(
-        enemyId = champ,
-        focusStatistics = Some(MatchAggregator.makeStatistics(champ, focus)),
-        enemyStatistics = Some(MatchAggregator.makeStatistics(champ, enemy))
-      )
-    }.toSeq
   }
 
   private def getChamps(statistics: ChampionStatistics): Set[Int] =

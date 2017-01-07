@@ -106,4 +106,6 @@ class LucindaServer(args: Seq[String])
     db.matchSums.sum(req.filters.toSet)
   }
 
+  override def getAllMatchups(req: GetAllMatchupsRequest): Future[GetAllMatchupsResponse] = ???
+
 }
