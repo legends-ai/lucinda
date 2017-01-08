@@ -4,7 +4,7 @@ version := "0.1.0"
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
-  "io.asuna" %% "asunasan" % "0.9.9",
+  "io.asuna" %% "common" % "0.10.0",
 
   // Deps
   "com.github.etaty" %% "rediscala" % "1.6.0",

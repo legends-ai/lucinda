@@ -8,7 +8,7 @@ import com.google.protobuf.CodedInputStream
 import io.asuna.proto.match_sum.MatchSum
 import io.asuna.proto.match_filters.MatchFilters
 import scala.concurrent.Future
-import io.asuna.asunasan.legends.MatchSumHelpers._
+import io.asuna.common.legends.MatchSumHelpers._
 
 abstract class MatchSumsModel extends CassandraTable[ConcreteMatchSumsModel, MatchSum] {
 

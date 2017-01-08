@@ -3,7 +3,7 @@ package io.asuna.lucinda.matches
 import cats.implicits._
 import io.asuna.proto.lucinda.LucindaData.MatchQuotient
 import io.asuna.proto.match_sum.MatchSum
-import io.asuna.asunasan.legends.MatchSumHelpers._
+import io.asuna.common.legends.MatchSumHelpers._
 
 object QuotientGenerator {
 

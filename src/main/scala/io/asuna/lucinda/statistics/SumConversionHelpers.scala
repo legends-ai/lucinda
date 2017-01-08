@@ -1,6 +1,6 @@
 package io.asuna.lucinda.statistics
 
-import io.asuna.asunasan.legends.MatchSumHelpers._
+import io.asuna.common.legends.MatchSumHelpers._
 import io.asuna.proto.lucinda.LucindaData.ChampionStatistics.Sums
 import io.asuna.proto.match_sum.MatchSum
 import cats.implicits._

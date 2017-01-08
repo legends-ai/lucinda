@@ -1,7 +1,7 @@
 package io.asuna.lucinda
 
 import buildinfo.BuildInfo
-import io.asuna.asunasan.{ Config, ConfigParser }
+import io.asuna.common.{ Config, ConfigParser }
 
 case class LucindaConfig(
   matchSumsKeyspace: String = "bacchus_dev",

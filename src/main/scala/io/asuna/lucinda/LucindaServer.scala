@@ -1,6 +1,6 @@
 package io.asuna.lucinda
 
-import io.asuna.asunasan.BaseService
+import io.asuna.common.BaseService
 import io.asuna.proto.enums.QueueType
 import io.asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics, Matchup }
 import io.asuna.proto.match_sum.MatchSum

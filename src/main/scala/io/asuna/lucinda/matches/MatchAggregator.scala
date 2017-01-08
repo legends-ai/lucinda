@@ -1,7 +1,7 @@
 package io.asuna.lucinda.matches
 
 import cats.implicits._
-import io.asuna.asunasan.legends.MatchSumHelpers._
+import io.asuna.common.legends.MatchSumHelpers._
 import io.asuna.proto.lucinda.LucindaData.Champion.MatchAggregate.Graphs.GoldPerTime
 import io.asuna.proto.enums.{Ability, Region, Role}
 import io.asuna.proto.lucinda.LucindaData.{ChampionStatistics, Statistic}
