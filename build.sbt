@@ -1,13 +1,19 @@
 name := "lucinda"
-organization := "io.asuna"
-version := "0.1.0"
+organization := "asuna"
 scalaVersion := "2.11.8"
 
+  // Resolver
+resolvers ++= Seq[Resolver](
+  Resolver.bintrayRepo("websudos", "oss-releases"),
+  Resolver.bintrayRepo("stew", "snapshots"),
+  "Aincrad" at "s3://aincrad.asuna.io"
+)
+
 libraryDependencies ++= Seq(
-  "io.asuna" %% "common" % "0.10.0",
+  "asuna" %% "common" % "1.1.1",
 
   // Deps
-  "com.github.etaty" %% "rediscala" % "1.6.0",
+  "com.github.etaty" %% "rediscala" % "1.8.0",
   "com.websudos" %%  "phantom-dsl" % "1.29.5",  // cassandra
 
   // Testing
@@ -16,27 +22,13 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )
 
-mainClass in assembly := Some("io.asuna.lucinda.Main")
-
+mainClass in assembly := Some("asuna.lucinda.Main")
+assemblyJarName in assembly := "lucinda-assembly.jar"
 assemblyMergeStrategy in assembly := {
   case x if x.endsWith("io.netty.versions.properties") => MergeStrategy.first
   case x if x contains "publicsuffix" => MergeStrategy.first
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
+  case x => (assemblyMergeStrategy in assembly).value(x)
 }
-assemblyJarName in assembly := "lucinda-assembly.jar"
-
-awsProfile := "asuna"
-s3region := com.amazonaws.services.s3.model.Region.US_West
-s3acl := com.amazonaws.services.s3.model.CannedAccessControlList.AuthenticatedRead
-
-// Resolver
-resolvers ++= Seq[Resolver](
-  Resolver.bintrayRepo("websudos", "oss-releases"),
-  Resolver.bintrayRepo("stew", "snapshots"),
-  s3resolver.value("Aincrad", s3("aincrad.asuna.io"))
-)
 
 // testing
 testOptions in Test += Tests.Argument("-oDF")
