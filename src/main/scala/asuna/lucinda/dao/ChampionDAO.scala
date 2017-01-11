@@ -1,5 +1,6 @@
 package asuna.lucinda.dao
 
+import asuna.proto.ids.ChampionId
 import cats.implicits._
 import asuna.lucinda.VulgateHelpers
 import asuna.lucinda.matches.MatchAggregator
@@ -21,48 +22,35 @@ class ChampionDAO(
 )(implicit ec: ExecutionContext) {
 
   /**
-    * Gets a Champion.
+    *  Gets a Matchup.
     */
-  def getChampion(
+  def getMatchup(
     factors: AggregationFactors,
-    champion: Int,
+    focus: Option[ChampionId],
     region: Region,
     role: Role,
     queues: Set[QueueType],
     minPlayRate: Double,
-    forceRefresh: Boolean = false
-  ): Future[Champion] = {
-    getWithoutMatchups(
-      factors, champion, region,
-      role, queues, minPlayRate, -1,
-      forceRefresh = forceRefresh
-    )
-  }
-
-  /**
-    *  Gets a Matchup.
-    */
-  def getMatchup(
-    factors: AggregationFactors, focus: Int, region: Region,
-    role: Role, queues: Set[QueueType], minPlayRate: Double, enemy: Int, forceRefresh: Boolean = false
+    enemy: Option[ChampionId],
+    forceRefresh: Boolean
   ): Future[Matchup] = {
     for {
-      focusChamp <- getWithoutMatchups(
+      focusChamp <- getChampion(
         factors, focus, region, role, queues, minPlayRate, enemy, forceRefresh = forceRefresh)
-      enemyChamp <- getWithoutMatchups(
+      enemyChamp <- getChampion(
         factors, enemy, region, role, queues, minPlayRate, focus, forceRefresh = forceRefresh)
     } yield Matchup(focus = Some(focusChamp), enemy = Some(enemyChamp))
   }
 
-  private def getWithoutMatchups(
+  def getChampion(
     factors: AggregationFactors,
-    champion: Int,
+    champion: Option[ChampionId],
     region: Region,
     role: Role,
     queues: Set[QueueType],
     minPlayRate: Double,
-    enemy: Int,
-    forceRefresh: Boolean = false
+    enemy: Option[ChampionId],
+    forceRefresh: Boolean
   ): Future[Champion] = {
     // TODO(igm): locale
     for {
@@ -83,7 +71,7 @@ class ChampionDAO(
         forceRefresh = forceRefresh
       )
     } yield Champion(
-      id = champion,
+      id = champion.map(_.value).orEmpty,
       matchAggregate = Some(matchAggregate)
     )
   }
@@ -96,7 +84,7 @@ class ChampionDAO(
     */
   def getMatchupOverviews(
     factors: AggregationFactors,
-    champion: Int,
+    champion: Option[ChampionId],
     region: Region,
     role: Role,
     queues: Set[QueueType],

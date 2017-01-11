@@ -1,14 +1,16 @@
 package asuna.lucinda.filters
 
+import asuna.proto.ids.ChampionId
 import asuna.proto.match_filters.MatchFilters
 import asuna.proto.enums.{ QueueType, Region, Role }
+import asuna.proto.enums.Tier
 
 case class MatchFilterSet(
-  champion: Int,
+  champion: Option[ChampionId],
   patches: Set[String],
-  tiers: Set[Int],
+  tiers: Set[Tier],
   region: Region,
-  enemy: Int,
+  enemy: Option[ChampionId],
   role: Role,
   queues: Set[QueueType]
 ) {
@@ -36,48 +38,12 @@ case class MatchFilterSet(
 
 object MatchFilterSet {
 
-  val defaultQueues = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
-
   def apply(
-    champion: Int,
-    patches: Set[String],
-    tiers: Set[Int],
-    region: Region,
-    enemy: Int,
-    role: Role
-  ): MatchFilterSet = MatchFilterSet(
-    champion = champion,
-    patches = patches,
-    tiers = tiers,
-    region = region,
-    enemy = enemy,
-    role = role,
-    queues = defaultQueues
-  )
-
-  def apply(
-    champion: Int,
+    champion: Option[ChampionId],
     patch: String,
-    tiers: Set[Int],
+    tiers: Set[Tier],
     region: Region,
-    enemy: Int,
-    role: Role
-  ): MatchFilterSet = MatchFilterSet(
-    champion = champion,
-    patches = Set(patch),
-    tiers = tiers,
-    region = region,
-    enemy = enemy,
-    role = role,
-    queues = defaultQueues
-  )
-
-  def apply(
-    champion: Int,
-    patch: String,
-    tiers: Set[Int],
-    region: Region,
-    enemy: Int,
+    enemy: Option[ChampionId],
     role: Role,
     queues: Set[QueueType]
   ): MatchFilterSet = MatchFilterSet(

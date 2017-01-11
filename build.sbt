@@ -10,11 +10,8 @@ resolvers ++= Seq[Resolver](
 )
 
 libraryDependencies ++= Seq(
-  "asuna" %% "common" % "1.1.1",
-
-  // Deps
+  "asuna" %% "common" % "1.1.7",
   "com.github.etaty" %% "rediscala" % "1.8.0",
-  "com.websudos" %%  "phantom-dsl" % "1.29.5",  // cassandra
 
   // Testing
   "org.scalacheck" %% "scalacheck" % "1.13.3" % "test",

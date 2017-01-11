@@ -1,14 +1,17 @@
 package asuna.lucinda
 
+import cats.implicits._
 import asuna.common.BaseService
 import asuna.proto.enums.QueueType
+import asuna.proto.ids.ChampionId
 import asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics, Matchup }
 import asuna.proto.match_sum.MatchSum
+import asuna.proto.service_alexandria.AlexandriaGrpc
+import asuna.proto.service_alexandria.AlexandriaRpc.GetSumRequest
 import asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
 import scala.concurrent.{ExecutionContext, Future}
 
 import asuna.lucinda.dao.{ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO}
-import asuna.lucinda.database.LucindaDatabase
 import asuna.proto.service_lucinda.LucindaGrpc
 import asuna.proto.service_lucinda.LucindaRpc._
 import redis.RedisClient
@@ -20,15 +23,13 @@ class LucindaServer(args: Seq[String])
 
   implicit val akkaSystem = akka.actor.ActorSystem()
 
-  // Setup database
-  val db = LucindaDatabase.fromConfig(config)
+  // Setup alexandria connection
+  val alexandriaConn = config.asuna.services("alexandria").conn
+  val alexandria = AlexandriaGrpc.stub(alexandriaConn)
 
   // Setup vulgate connection
   val vulgateConn = config.asuna.services("vulgate").conn
   val vulgate = VulgateGrpc.stub(vulgateConn)
-
-  // Default queues lucinda will serve. TODO(igm): support queue in the requests
-  val defaultQueues = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
 
   // Next, let's init all of our dependencies.
   lazy val statsRedis = RedisClient(
@@ -44,8 +45,8 @@ class LucindaServer(args: Seq[String])
     name = "lucinda:aggs"
   )
 
-  lazy val championStatisticsDAO = new ChampionStatisticsDAO(db, statsRedis)
-  lazy val matchAggregateDAO = new MatchAggregateDAO(db, aggRedis, championStatisticsDAO)
+  lazy val championStatisticsDAO = new ChampionStatisticsDAO(config.service, alexandria, statsRedis)
+  lazy val matchAggregateDAO = new MatchAggregateDAO(alexandria, aggRedis, championStatisticsDAO)
   lazy val championDAO = new ChampionDAO(vulgate, championStatisticsDAO, matchAggregateDAO)
 
   override def getStatistics(req: GetStatisticsRequest): Future[ChampionStatistics.Results] = endpoint {
@@ -61,7 +62,7 @@ class LucindaServer(args: Seq[String])
         factors = factors,
         region = req.region,
         role = req.role,
-        queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
+        queues = defaultQueuesIfEmpty(req.queues),
         forceRefresh = req.forceRefresh,
         minPlayRate = req.minPlayRate
       )
@@ -78,9 +79,15 @@ class LucindaServer(args: Seq[String])
         )
       )
       champ <- championDAO.getChampion(
-        factors, req.championId, req.region, req.role,
-        queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
-        req.minPlayRate, forceRefresh = req.forceRefresh)
+        factors = factors,
+        champion = req.championId,
+        region = req.region,
+        role = req.role,
+        queues = defaultQueuesIfEmpty(req.queues),
+        enemy = None,
+        minPlayRate = req.minPlayRate,
+        forceRefresh = req.forceRefresh
+      )
     } yield champ
   }
 
@@ -95,15 +102,20 @@ class LucindaServer(args: Seq[String])
         )
       )
       matchup <- championDAO.getMatchup(
-        factors, req.focusChampionId, req.region,
-        req.role,
-        queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
-        req.minPlayRate, req.enemyChampionId, forceRefresh = req.forceRefresh)
+        factors = factors,
+        focus = req.focusChampionId,
+        region = req.region,
+        role = req.role,
+        queues = defaultQueuesIfEmpty(req.queues),
+        minPlayRate = req.minPlayRate,
+        enemy = req.enemyChampionId,
+        forceRefresh = req.forceRefresh
+      )
     } yield matchup
   }
 
   override def getMatchSum(req: GetMatchSumRequest): Future[MatchSum] = endpoint {
-    db.matchSums.sum(req.filters.toSet)
+    alexandria.getSum(GetSumRequest(req.filters.toSet.toSeq))
   }
 
   override def getAllMatchups(req: GetAllMatchupsRequest): Future[GetAllMatchupsResponse] = endpoint {
@@ -122,11 +134,14 @@ class LucindaServer(args: Seq[String])
         champion = req.championId,
         region = req.region,
         role = req.role,
-        queues = if (req.queues.length == 0) defaultQueues else req.queues.toSet,
+        queues = defaultQueuesIfEmpty(req.queues),
         minPlayRate = req.minPlayRate,
         forceRefresh = req.forceRefresh
       )
     } yield GetAllMatchupsResponse(matchups = matchups)
   }
+
+  private[this] def defaultQueuesIfEmpty(queues: Seq[QueueType]): Set[QueueType] =
+    if (queues.length == 0) config.service.defaultQueues else queues.toSet
 
 }

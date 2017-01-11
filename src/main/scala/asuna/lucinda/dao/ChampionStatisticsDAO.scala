@@ -1,12 +1,16 @@
 package asuna.lucinda.dao
 
+import asuna.lucinda.LucindaConfig
 import asuna.lucinda.statistics.StatisticsCombiner._
 import asuna.lucinda.statistics.{ ChangeMarker, StatisticsAggregator }
 import asuna.proto.enums.QueueType
+import asuna.proto.ids.ChampionId
+import asuna.proto.service_alexandria.AlexandriaGrpc.Alexandria
+import asuna.proto.service_alexandria.AlexandriaRpc.GetSumRequest
+import asuna.proto.enums.Tier
 import scala.concurrent.{ExecutionContext, Future}
 
 import cats.implicits._
-import asuna.lucinda.database.LucindaDatabase
 import asuna.lucinda.filters.MatchFilterSet
 import asuna.proto.enums.{Region, Role}
 import asuna.proto.lucinda.LucindaData.ChampionStatistics
@@ -19,7 +23,7 @@ import asuna.lucinda.statistics.FilterChampionsHelpers._
   * String representation of champ statistics. Used for a redis key.
   */
 case class ChampionStatisticsId(
-  tiers: List[Int],
+  tiers: List[Tier],
   patch: String,
   region: Region,
   role: Role,
@@ -30,24 +34,24 @@ case class ChampionStatisticsId(
 object ChampionStatisticsId {
 
   def fromSets(
-    tiers: Set[Int],
+    tiers: Set[Tier],
     patch: String,
     region: Region,
     role: Role,
-    enemy: Int,
+    enemy: Option[ChampionId],
     queues: Set[QueueType]
   ): ChampionStatisticsId = ChampionStatisticsId(
-    tiers = tiers.toList.sorted,
+    tiers = tiers.toList.sortBy(_.value),
     patch = patch,
     region = region,
     role = role,
-    enemy = enemy,
+    enemy = enemy.map(_.value).getOrElse(-1),
     queues = queues.toList.sortBy(_.value)
   )
 
 }
 
-class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec: ExecutionContext) {
+class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis: RedisClient)(implicit ec: ExecutionContext) {
 
   /**
    * Fetches a ChampionStatistics.Results object.
@@ -66,6 +70,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
         region = region,
         role = role,
         queues = queues,
+        enemy = None,
         forceRefresh = forceRefresh
       )
     } yield {
@@ -92,7 +97,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     region: Region,
     role: Role,
     queues: Set[QueueType],
-    enemy: Int = -1,
+    enemy: Option[ChampionId],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
@@ -114,14 +119,14 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     * Gets a ChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
     */
   def getSingle(
-    champions: Set[Int],
-    tiers: Set[Int],
+    champions: Set[ChampionId],
+    tiers: Set[Tier],
     patch: String,
     prevPatch: Option[String],
     region: Region,
     role: Role,
     queues: Set[QueueType],
-    enemy: Int = -1,
+    enemy: Option[ChampionId],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
@@ -135,7 +140,7 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
 
       case _ => {
         if (!prevPatch.isDefined) {
-          forceGet(champions, tiers, patch, region, role, enemy, reverse)
+          forceGet(champions, tiers, patch, region, role, enemy, queues, reverse)
         } else {
           val id = ChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
           val key = id.toString
@@ -146,8 +151,8 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
             // If the key is not found, recalculate it and write it
             case None => for {
               // TODO(igm): don't force get the previous patch, but instead read it back from redis
-              prev <- forceGet(champions, tiers, prevPatch.get, region, role, enemy, reverse)
-              stats <- forceGet(champions, tiers, patch, region, role, enemy, reverse)
+              prev <- forceGet(champions, tiers, prevPatch.get, region, role, enemy, queues, reverse)
+              stats <- forceGet(champions, tiers, patch, region, role, enemy, queues, reverse)
               _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
             } yield ChangeMarker.mark(stats, prev)
 
@@ -163,21 +168,22 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     * Runs get across multiple patches and aggregates into one ChampionStatistics object.
     */
   private[this] def getForPatches(
-    champions: Set[Int],
-    tiers: Set[Int],
+    champions: Set[ChampionId],
+    tiers: Set[Tier],
     patches: Set[String],
     prevPatches: Map[String, String],
     region: Region,
     role: Role,
     queues: Set[QueueType],
-    enemy: Int = -1,
+    enemy: Option[ChampionId],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[ChampionStatistics] = {
     for {
       statsList <- patches.toList.map(patch =>
         getSingle(
-          champions, tiers, patch, prevPatches.get(patch), region, role, queues, enemy, reverse, forceRefresh = forceRefresh
+          champions, tiers, patch, prevPatches.get(patch),
+          region, role, queues, enemy, reverse, forceRefresh = forceRefresh
         )).sequence
     } yield statsList.toList.combineAll
   }
@@ -193,34 +199,37 @@ class ChampionStatisticsDAO(db: LucindaDatabase, redis: RedisClient)(implicit ec
     *  This does not take caching into account.
     */
   private def forceGet(
-    champions: Set[Int],
-    tiers: Set[Int],
+    champions: Set[ChampionId],
+    tiers: Set[Tier],
     patch: String,
     region: Region,
     role: Role,
-    enemy: Int,
+    enemy: Option[ChampionId],
+    queues: Set[QueueType],
     reverse: Boolean
   ): Future[ChampionStatistics] = {
     // A lot goes on in this function, especially since we're dealing with Futures.
     // I'll try to explain every step in detail.
 
     // Here, we build the Set[MatchFilters] for every champion.
-    // This is of type Map[Int, Set[MatchFilters]].
-    val filtersMap = champions.map { champ =>
-      val basis = MatchFilterSet(champ, patch, tiers, region, enemy, role)
+    val filtersMap: Map[Int, Set[MatchFilters]] = champions.map { champ =>
+      val basis = MatchFilterSet(
+        champ.some, patch, tiers, region, enemy, role, queues
+      )
       val nextSet = if (reverse) {
         basis.inverse
       } else {
         basis
       }
-      (champ, nextSet.toFilterSet)
+      (champ.value, nextSet.toFilterSet)
     }.toMap
 
     // Next, we'll compute the MatchSums. This is where the function is no longer
     // pure, and we make a database call. (Note that since we're using futures,
     // no database call is made at the time of execution.) This returns a
     // Map[Int, Future[MatchSum]].
-    val sumsMapFuts = filtersMap.mapValues(filters => db.matchSums.sum(filters))
+    val sumsMapFuts = filtersMap
+      .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq)))
 
     // Next, we'll extract the Future from the value using some map magic.
     // Thus we end up with a Future[Map[Int, MatchSum]].
