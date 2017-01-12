@@ -13,6 +13,11 @@ object QuotientGenerator {
     6261, 6262, 6263
   )
 
+  // Items that could be core items.
+  val coreItems: Set[Int] = Set(
+    // TODO(pradyuman)
+  )
+
   def generate(sum: MatchSum): MatchQuotient = {
     val justPlays = sum.scalars.map(_.plays)
 
@@ -73,6 +78,7 @@ object QuotientGenerator {
       enemies = divideSubscalarMap(justPlays, sum.enemies),
       starterItems = divideSubscalarMap(justPlays, sum.starterItems),
       buildPath = divideSubscalarMap(justPlays, sum.buildPath),
+      coreBuilds = divideSubscalarMap(justPlays, makeCoreBuilds(sum.buildPath)),
       items = divideSubscalarMap(justPlays, sum.items)
     )
   }
@@ -130,6 +136,24 @@ object QuotientGenerator {
       .groupBy { case (keystone, _) => keystone }
       // Get all of the subscalars and combine them
       .mapValues(_.toList.map(_._2).combineAll)
+  }
+
+  def makeCoreBuilds(builds: Map[String, MatchSum.Subscalars]): Map[String, MatchSum.Subscalars] = {
+    builds
+      .map { case (str, subscalars) =>
+        val build = MatchAggregator.deserializeBuild(str)
+        (build.filter(coreItems), subscalars)
+      }
+
+      .groupBy { case (items, _) => items }
+
+      // Get all of the subscalars and combine them
+      .mapValues(_.toList.map(_._2).combineAll)
+
+      // turn things back into an item list
+      .map { case (items, v) =>
+        (items.map(_.toString).mkString("|"), v)
+      }.toMap
   }
 
 }
