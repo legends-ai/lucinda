@@ -7,7 +7,7 @@ import asuna.proto.enums.Tier
 
 case class MatchFilterSet(
   champion: Option[ChampionId],
-  patches: Set[String],
+  versions: Set[String],
   tiers: Set[Tier],
   region: Region,
   enemy: Option[ChampionId],
@@ -17,12 +17,12 @@ case class MatchFilterSet(
 
   def toFilterSet: Set[MatchFilters] = {
     for {
-      patch <- patches
+      version <- versions
       tier <- tiers
       queue <- queues
     } yield MatchFilters(
       championId = champion,
-      patch = patch,
+      version = version,
       tier = tier,
       region = region,
       enemyId = enemy,
@@ -40,7 +40,7 @@ object MatchFilterSet {
 
   def apply(
     champion: Option[ChampionId],
-    patch: String,
+    version: String,
     tiers: Set[Tier],
     region: Region,
     enemy: Option[ChampionId],
@@ -48,7 +48,7 @@ object MatchFilterSet {
     queues: Set[QueueType]
   ): MatchFilterSet = MatchFilterSet(
     champion = champion,
-    patches = Set(patch),
+    versions = Set(version),
     tiers = tiers,
     region = region,
     enemy = enemy,

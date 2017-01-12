@@ -7,6 +7,12 @@ import asuna.common.legends.MatchSumHelpers._
 
 object QuotientGenerator {
 
+  val keystones = Set(
+    6161, 6162, 6164,
+    6361, 6362, 6363,
+    6261, 6262, 6263
+  )
+
   def generate(sum: MatchSum): MatchQuotient = {
     val justPlays = sum.scalars.map(_.plays)
 
@@ -56,8 +62,10 @@ object QuotientGenerator {
       )),
       masteries = divideSubscalarMap(justPlays, sum.masteries),
       runes = divideSubscalarMap(justPlays, sum.runes),
-      keystones = divideSubscalarMap(justPlays, sum.keystones),
       summoners = divideSubscalarMap(justPlays, sum.summoners),
+      keystones = divideSubscalarMap(justPlays, makeKeystones(keystones, sum.masteries)),
+      startingTrinkets = divideSubscalarMap(justPlays, sum.startingTrinkets),
+      endingTrinkets = divideSubscalarMap(justPlays, sum.endingTrinkets),
       skillOrders = divideSubscalarMap(justPlays, mergeSkillOrders(sum.skillOrders)),
       durations = divideSubscalarMap(justPlays, sum.durations),
       bans = divideSubscalarMap(justPlays, sum.bans),
@@ -65,7 +73,6 @@ object QuotientGenerator {
       enemies = divideSubscalarMap(justPlays, sum.enemies),
       starterItems = divideSubscalarMap(justPlays, sum.starterItems),
       buildPath = divideSubscalarMap(justPlays, sum.buildPath),
-      coreBuildList = divideSubscalarMap(justPlays, sum.buildPath),
       items = divideSubscalarMap(justPlays, sum.items)
     )
   }
@@ -109,6 +116,20 @@ object QuotientGenerator {
     skillOrders.filterKeys(_.length() == 18).transform { (skillOrder, _) =>
       skillOrders.filterKeys(skillOrder startsWith _).values.toList.combineAll
     }
+  }
+
+  def makeKeystones(keystones: Set[Int], masteries: Map[String, MatchSum.Subscalars]): Map[Int, MatchSum.Subscalars] = {
+    masteries
+      .map { case (str, subscalars) =>
+        // TODO(igm): this is ugly and lots of unnecessary calculations
+        // We can easily write a version without deserializing
+        val set = MatchAggregator.deserializeBonusSet(str)
+        val ids = set.map(_._1)
+        (ids.find(keystones).orEmpty, subscalars)
+      }
+      .groupBy { case (keystone, _) => keystone }
+      // Get all of the subscalars and combine them
+      .mapValues(_.toList.map(_._2).combineAll)
   }
 
 }

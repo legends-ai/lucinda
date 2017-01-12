@@ -10,7 +10,7 @@ resolvers ++= Seq[Resolver](
 )
 
 libraryDependencies ++= Seq(
-  "asuna" %% "common" % "1.1.7",
+  "asuna" %% "common" % "1.1.15",
   "com.github.etaty" %% "rediscala" % "1.8.0",
 
   // Testing
