@@ -158,7 +158,6 @@ trait MatchSumGeneratorHelper {
       deltas = Option(deltas),
       masteries = masteries,
       runes = runes,
-      keystones = keystones,
       summoners = summoners,
       skillOrders = skillOrders,
       durationDistribution = Option(durationDistribution),
