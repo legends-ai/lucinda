@@ -48,7 +48,7 @@ dockerfile in docker := {
   }
 }
 
-val base = "096202052535.dkr.ecr.us-west-2.amazonaws.com"
+val base = "096202052535.dkr.ecr.us-east-1.amazonaws.com"
 imageNames in docker := Seq(
   // Sets the latest tag
   ImageName(s"${base}/${name.value}:latest"),
