@@ -1,7 +1,7 @@
 package asuna.lucinda
 
 import cats.implicits._
-import asuna.common.BaseService
+import asuna.common.BaseGrpcService
 import asuna.proto.enums.QueueType
 import asuna.proto.ids.ChampionId
 import asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics, Matchup }
@@ -19,7 +19,7 @@ import redis.RedisClient
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class LucindaServer(args: Seq[String])
-    extends BaseService(args, LucindaConfigParser, LucindaGrpc.bindService) with LucindaGrpc.Lucinda {
+    extends BaseGrpcService(args, LucindaConfigParser, LucindaGrpc.bindService) with LucindaGrpc.Lucinda {
 
   implicit val akkaSystem = akka.actor.ActorSystem()
 
