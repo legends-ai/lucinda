@@ -24,11 +24,11 @@ class LucindaServer(args: Seq[String])
   implicit val akkaSystem = akka.actor.ActorSystem()
 
   // Setup alexandria connection
-  val alexandriaConn = config.asuna.services("alexandria").conn
+  val alexandriaConn = config.common.services("alexandria").conn
   val alexandria = AlexandriaGrpc.stub(alexandriaConn)
 
   // Setup vulgate connection
-  val vulgateConn = config.asuna.services("vulgate").conn
+  val vulgateConn = config.common.services("vulgate").conn
   val vulgate = VulgateGrpc.stub(vulgateConn)
 
   // Next, let's init all of our dependencies.
@@ -49,7 +49,7 @@ class LucindaServer(args: Seq[String])
   lazy val matchAggregateDAO = new MatchAggregateDAO(alexandria, aggRedis, championStatisticsDAO)
   lazy val championDAO = new ChampionDAO(vulgate, championStatisticsDAO, matchAggregateDAO)
 
-  override def getStatistics(req: GetStatisticsRequest): Future[ChampionStatistics.Results] = endpoint {
+  override def getStatistics(req: GetStatisticsRequest): Future[ChampionStatistics.Results] = {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -69,7 +69,7 @@ class LucindaServer(args: Seq[String])
     } yield results
   }
 
-  override def getChampion(req: GetChampionRequest): Future[Champion] = endpoint {
+  override def getChampion(req: GetChampionRequest): Future[Champion] = {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -92,7 +92,7 @@ class LucindaServer(args: Seq[String])
   }
 
 
-  override def getMatchup(req: GetMatchupRequest): Future[Matchup] = endpoint {
+  override def getMatchup(req: GetMatchupRequest): Future[Matchup] = {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(
@@ -114,11 +114,11 @@ class LucindaServer(args: Seq[String])
     } yield matchup
   }
 
-  override def getMatchSum(req: GetMatchSumRequest): Future[MatchSum] = endpoint {
+  override def getMatchSum(req: GetMatchSumRequest): Future[MatchSum] = {
     alexandria.getSum(GetSumRequest(req.filters.toSet.toSeq))
   }
 
-  override def getAllMatchups(req: GetAllMatchupsRequest): Future[GetAllMatchupsResponse] = endpoint {
+  override def getAllMatchups(req: GetAllMatchupsRequest): Future[GetAllMatchupsResponse] = {
     for {
       factors <- vulgate.getAggregationFactors(
         VulgateRpc.GetAggregationFactorsRequest(

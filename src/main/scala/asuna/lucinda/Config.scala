@@ -2,19 +2,17 @@ package asuna.lucinda
 
 import asuna.proto.enums.QueueType
 import buildinfo.BuildInfo
-import asuna.common.{ Config, ConfigParser }
+import asuna.common.config.ConfigParser
 
 case class LucindaConfig(
   redisHost: String = "localhost",
   redisPort: Int = 6379
 ) {
-
   val defaultQueues = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
-
 }
 
 object LucindaConfigParser extends ConfigParser[LucindaConfig](
-  myService = BuildInfo.name,
+  name = BuildInfo.name,
   dependencies = Set("alexandria", "vulgate"),
   port = 45045,
   healthPort = 45046,
