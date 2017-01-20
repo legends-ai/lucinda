@@ -1,5 +1,5 @@
 name := "lucinda"
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.1"
 
 enablePlugins(
   AssemblyPlugin,
