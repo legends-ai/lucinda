@@ -9,11 +9,10 @@ enablePlugins(
 )
 
 libraryDependencies ++= Seq(
-  "asuna" %% "common" % "1.3.1",
+  "asuna" %% "common" % "1.3.6",
   "com.github.etaty" %% "rediscala" % "1.8.0",
 
   "org.scalacheck" %% "scalacheck" % "1.13.3" % "test",
-  "org.scalactic" %% "scalactic" % "3.0.0" % "test",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )
 

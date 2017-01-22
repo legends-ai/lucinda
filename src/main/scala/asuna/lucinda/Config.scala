@@ -13,6 +13,7 @@ case class LucindaConfig(
 
 object LucindaConfigParser extends ConfigParser[LucindaConfig](
   name = BuildInfo.name,
+  version = BuildInfo.version,
   dependencies = Set("alexandria", "vulgate"),
   port = 45045,
   healthPort = 45046,
