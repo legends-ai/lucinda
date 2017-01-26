@@ -133,7 +133,7 @@ class MatchAggregateDAO(alexandria: Alexandria, redis: RedisClient, statistics: 
     forceRefresh: Boolean
   ): Future[MatchAggregate] = {
     // First, let's get per-role sums.
-    val byRoleFilters = Role.values.map { someRole =>
+    val byRoleFilters = (Role.values.toSet - Role.UNDEFINED_ROLE).map { someRole =>
       (someRole, MatchFilterSet(champion, patches, tiers, region, enemy, someRole, queues).toFilterSet)
     }.toMap
     val byRoleFuts = byRoleFilters
