@@ -24,12 +24,10 @@ class LucindaServer(args: Seq[String])
   implicit val akkaSystem = akka.actor.ActorSystem()
 
   // Setup alexandria connection
-  val alexandriaConn = config.common.services("alexandria").conn
-  val alexandria = AlexandriaGrpc.stub(alexandriaConn)
+  val alexandria = AlexandriaGrpc.stub(clientFor("alexandria"))
 
   // Setup vulgate connection
-  val vulgateConn = config.common.services("vulgate").conn
-  val vulgate = VulgateGrpc.stub(vulgateConn)
+  val vulgate = VulgateGrpc.stub(clientFor("vulgate"))
 
   // Next, let's init all of our dependencies.
   lazy val statsRedis = RedisClient(
