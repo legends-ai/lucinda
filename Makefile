@@ -1,11 +1,13 @@
+alexandriatunnel:
+	lsof -twni tcp:22045 | xargs kill -9
+	ssh -fNL 22045:muramasa.dev:22045 ec2-user@bastion.dev.asuna.io
+
 vulgatetunnel:
 	lsof -twni tcp:6205 | xargs kill -9
-	ssh -i ~/legends_aws.pem -fNL 6205:localhost:6205 ubuntu@dev.asuna.io
+	ssh -fNL 6205:muramasa.dev:6205 ec2-user@bastion.dev.asuna.io
 
 # TODO(igm): find a cleaner way of doing this
-devtunnel: vulgatetunnel
+tunnel: alexandriatunnel vulgatetunnel
 
 run:
-	java -jar target/scala-2.11/lucinda-assembly.jar \
-		--vulgate_host=localhost --vulgate_port=6205 \
-		--redis_host=localhost
+	sbt "run --alexandria_port=22045 --vulgate_port=6205"

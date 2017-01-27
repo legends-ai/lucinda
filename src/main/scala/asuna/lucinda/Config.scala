@@ -8,7 +8,7 @@ case class LucindaConfig(
   redisHost: String = "localhost",
   redisPort: Int = 6379
 ) {
-  val defaultQueues = List(
+  val defaultQueues = Set(
     QueueType.RANKED_FLEX_SR, // S7 Flex
     QueueType.RANKED_SOLO_5x5, // S7 Solo
     QueueType.TEAM_BUILDER_RANKED_SOLO // S6 Solo
