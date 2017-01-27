@@ -8,7 +8,11 @@ case class LucindaConfig(
   redisHost: String = "localhost",
   redisPort: Int = 6379
 ) {
-  val defaultQueues = Set(QueueType.RANKED_FLEX_SR, QueueType.TEAM_BUILDER_DRAFT_RANKED_5x5)
+  val defaultQueues = List(
+    QueueType.RANKED_FLEX_SR, // S7 Flex
+    QueueType.RANKED_SOLO_5x5, // S7 Solo
+    QueueType.TEAM_BUILDER_RANKED_SOLO // S6 Solo
+  )
 }
 
 object LucindaConfigParser extends ConfigParser[LucindaConfig](
