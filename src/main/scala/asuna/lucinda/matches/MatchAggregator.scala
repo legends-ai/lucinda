@@ -71,7 +71,7 @@ object MatchAggregator {
   }
 
   private def getStat[T](obj: Option[T], champion: Int, accessor: T => Map[Int, Statistic]): Option[Statistic] = {
-    obj.flatMap(accessor(_).get(champion))
+    obj.flatMap(accessor(_).get(champion)).getOrElse(Statistic()).some
   }
 
   private def getDelta(deltas: Option[ChampionStatistics.Results.Deltas], champion: Int, accessor: ChampionStatistics.Results.Deltas => Option[ChampionStatistics.Results.Deltas.Delta]): Option[MatchAggregate.Statistics.Deltas.Delta] = {
