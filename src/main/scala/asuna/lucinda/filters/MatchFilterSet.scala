@@ -26,7 +26,8 @@ case class MatchFilterSet(
       tier = tier,
       region = region,
       enemyId = enemy,
-      role = role
+      role = role,
+      queue = queue
     )
   }.toSet
 
