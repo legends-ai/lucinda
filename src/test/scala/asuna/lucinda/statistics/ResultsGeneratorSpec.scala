@@ -1,11 +1,10 @@
 package asuna.lucinda.statistics
 
-import asuna.proto.lucinda.LucindaData.Statistic
+import asuna.proto.league.MatchSum
+import asuna.proto.league.lucinda.Statistic
+import asuna.proto.league.lucinda.ChampionStatistics.{ Results, Quotients, Sums }
 import org.scalatest.{ Matchers, PropSpec }
 import org.scalatest.prop.PropertyChecks
-
-import asuna.proto.match_sum.MatchSum
-import asuna.proto.lucinda.LucindaData.ChampionStatistics.{Results, Quotients, Sums}
 
 class ResultsGeneratorSpec extends PropSpec
     with PropertyChecks with Matchers with MatchSumGeneratorHelper {

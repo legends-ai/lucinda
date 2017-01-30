@@ -1,12 +1,10 @@
 package asuna.lucinda.filters
 
-import asuna.proto.ids.ChampionId
-import cats.implicits._
 import asuna.lucinda.statistics.MatchSumGeneratorHelper
+import asuna.proto.league.{ ChampionId, Region, Role, QueueType }
+import cats.implicits._
 import org.scalatest.{ Matchers, PropSpec }
 import org.scalatest.prop.PropertyChecks
-
-import asuna.proto.enums.{Region, Role, QueueType}
 
 class MatchFilterSetSpec extends PropSpec
     with PropertyChecks with Matchers with MatchSumGeneratorHelper {

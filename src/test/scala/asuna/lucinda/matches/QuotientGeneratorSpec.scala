@@ -1,7 +1,7 @@
 package asuna.lucinda.matches
 
 import asuna.lucinda.statistics.MatchSumGeneratorHelper
-import asuna.proto.match_sum.MatchSum
+import asuna.proto.league.MatchSum
 import org.scalacheck.{ Arbitrary, Gen }
 import org.scalatest.{ Matchers, PropSpec }
 import org.scalatest.prop.PropertyChecks

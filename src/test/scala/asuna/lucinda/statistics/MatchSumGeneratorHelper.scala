@@ -1,12 +1,11 @@
 package asuna.lucinda.statistics
 
+import asuna.proto.league.{ MatchSum, Region, Role, QueueType }
+import asuna.proto.league.lucinda.ChampionStatistics
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
-import Arbitrary.arbitrary
 
-import asuna.proto.enums.{Region, Role, QueueType}
-import asuna.proto.lucinda.LucindaData.ChampionStatistics
-import asuna.proto.match_sum.MatchSum
+import Arbitrary.arbitrary
 
 /**
   * Helper for generating valid MatchSum maps.

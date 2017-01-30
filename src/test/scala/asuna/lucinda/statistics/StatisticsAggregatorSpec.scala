@@ -1,9 +1,9 @@
 package asuna.lucinda.statistics
 
+import asuna.proto.league.{ Region, Role }
 import org.scalatest.{ Matchers, PropSpec }
 import org.scalatest.prop.PropertyChecks
 
-import asuna.proto.enums.{Region, Role}
 import StatisticsAggregator._
 
 class StatisticsAggregatorSpec extends PropSpec
