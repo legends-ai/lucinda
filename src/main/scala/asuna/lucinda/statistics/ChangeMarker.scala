@@ -1,10 +1,10 @@
 package asuna.lucinda.statistics
 
 import scala.collection.immutable.Map
+
+import asuna.proto.league.lucinda.{ ChampionStatistics, Statistic }
 import cats.implicits._
 import cats.Semigroup
-import asuna.proto.lucinda.LucindaData.Statistic
-import asuna.proto.lucinda.LucindaData.ChampionStatistics
 
 object ChangeMarker {
 

@@ -1,8 +1,8 @@
 package asuna.lucinda
 
-import asuna.proto.enums.QueueType
-import buildinfo.BuildInfo
 import asuna.common.config.ConfigParser
+import asuna.proto.league.QueueType
+import buildinfo.BuildInfo
 
 case class LucindaConfig(
   redisHost: String = "localhost",
@@ -20,7 +20,7 @@ object LucindaConfigParser extends ConfigParser[LucindaConfig](
   version = BuildInfo.version,
   dependencies = Set("alexandria", "vulgate"),
   port = 45045,
-  healthPort = 45046,
+  metaPort = 45046,
   initial = LucindaConfig()
 ) {
 

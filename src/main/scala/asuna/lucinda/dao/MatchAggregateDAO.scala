@@ -1,15 +1,15 @@
 package asuna.lucinda.dao
 
+import scala.concurrent.{ ExecutionContext, Future }
+
 import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.matches.AggregationContext
-import asuna.proto.enums.{ QueueType, Region, Role, Tier }
-import asuna.proto.ids.ChampionId
-import asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
-import asuna.proto.service_alexandria.AlexandriaGrpc.Alexandria
-import asuna.proto.service_alexandria.AlexandriaRpc.GetSumRequest
-import redis.RedisClient
-import scala.concurrent.{ ExecutionContext, Future }
+import asuna.proto.league.{ ChampionId, QueueType, Region, Role, Tier }
+import asuna.proto.league.lucinda.Champion.MatchAggregate
+import asuna.proto.league.alexandria.GetSumRequest
+import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import cats.implicits._
+import redis.RedisClient
 
 case class MatchAggregateId(
   // TODO(igm): don't cache based on minPlayRate -- calculate on the fly

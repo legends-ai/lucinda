@@ -1,22 +1,17 @@
 package asuna.lucinda
 
-import cats.implicits._
-import asuna.common.BaseGrpcService
-import asuna.proto.enums.QueueType
-import asuna.proto.ids.ChampionId
-import asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics, Matchup }
-import asuna.proto.match_sum.MatchSum
-import asuna.proto.service_alexandria.AlexandriaGrpc
-import asuna.proto.service_alexandria.AlexandriaRpc.GetSumRequest
-import asuna.proto.service_vulgate.{ VulgateGrpc, VulgateRpc }
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.ExecutionContext.Implicits.global
 
-import asuna.lucinda.dao.{ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO}
-import asuna.proto.service_lucinda.LucindaGrpc
-import asuna.proto.service_lucinda.LucindaRpc._
+import asuna.common.BaseGrpcService
+import asuna.proto.league.{ ChampionId, QueueType, MatchSum }
+import asuna.proto.league.alexandria.{ AlexandriaGrpc, GetSumRequest }
+import asuna.proto.league.lucinda._
+import asuna.proto.league.vulgate.{ GetAggregationFactorsRequest, VulgateGrpc }
+import asuna.lucinda.dao.{ ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO }
+import cats.implicits._
 import redis.RedisClient
 
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class LucindaServer(args: Seq[String])
     extends BaseGrpcService(args, LucindaConfigParser, LucindaGrpc.bindService) with LucindaGrpc.Lucinda {
@@ -50,7 +45,7 @@ class LucindaServer(args: Seq[String])
   override def getStatistics(req: GetStatisticsRequest): Future[ChampionStatistics.Results] = {
     for {
       factors <- vulgate.getAggregationFactors(
-        VulgateRpc.GetAggregationFactorsRequest(
+        GetAggregationFactorsRequest(
           context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
           patches = req.patch,
           tiers = req.tier
@@ -70,7 +65,7 @@ class LucindaServer(args: Seq[String])
   override def getChampion(req: GetChampionRequest): Future[Champion] = {
     for {
       factors <- vulgate.getAggregationFactors(
-        VulgateRpc.GetAggregationFactorsRequest(
+        GetAggregationFactorsRequest(
           context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
           patches = req.patch,
           tiers = req.tier
@@ -93,7 +88,7 @@ class LucindaServer(args: Seq[String])
   override def getMatchup(req: GetMatchupRequest): Future[Matchup] = {
     for {
       factors <- vulgate.getAggregationFactors(
-        VulgateRpc.GetAggregationFactorsRequest(
+        GetAggregationFactorsRequest(
           context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
           patches = req.patch,
           tiers = req.tier
@@ -119,7 +114,7 @@ class LucindaServer(args: Seq[String])
   override def getAllMatchups(req: GetAllMatchupsRequest): Future[GetAllMatchupsResponse] = {
     for {
       factors <- vulgate.getAggregationFactors(
-        VulgateRpc.GetAggregationFactorsRequest(
+        GetAggregationFactorsRequest(
           context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
           patches = req.patch,
           tiers = req.tier

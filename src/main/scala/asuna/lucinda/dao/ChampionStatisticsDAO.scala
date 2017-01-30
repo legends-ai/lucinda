@@ -1,23 +1,19 @@
 package asuna.lucinda.dao
 
-import asuna.lucinda.LucindaConfig
-import asuna.lucinda.statistics.StatisticsCombiner._
-import asuna.lucinda.statistics.{ ChangeMarker, StatisticsAggregator }
-import asuna.proto.enums.QueueType
-import asuna.proto.ids.ChampionId
-import asuna.proto.service_alexandria.AlexandriaGrpc.Alexandria
-import asuna.proto.service_alexandria.AlexandriaRpc.GetSumRequest
-import asuna.proto.enums.Tier
 import scala.concurrent.{ExecutionContext, Future}
 
-import cats.implicits._
+import asuna.lucinda.LucindaConfig
 import asuna.lucinda.filters.MatchFilterSet
-import asuna.proto.enums.{Region, Role}
-import asuna.proto.lucinda.LucindaData.ChampionStatistics
-import asuna.proto.match_filters.MatchFilters
-import asuna.proto.vulgate.VulgateData.AggregationFactors
-import redis.RedisClient
+import asuna.lucinda.statistics.{ ChangeMarker, StatisticsAggregator }
 import asuna.lucinda.statistics.FilterChampionsHelpers._
+import asuna.lucinda.statistics.StatisticsCombiner._
+import asuna.proto.league.{ ChampionId, MatchFilters, QueueType, Region, Role, Tier }
+import asuna.proto.league.alexandria.GetSumRequest
+import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
+import asuna.proto.league.lucinda.ChampionStatistics
+import asuna.proto.league.vulgate.AggregationFactors
+import cats.implicits._
+import redis.RedisClient
 
 /**
   * String representation of champ statistics. Used for a redis key.

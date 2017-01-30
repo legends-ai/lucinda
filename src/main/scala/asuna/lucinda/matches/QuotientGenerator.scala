@@ -1,9 +1,9 @@
 package asuna.lucinda.matches
 
-import cats.implicits._
-import asuna.proto.lucinda.LucindaData.MatchQuotient
-import asuna.proto.match_sum.MatchSum
 import asuna.common.legends.MatchSumHelpers._
+import asuna.proto.league.MatchSum
+import asuna.proto.league.lucinda.MatchQuotient
+import cats.implicits._
 
 object QuotientGenerator {
 

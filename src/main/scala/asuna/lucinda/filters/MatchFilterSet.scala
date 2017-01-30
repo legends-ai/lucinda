@@ -1,9 +1,8 @@
 package asuna.lucinda.filters
 
-import asuna.proto.ids.ChampionId
-import asuna.proto.match_filters.MatchFilters
-import asuna.proto.enums.{ QueueType, Region, Role }
-import asuna.proto.enums.Tier
+import asuna.proto.league.{
+  ChampionId, MatchFilters, QueueType, Region, Role, Tier
+}
 
 case class MatchFilterSet(
   champion: Option[ChampionId],

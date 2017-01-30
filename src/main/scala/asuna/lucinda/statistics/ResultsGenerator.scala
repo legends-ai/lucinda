@@ -1,8 +1,8 @@
 package asuna.lucinda.statistics
 
+import asuna.proto.league.lucinda.Statistic
+import asuna.proto.league.lucinda.ChampionStatistics.{ Results, Sums, Quotients }
 import cats.implicits._
-import asuna.proto.lucinda.LucindaData.Statistic
-import asuna.proto.lucinda.LucindaData.ChampionStatistics.{Results, Sums, Quotients}
 
 /**
   * Generats the Results part of the statistics.

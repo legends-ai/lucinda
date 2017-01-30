@@ -1,8 +1,9 @@
 package asuna.lucinda.statistics
 
-import asuna.proto.lucinda.LucindaData.ChampionStatistics.{Quotients, Sums}
 import scala.math.Numeric
 import scala.math.Numeric.Implicits._
+
+import asuna.proto.league.lucinda.ChampionStatistics.{ Quotients, Sums }
 
 object QuotientsGenerator {
 

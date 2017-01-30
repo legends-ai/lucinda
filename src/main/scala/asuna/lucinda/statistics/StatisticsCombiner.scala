@@ -1,9 +1,10 @@
 package asuna.lucinda.statistics
 
-import SumsHelpers._
+import asuna.proto.league.lucinda.ChampionStatistics
 import cats.Monoid
 import cats.implicits._
-import asuna.proto.lucinda.LucindaData.ChampionStatistics
+
+import SumsHelpers._
 
 object StatisticsCombiner {
 

@@ -1,8 +1,9 @@
 package asuna.lucinda.statistics
 
-import asuna.proto.lucinda.LucindaData.ChampionStatistics.Sums
-import asuna.proto.match_sum.MatchSum
+import asuna.proto.league.MatchSum
+import asuna.proto.league.lucinda.ChampionStatistics.Sums
 import cats.implicits._
+
 import SumsHelpers._
 import SumConversionHelpers._
 

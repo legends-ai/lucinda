@@ -1,21 +1,16 @@
 package asuna.lucinda.dao
 
-import asuna.proto.ids.ChampionId
-import cats.implicits._
-import asuna.lucinda.VulgateHelpers
-import asuna.lucinda.matches.MatchAggregator
-import asuna.proto.charon.CharonData.{ Static }
-import asuna.proto.enums.QueueType
-import asuna.proto.lucinda.LucindaData.{ Champion, Matchup, MatchupOverview }
-import asuna.proto.vulgate.VulgateData.AggregationFactors
-import asuna.proto.enums.{ Region, Role }
-import asuna.proto.lucinda.LucindaData.{ Champion, ChampionStatistics }
-import asuna.proto.range.{ PatchRange, TierRange }
-import asuna.proto.service_vulgate.VulgateGrpc.Vulgate
-import asuna.proto.service_vulgate.VulgateRpc
-import asuna.proto.vulgate.VulgateData
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.immutable.Vector
+
+import asuna.lucinda.VulgateHelpers
+import asuna.lucinda.matches.MatchAggregator
+import asuna.proto.league.{ ChampionId, PatchRange, QueueType, Region, Role, TierRange }
+import asuna.proto.league.charon.static
+import asuna.proto.league.lucinda.{ Champion, ChampionStatistics, Matchup, MatchupOverview }
+import asuna.proto.league.vulgate.AggregationFactors
+import asuna.proto.league.vulgate.VulgateGrpc.Vulgate
+import cats.implicits._
 
 class ChampionDAO(
   vulgate: Vulgate, statisticsDAO: ChampionStatisticsDAO, matchAggregateDAO: MatchAggregateDAO

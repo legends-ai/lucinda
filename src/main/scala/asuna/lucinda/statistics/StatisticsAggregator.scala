@@ -1,10 +1,7 @@
 package asuna.lucinda.statistics
 
-import asuna.proto.enums.{Region, Role}
-import asuna.proto.ids.ChampionId
-import asuna.proto.lucinda.LucindaData._
-import asuna.proto.match_sum.MatchSum
-import asuna.proto.match_filters.MatchFilters
+import asuna.proto.league.{ ChampionId, MatchSum, MatchFilters, Region, Role }
+import asuna.proto.league.lucinda._
 
 object StatisticsAggregator {
 

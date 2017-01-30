@@ -1,16 +1,14 @@
 package asuna.lucinda.matches
 
-import cats.implicits._
-import asuna.common.legends.MatchSumHelpers._
-import asuna.proto.lucinda.LucindaData.Champion.MatchAggregate.Graphs.GoldPerTime
-import asuna.proto.enums.{Ability, Region, Role}
-import asuna.proto.lucinda.LucindaData.{ChampionStatistics, Statistic}
-import asuna.proto.lucinda.LucindaData.Champion.MatchAggregate
-import asuna.proto.lucinda.LucindaData.MatchQuotient
-import asuna.proto.match_sum.MatchSum
-import asuna.proto.range.IntRange
 import scala.util.{ Success, Try }
+
+import asuna.common.legends.MatchSumHelpers._
 import asuna.lucinda.statistics.StatisticsCombiner._
+import asuna.proto.league.{ Ability, IntRange, MatchSum, Region, Role }
+import asuna.proto.league.lucinda.{ ChampionStatistics, MatchQuotient, Statistic }
+import asuna.proto.league.lucinda.Champion.MatchAggregate
+import asuna.proto.league.lucinda.Champion.MatchAggregate.Graphs.GoldPerTime
+import cats.implicits._
 
 object MatchAggregator {
 
