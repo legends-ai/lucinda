@@ -6,8 +6,8 @@ import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.matches.AggregationContext
 import asuna.proto.league.{ ChampionId, QueueType, Region, Role, Tier }
 import asuna.proto.league.lucinda.Champion.MatchAggregate
-import asuna.proto.league.alexandria.GetSumRequest
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
+import asuna.proto.league.alexandria.rpc.GetSumRequest
 import cats.implicits._
 import redis.RedisClient
 

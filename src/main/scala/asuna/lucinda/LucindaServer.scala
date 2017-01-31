@@ -5,16 +5,20 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import asuna.common.BaseGrpcService
 import asuna.proto.league.{ ChampionId, QueueType, MatchSum }
-import asuna.proto.league.alexandria.{ AlexandriaGrpc, GetSumRequest }
-import asuna.proto.league.lucinda._
-import asuna.proto.league.vulgate.{ GetAggregationFactorsRequest, VulgateGrpc }
+import asuna.proto.league.alexandria.AlexandriaGrpc
+import asuna.proto.league.alexandria.rpc.GetSumRequest
+import asuna.proto.league.lucinda.{ Champion, ChampionStatistics, LucindaGrpc, Matchup }
+import asuna.proto.league.lucinda.rpc._
+import asuna.proto.league.vulgate.VulgateGrpc
+import asuna.proto.league.vulgate.rpc.GetAggregationFactorsRequest
 import asuna.lucinda.dao.{ ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO }
 import cats.implicits._
 import redis.RedisClient
 
 
 class LucindaServer(args: Seq[String])
-    extends BaseGrpcService(args, LucindaConfigParser, LucindaGrpc.bindService) with LucindaGrpc.Lucinda {
+    extends BaseGrpcService(args, LucindaConfigParser, LucindaGrpc.bindService)
+    with LucindaGrpc.Lucinda {
 
   implicit val akkaSystem = akka.actor.ActorSystem()
 

@@ -8,8 +8,8 @@ import asuna.lucinda.statistics.{ ChangeMarker, StatisticsAggregator }
 import asuna.lucinda.statistics.FilterChampionsHelpers._
 import asuna.lucinda.statistics.StatisticsCombiner._
 import asuna.proto.league.{ ChampionId, MatchFilters, QueueType, Region, Role, Tier }
-import asuna.proto.league.alexandria.GetSumRequest
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
+import asuna.proto.league.alexandria.rpc.GetSumRequest
 import asuna.proto.league.lucinda.ChampionStatistics
 import asuna.proto.league.vulgate.AggregationFactors
 import cats.implicits._
