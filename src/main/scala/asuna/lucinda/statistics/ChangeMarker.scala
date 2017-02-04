@@ -2,7 +2,7 @@ package asuna.lucinda.statistics
 
 import scala.collection.immutable.Map
 
-import asuna.proto.league.lucinda.{ ChampionStatistics, Statistic }
+import asuna.proto.league.lucinda.{ AllChampionStatistics, Statistic }
 import cats.implicits._
 import cats.Semigroup
 
@@ -25,11 +25,11 @@ object ChangeMarker {
     }
   }
 
-  implicit object MarkDeltaSemigroup extends Semigroup[ChampionStatistics.Results.Deltas.Delta] {
+  implicit object MarkDeltaSemigroup extends Semigroup[AllChampionStatistics.Results.Deltas.Delta] {
     def combine(
-      delta: ChampionStatistics.Results.Deltas.Delta, prev: ChampionStatistics.Results.Deltas.Delta
+      delta: AllChampionStatistics.Results.Deltas.Delta, prev: AllChampionStatistics.Results.Deltas.Delta
     ) = {
-      ChampionStatistics.Results.Deltas.Delta(
+      AllChampionStatistics.Results.Deltas.Delta(
         zeroToTen = delta.zeroToTen |++| prev.zeroToTen,
         tenToTwenty = delta.tenToTwenty |++| prev.tenToTwenty,
         twentyToThirty = delta.twentyToThirty |++| prev.twentyToThirty,
@@ -38,11 +38,11 @@ object ChangeMarker {
     }
   }
 
-  implicit object MarkScalarsSemigroup extends Semigroup[ChampionStatistics.Results.Scalars] {
+  implicit object MarkScalarsSemigroup extends Semigroup[AllChampionStatistics.Results.Scalars] {
     def combine(
-      scalars: ChampionStatistics.Results.Scalars, prev: ChampionStatistics.Results.Scalars
+      scalars: AllChampionStatistics.Results.Scalars, prev: AllChampionStatistics.Results.Scalars
     ) = {
-      ChampionStatistics.Results.Scalars(
+      AllChampionStatistics.Results.Scalars(
         wins = scalars.wins |++| prev.wins,
         goldEarned = scalars.goldEarned |++| prev.goldEarned,
         kills = scalars.kills |++| prev.kills,
@@ -72,11 +72,11 @@ object ChangeMarker {
     }
   }
 
-  implicit object MarkDeltasSemigroup extends Semigroup[ChampionStatistics.Results.Deltas] {
+  implicit object MarkDeltasSemigroup extends Semigroup[AllChampionStatistics.Results.Deltas] {
     def combine(
-      deltas: ChampionStatistics.Results.Deltas, prev: ChampionStatistics.Results.Deltas
+      deltas: AllChampionStatistics.Results.Deltas, prev: AllChampionStatistics.Results.Deltas
     ) = {
-      ChampionStatistics.Results.Deltas(
+      AllChampionStatistics.Results.Deltas(
         csDiff = deltas.csDiff |+| prev.csDiff,
         xpDiff = deltas.xpDiff |+| prev.xpDiff,
         damageTakenDiff = deltas.damageTakenDiff |+| prev.damageTakenDiff,
@@ -89,21 +89,21 @@ object ChangeMarker {
     }
   }
 
-  implicit object MarkDerivativesSemigroup extends Semigroup[ChampionStatistics.Results.Derivatives] {
+  implicit object MarkDerivativesSemigroup extends Semigroup[AllChampionStatistics.Results.Derivatives] {
     def combine(
-      derivatives: ChampionStatistics.Results.Derivatives, prev: ChampionStatistics.Results.Derivatives
+      derivatives: AllChampionStatistics.Results.Derivatives, prev: AllChampionStatistics.Results.Derivatives
     ) = {
-      ChampionStatistics.Results.Derivatives(
+      AllChampionStatistics.Results.Derivatives(
         picks = derivatives.picks |+| prev.picks,
         bans = derivatives.bans |+| prev.bans
       )
     }
   }
 
-  implicit object MarkResultsSemigroup extends Semigroup[ChampionStatistics.Results] {
+  implicit object MarkResultsSemigroup extends Semigroup[AllChampionStatistics.Results] {
     def combine(
-      stats: ChampionStatistics.Results, prev: ChampionStatistics.Results
-    ): ChampionStatistics.Results = {
+      stats: AllChampionStatistics.Results, prev: AllChampionStatistics.Results
+    ): AllChampionStatistics.Results = {
       stats.copy(
         scalars = stats.scalars |+| prev.scalars,
         deltas = stats.deltas |+| prev.deltas,
@@ -112,7 +112,7 @@ object ChangeMarker {
     }
   }
 
-  def mark(stats: ChampionStatistics, prev: ChampionStatistics) =
+  def mark(stats: AllChampionStatistics, prev: AllChampionStatistics) =
     stats.copy(results = stats.results |+| prev.results)
 
 }

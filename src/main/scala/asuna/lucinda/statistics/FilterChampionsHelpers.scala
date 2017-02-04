@@ -1,6 +1,6 @@
 package asuna.lucinda.statistics
 
-import asuna.proto.league.lucinda.ChampionStatistics.Results
+import asuna.proto.league.lucinda.AllChampionStatistics.Results
 
 object FilterChampionsHelpers {
 

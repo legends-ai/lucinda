@@ -4,74 +4,76 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.matches.AggregationContext
-import asuna.proto.league.{ ChampionId, QueueType, Region, Role, Tier }
-import asuna.proto.league.lucinda.Champion.MatchAggregate
+import asuna.proto.league.{ QueueType, Region, Role, Tier }
+import asuna.proto.league.lucinda.Statistics
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc.GetSumRequest
 import cats.implicits._
 import redis.RedisClient
 
-case class MatchAggregateId(
+case class StatisticsId(
   // TODO(igm): don't cache based on minPlayRate -- calculate on the fly
-  patches: List[String],
-  lastFivePatches: List[String],
-  champion: Int,
-  tiers: List[Tier],
-  region: Region,
-  role: Role,
-  enemy: Int,
-  queues: List[QueueType],
+  patches: Seq[String],
+  lastFivePatches: Seq[String],
+  champions: Seq[Int],
+  tiers: Seq[Tier],
+  regions: Seq[Region],
+  roles: Seq[Role],
+  enemies: Seq[Int],
+  queues: Seq[QueueType],
   minPlayRate: Double
 )
 
-object MatchAggregateId {
+object StatisticsId {
 
   /**
-    * Since List has a deterministic print order, we convert Sets to Lists.
+    * Since Seq has a deterministic print order, we convert Sets to Seqs.
     */
   def fromSets(
     patches: Set[String],
-    lastFivePatches: List[String],
-    champion: Option[ChampionId],
+    lastFivePatches: Seq[String],
+    champions: Set[Int],
     tiers: Set[Tier],
-    region: Region,
-    role: Role,
-    enemy: Option[ChampionId],
+    regions: Set[Region],
+    roles: Set[Role],
+    enemies: Set[Int],
     queues: Set[QueueType],
     minPlayRate: Double
-  ): MatchAggregateId = MatchAggregateId(
-    patches = patches.toList.sorted,
+  ): StatisticsId = StatisticsId(
+    patches = patches.toSeq.sorted,
     lastFivePatches = lastFivePatches,
-    champion = champion.map(_.value).getOrElse(-1),
-    tiers = tiers.toList.sortBy(_.value),
-    region = region,
-    role = role,
-    enemy = enemy.map(_.value).getOrElse(-1),
-    queues = queues.toList.sortBy(_.value),
+    champions = champions.toSeq,
+    tiers = tiers.toSeq.sortBy(_.value),
+    regions = regions.toSeq,
+    roles = roles.toSeq,
+    enemies = enemies.toSeq,
+    queues = queues.toSeq.sortBy(_.value),
     minPlayRate = minPlayRate
   )
 
 }
 
-class MatchAggregateDAO(alexandria: Alexandria, redis: RedisClient, statistics: ChampionStatisticsDAO)(implicit ec: ExecutionContext) {
+class StatisticsDAO(alexandria: Alexandria, redis: RedisClient, statistics: AllChampionStatisticsDAO)(
+  implicit ec: ExecutionContext
+) {
 
   def get(
-    champions: Set[ChampionId],
+    allChampions: Set[Int],
     patches: Set[String],
-    lastFivePatches: List[String],
+    lastFivePatches: Seq[String],
     prevPatches: Map[String, String],
-    champion: Option[ChampionId],
+    champions: Set[Int],
     tiers: Set[Tier],
-    region: Region,
-    role: Role,
+    regions: Set[Region],
+    roles: Set[Role],
     queues: Set[QueueType],
-    enemy: Option[ChampionId],
+    enemies: Set[Int],
     minPlayRate: Double,
     forceRefresh: Boolean = false
-  ): Future[MatchAggregate] = {
+  ): Future[Statistics] = {
     import scala.concurrent.duration._
 
-    val id = MatchAggregateId.fromSets(
+    val id = StatisticsId.fromSets(
       patches = patches,
       lastFivePatches = lastFivePatches,
       champion = champion,
@@ -96,9 +98,9 @@ class MatchAggregateDAO(alexandria: Alexandria, redis: RedisClient, statistics: 
           prevPatches = prevPatches,
           champion = champion,
           tiers = tiers,
-          region = region,
-          role = role,
-          enemy = enemy,
+          regions = region,
+          roles = role,
+          enemies = enemy,
           queues = queues,
           minPlayRate = minPlayRate,
           forceRefresh = forceRefresh
@@ -108,7 +110,7 @@ class MatchAggregateDAO(alexandria: Alexandria, redis: RedisClient, statistics: 
       } yield stats
 
       // If the key is found, we shall parse it
-      case Some(bytes) => Future.successful(MatchAggregate.parseFrom(bytes.toArray[Byte]))
+      case Some(bytes) => Future.successful(Statistics.parseFrom(bytes.toArray[Byte]))
     }
   }
 
@@ -119,19 +121,19 @@ class MatchAggregateDAO(alexandria: Alexandria, redis: RedisClient, statistics: 
     * @param lastFivePatches -- The last five patches of the game.
     */
   private def forceGet(
-    champions: Set[ChampionId],
+    allChampions: Set[Int],
     patches: Set[String],
     lastFivePatches: Seq[String],
     prevPatches: Map[String, String],
-    champion: Option[ChampionId],
+    champions: Option[ChampionId],
     tiers: Set[Tier],
-    region: Region,
-    role: Role,
-    enemy: Option[ChampionId],
+    regions: Set[Region],
+    roles: Set[Role],
+    enemies: Set[Int],
     queues: Set[QueueType],
     minPlayRate: Double,
     forceRefresh: Boolean
-  ): Future[MatchAggregate] = {
+  ): Future[Statistics] = {
     // First, let's get per-role sums.
     val byRoleFilters = (Role.values.toSet - Role.UNDEFINED_ROLE).map { someRole =>
       (someRole, MatchFilterSet(champion, patches, tiers, region, enemy, someRole, queues).toFilterSet)
@@ -157,7 +159,7 @@ class MatchAggregateDAO(alexandria: Alexandria, redis: RedisClient, statistics: 
         ).map((patch, _))
       }
 
-      // This contains an element of the form Map[String, ChampionStatistics]
+      // This contains an element of the form Map[String, AllChampionStatistics]
       // where key is the patch and value is the stats.
       allStats <- allStatsFuts.sequence.map(_.toMap)
 

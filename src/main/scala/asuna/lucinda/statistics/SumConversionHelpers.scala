@@ -2,7 +2,7 @@ package asuna.lucinda.statistics
 
 import asuna.common.legends.MatchSumHelpers._
 import asuna.proto.league.MatchSum
-import asuna.proto.league.lucinda.ChampionStatistics.Sums
+import asuna.proto.league.lucinda.AllChampionStatistics.Sums
 import cats.implicits._
 
 object SumConversionHelpers {

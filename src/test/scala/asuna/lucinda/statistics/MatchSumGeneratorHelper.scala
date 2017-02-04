@@ -1,7 +1,7 @@
 package asuna.lucinda.statistics
 
 import asuna.proto.league.{ MatchSum, Region, Role, QueueType }
-import asuna.proto.league.lucinda.ChampionStatistics
+import asuna.proto.league.lucinda.AllChampionStatistics
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
 
@@ -198,14 +198,14 @@ trait MatchSumGeneratorHelper {
     sumMap <- genMatchSumMap
   } yield SumCombiner.combineSums(sumMap)
 
-  implicit lazy val arbSums: Arbitrary[ChampionStatistics.Sums] = Arbitrary(genSums)
+  implicit lazy val arbSums: Arbitrary[AllChampionStatistics.Sums] = Arbitrary(genSums)
 
   // TODO(igm): generate these quotients independently
   val genQuotients = for {
     sums <- genSums
   } yield QuotientsGenerator.generateQuotients(sums)
 
-  implicit lazy val arbQuotients: Arbitrary[ChampionStatistics.Quotients] = Arbitrary(genQuotients)
+  implicit lazy val arbQuotients: Arbitrary[AllChampionStatistics.Quotients] = Arbitrary(genQuotients)
 
   val genMatchAggregatorArgs: Gen[MatchAggregatorArgs] = {
     for {
@@ -216,7 +216,7 @@ trait MatchSumGeneratorHelper {
       role <- arbitrary[Role]
       champs = otherChamps + champion
 
-      // Generate a ChampionStatistics object for every patch.
+      // Generate a AllChampionStatistics object for every patch.
       // This is probably the most expensive operation here. #bigdata
       patchSums <- Gen.containerOfN[List, Map[Int, MatchSum]](patches.size, makeMatchSumMap(champs))
       patchStats = patches.zip(patchSums).map { case (patch, sumMap) =>
@@ -250,7 +250,7 @@ trait MatchSumGeneratorHelper {
 case class MatchAggregatorArgs(
   champion: Int,
   minPlayRate: Double,
-  patchStats: Map[String, ChampionStatistics],
+  patchStats: Map[String, AllChampionStatistics],
   byRole: Map[Role, MatchSum],
   byPatch: Map[String, MatchSum]
 )

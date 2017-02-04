@@ -10,7 +10,7 @@ import asuna.lucinda.statistics.StatisticsCombiner._
 import asuna.proto.league.{ ChampionId, MatchFilters, QueueType, Region, Role, Tier }
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc.GetSumRequest
-import asuna.proto.league.lucinda.ChampionStatistics
+import asuna.proto.league.lucinda.AllChampionStatistics
 import asuna.proto.league.vulgate.AggregationFactors
 import cats.implicits._
 import redis.RedisClient
@@ -18,7 +18,7 @@ import redis.RedisClient
 /**
   * String representation of champ statistics. Used for a redis key.
   */
-case class ChampionStatisticsId(
+case class AllChampionStatisticsId(
   tiers: List[Tier],
   patch: String,
   region: Region,
@@ -27,7 +27,7 @@ case class ChampionStatisticsId(
   queues: List[QueueType]
 )
 
-object ChampionStatisticsId {
+object AllChampionStatisticsId {
 
   def fromSets(
     tiers: Set[Tier],
@@ -36,7 +36,7 @@ object ChampionStatisticsId {
     role: Role,
     enemy: Option[ChampionId],
     queues: Set[QueueType]
-  ): ChampionStatisticsId = ChampionStatisticsId(
+  ): AllChampionStatisticsId = AllChampionStatisticsId(
     tiers = tiers.toList.sortBy(_.value),
     patch = patch,
     region = region,
@@ -47,10 +47,10 @@ object ChampionStatisticsId {
 
 }
 
-class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis: RedisClient)(implicit ec: ExecutionContext) {
+class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis: RedisClient)(implicit ec: ExecutionContext) {
 
   /**
-   * Fetches a ChampionStatistics.Results object.
+   * Fetches a AllChampionStatistics.Results object.
    */
   def getResults(
     factors: AggregationFactors,
@@ -59,7 +59,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
     queues: Set[QueueType],
     forceRefresh: Boolean = false,
     minPlayRate: Double = 0
-  ): Future[ChampionStatistics.Results] = {
+  ): Future[AllChampionStatistics.Results] = {
     for {
       statistics <- get(
         factors = factors,
@@ -71,7 +71,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
       )
     } yield {
       // Get the results object
-      val results = statistics.results.getOrElse(ChampionStatistics.Results())
+      val results = statistics.results.getOrElse(AllChampionStatistics.Results())
 
       // Find the champions that satisfy the min play rate
       val pickRates = results.derivatives
@@ -96,7 +96,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
     enemy: Option[ChampionId],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
-  ): Future[ChampionStatistics] = {
+  ): Future[AllChampionStatistics] = {
     getForPatches(
       champions = factors.champions.toSet,
       tiers = factors.tiers.toSet,
@@ -112,7 +112,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
   }
 
   /**
-    * Gets a ChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
+    * Gets a AllChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
     */
   def getSingle(
     champions: Set[ChampionId],
@@ -125,7 +125,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
     enemy: Option[ChampionId],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
-  ): Future[ChampionStatistics] = {
+  ): Future[AllChampionStatistics] = {
     import scala.concurrent.duration._
     role match {
       case Role.UNDEFINED_ROLE => {
@@ -138,7 +138,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
         if (!prevPatch.isDefined) {
           forceGet(champions, tiers, patch, region, role, enemy, queues, reverse)
         } else {
-          val id = ChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
+          val id = AllChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
           val key = id.toString
 
           val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
@@ -153,7 +153,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
             } yield ChangeMarker.mark(stats, prev)
 
             // If the key is found, we shall parse it
-            case Some(bytes) => Future.successful(ChampionStatistics.parseFrom(bytes.toArray[Byte]))
+            case Some(bytes) => Future.successful(AllChampionStatistics.parseFrom(bytes.toArray[Byte]))
           }
         }
       }
@@ -161,7 +161,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
   }
 
   /**
-    * Runs get across multiple patches and aggregates into one ChampionStatistics object.
+    * Runs get across multiple patches and aggregates into one AllChampionStatistics object.
     */
   private[this] def getForPatches(
     champions: Set[ChampionId],
@@ -174,7 +174,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
     enemy: Option[ChampionId],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
-  ): Future[ChampionStatistics] = {
+  ): Future[AllChampionStatistics] = {
     for {
       statsList <- patches.toList.map(patch =>
         getSingle(
@@ -185,7 +185,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
   }
 
   /**
-    *  This function derives a ChampionStatistics object from a patch, a set of tiers, a region, and an enemy.
+    *  This function derives a AllChampionStatistics object from a patch, a set of tiers, a region, and an enemy.
     *
     *  An overview of the steps to do this is as follows:
     *  1. Find filters for each champion. (see buildFilterSet)
@@ -203,7 +203,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
     enemy: Option[ChampionId],
     queues: Set[QueueType],
     reverse: Boolean
-  ): Future[ChampionStatistics] = {
+  ): Future[AllChampionStatistics] = {
     // A lot goes on in this function, especially since we're dealing with Futures.
     // I'll try to explain every step in detail.
 
@@ -232,7 +232,7 @@ class ChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis
     val sumsMapFut = sumsMapFuts.sequence
 
     // Finally, we'll map over the values of this map to generate a Statistics
-    // object for each value. Thus we end up with a Future[ChampionStatistics],
+    // object for each value. Thus we end up with a Future[AllChampionStatistics],
     // and we are done.
     sumsMapFut.map { sumsMap =>
       StatisticsAggregator.makeStatistics(role, sumsMap)

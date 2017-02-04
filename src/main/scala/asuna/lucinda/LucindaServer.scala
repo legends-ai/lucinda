@@ -4,14 +4,14 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import asuna.common.BaseGrpcService
-import asuna.proto.league.{ ChampionId, QueueType, MatchSum }
+import asuna.proto.league.{ QueueType, MatchSum }
 import asuna.proto.league.alexandria.AlexandriaGrpc
 import asuna.proto.league.alexandria.rpc.GetSumRequest
-import asuna.proto.league.lucinda.{ Champion, ChampionStatistics, LucindaGrpc, Matchup }
+import asuna.proto.league.lucinda.{ AllChampionStatistics, LucindaGrpc, Statistics }
 import asuna.proto.league.lucinda.rpc._
 import asuna.proto.league.vulgate.VulgateGrpc
 import asuna.proto.league.vulgate.rpc.GetAggregationFactorsRequest
-import asuna.lucinda.dao.{ ChampionDAO, MatchAggregateDAO, ChampionStatisticsDAO }
+import asuna.lucinda.dao.{ StatisticsDAO, AllChampionStatisticsDAO }
 import cats.implicits._
 import redis.RedisClient
 
@@ -42,11 +42,10 @@ class LucindaServer(args: Seq[String])
     name = "lucinda:aggs"
   )
 
-  lazy val championStatisticsDAO = new ChampionStatisticsDAO(config.service, alexandria, statsRedis)
-  lazy val matchAggregateDAO = new MatchAggregateDAO(alexandria, aggRedis, championStatisticsDAO)
-  lazy val championDAO = new ChampionDAO(vulgate, championStatisticsDAO, matchAggregateDAO)
+  lazy val championStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria, statsRedis)
+  lazy val statisticsDAO = new StatisticsDAO(alexandria, aggRedis, championStatisticsDAO)
 
-  override def getStatistics(req: GetStatisticsRequest): Future[ChampionStatistics.Results] = {
+  override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
@@ -66,7 +65,7 @@ class LucindaServer(args: Seq[String])
     } yield results
   }
 
-  override def getChampion(req: GetChampionRequest): Future[Champion] = {
+  override def getStatistics(req: GetStatisticsRequest): Future[Statistics] = {
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
@@ -75,44 +74,21 @@ class LucindaServer(args: Seq[String])
           tiers = req.tier
         )
       )
-      champ <- championDAO.getChampion(
-        factors = factors,
-        champion = req.championId,
-        region = req.region,
-        role = req.role,
+      statistics <- statisticsDAO.get(
+        allChampions = factors.champions.toSet,
+        patches = req.patches.toSet,
+        lastFivePatches = factors.lastFivePatches, //
+        prevPatches = factors.prevPatches,
+        champions = req.championIds.toSet,
+        tiers = req.tiers.toSet,
+        regions = req.regions.toSet,
+        roles = req.roles.toSet,
         queues = defaultQueuesIfEmpty(req.queues),
-        enemy = None,
+        enemies = req.enemyIds.toSet,
         minPlayRate = req.minPlayRate,
         forceRefresh = req.forceRefresh
       )
-    } yield champ
-  }
-
-
-  override def getMatchup(req: GetMatchupRequest): Future[Matchup] = {
-    for {
-      factors <- vulgate.getAggregationFactors(
-        GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
-          patches = req.patch,
-          tiers = req.tier
-        )
-      )
-      matchup <- championDAO.getMatchup(
-        factors = factors,
-        focus = req.focusChampionId,
-        region = req.region,
-        role = req.role,
-        queues = defaultQueuesIfEmpty(req.queues),
-        minPlayRate = req.minPlayRate,
-        enemy = req.enemyChampionId,
-        forceRefresh = req.forceRefresh
-      )
-    } yield matchup
-  }
-
-  override def getMatchSum(req: GetMatchSumRequest): Future[MatchSum] = {
-    alexandria.getSum(GetSumRequest(req.filters.toSet.toSeq))
+    } yield statistics
   }
 
   override def getAllMatchups(req: GetAllMatchupsRequest): Future[GetAllMatchupsResponse] = {

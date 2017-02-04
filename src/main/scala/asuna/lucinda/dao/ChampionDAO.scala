@@ -7,35 +7,14 @@ import asuna.lucinda.VulgateHelpers
 import asuna.lucinda.matches.MatchAggregator
 import asuna.proto.league.{ ChampionId, PatchRange, QueueType, Region, Role, TierRange }
 import asuna.proto.league.charon.static
-import asuna.proto.league.lucinda.{ Champion, ChampionStatistics, Matchup, MatchupOverview }
+import asuna.proto.league.lucinda.{ Champion, AllChampionStatistics, Matchup, MatchupOverview }
 import asuna.proto.league.vulgate.AggregationFactors
 import asuna.proto.league.vulgate.VulgateGrpc.Vulgate
 import cats.implicits._
 
 class ChampionDAO(
-  vulgate: Vulgate, statisticsDAO: ChampionStatisticsDAO, matchAggregateDAO: MatchAggregateDAO
+  vulgate: Vulgate, statisticsDAO: AllChampionStatisticsDAO, matchAggregateDAO: MatchAggregateDAO
 )(implicit ec: ExecutionContext) {
-
-  /**
-    *  Gets a Matchup.
-    */
-  def getMatchup(
-    factors: AggregationFactors,
-    focus: Option[ChampionId],
-    region: Region,
-    role: Role,
-    queues: Set[QueueType],
-    minPlayRate: Double,
-    enemy: Option[ChampionId],
-    forceRefresh: Boolean
-  ): Future[Matchup] = {
-    for {
-      focusChamp <- getChampion(
-        factors, focus, region, role, queues, minPlayRate, enemy, forceRefresh = forceRefresh)
-      enemyChamp <- getChampion(
-        factors, enemy, region, role, queues, minPlayRate, focus, forceRefresh = forceRefresh)
-    } yield Matchup(focus = Some(focusChamp), enemy = Some(enemyChamp))
-  }
 
   def getChampion(
     factors: AggregationFactors,
@@ -71,12 +50,6 @@ class ChampionDAO(
     )
   }
 
-  private def getChamps(statistics: ChampionStatistics): Set[Int] =
-    statistics.sums.flatMap(_.scalars).map(_.wins.keys.toSet).getOrElse(Set())
-
-  /**
-    * Gets a Champion.
-    */
   def getMatchupOverviews(
     factors: AggregationFactors,
     champion: Option[ChampionId],

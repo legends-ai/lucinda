@@ -5,7 +5,7 @@ import scala.util.{ Success, Try }
 import asuna.common.legends.MatchSumHelpers._
 import asuna.lucinda.statistics.StatisticsCombiner._
 import asuna.proto.league.{ Ability, IntRange, MatchSum, Region, Role }
-import asuna.proto.league.lucinda.{ ChampionStatistics, MatchQuotient, Statistic }
+import asuna.proto.league.lucinda.{ AllChampionStatistics, MatchQuotient, Statistic }
 import asuna.proto.league.lucinda.Champion.MatchAggregate
 import asuna.proto.league.lucinda.Champion.MatchAggregate.Graphs.GoldPerTime
 import cats.implicits._
@@ -15,7 +15,7 @@ object MatchAggregator {
   def makeAggregate(
     champion: Int,
     minPlayRate: Double,
-    patchStats: Map[String, ChampionStatistics],
+    patchStats: Map[String, AllChampionStatistics],
     byRole: Map[Role, MatchSum],
     byPatch: Map[String, MatchSum]
   ): MatchAggregate = {
@@ -41,7 +41,7 @@ object MatchAggregator {
   /**
     * Prepares the MatchAggregateRoles object.
     */
-  private[this] def makeRoleStats(allStats: ChampionStatistics, roleSums: Map[Role, MatchSum]): MatchAggregate.Roles = {
+  private[this] def makeRoleStats(allStats: AllChampionStatistics, roleSums: Map[Role, MatchSum]): MatchAggregate.Roles = {
     // We get the total champions in role based on number of win rates in map.
     val totalChampionsInRole = allStats.results.flatMap(_.scalars)
       .map(_.wins.keys.filter(_ > 0).size).getOrElse(0)
@@ -72,9 +72,9 @@ object MatchAggregator {
     obj.flatMap(accessor(_).get(champion)).getOrElse(Statistic()).some
   }
 
-  private def getDelta(deltas: Option[ChampionStatistics.Results.Deltas], champion: Int, accessor: ChampionStatistics.Results.Deltas => Option[ChampionStatistics.Results.Deltas.Delta]): Option[MatchAggregate.Statistics.Deltas.Delta] = {
+  private def getDelta(deltas: Option[AllChampionStatistics.Results.Deltas], champion: Int, accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]): Option[MatchAggregate.Statistics.Deltas.Delta] = {
     val delta = deltas.flatMap(accessor)
-    val get = getStat(delta, champion, _: ChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic])
+    val get = getStat(delta, champion, _: AllChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic])
     if (!delta.isDefined) {
       return None
     }
@@ -86,15 +86,15 @@ object MatchAggregator {
     ))
   }
 
-  def makeStatistics(champion: Int, roleStats: ChampionStatistics): MatchAggregate.Statistics = {
+  def makeStatistics(champion: Int, roleStats: AllChampionStatistics): MatchAggregate.Statistics = {
     val results = roleStats.results
 
     val scalars = results.flatMap(_.scalars)
-    val getScalar = getStat(scalars, champion, _: ChampionStatistics.Results.Scalars => Map[Int, Statistic])
+    val getScalar = getStat(scalars, champion, _: AllChampionStatistics.Results.Scalars => Map[Int, Statistic])
     val derivatives = results.flatMap(_.derivatives)
 
     // We calculate the pick rate stat out here, as we need it to find the gamesPlayed stat.
-    val pickRateStat = getStat[ChampionStatistics.Results.Derivatives](derivatives, champion, _.picks)
+    val pickRateStat = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champion, _.picks)
 
     // Number of games played by this champion in this role.
     val gamesPlayed = roleStats.sums.flatMap(_.scalars).flatMap(_.plays.get(champion)).getOrElse(0L)
@@ -113,7 +113,7 @@ object MatchAggregator {
     val scalarsStats = MatchAggregate.Statistics.Scalars(
       winRate = getScalar(_.wins),
       pickRate = pickRateStat,
-      banRate = getStat[ChampionStatistics.Results.Derivatives](derivatives, champion, _.bans),
+      banRate = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champion, _.bans),
       gamesPlayed = gamesPlayedStat,
       goldEarned = getScalar(_.goldEarned),
       kills = getScalar(_.kills),
@@ -139,7 +139,7 @@ object MatchAggregator {
     )
 
     val deltas = results.flatMap(_.deltas)
-    val getDeltas = getDelta(deltas, champion, _: ChampionStatistics.Results.Deltas => Option[ChampionStatistics.Results.Deltas.Delta])
+    val getDeltas = getDelta(deltas, champion, _: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta])
     val deltasStats = MatchAggregate.Statistics.Deltas(
       csDiff = getDeltas(_.csDiff),
       xpDiff = getDeltas(_.xpDiff),
@@ -163,8 +163,8 @@ object MatchAggregator {
     * @param patchStats: Map of patch to results for the role.
     */
   def makeGraphs(
-    roleStats: ChampionStatistics,
-    patchStats: Map[String, ChampionStatistics],
+    roleStats: AllChampionStatistics,
+    patchStats: Map[String, AllChampionStatistics],
     quot: MatchQuotient,
     id: Int
   ): MatchAggregate.Graphs = {

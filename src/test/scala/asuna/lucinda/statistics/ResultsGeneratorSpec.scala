@@ -2,7 +2,7 @@ package asuna.lucinda.statistics
 
 import asuna.proto.league.MatchSum
 import asuna.proto.league.lucinda.Statistic
-import asuna.proto.league.lucinda.ChampionStatistics.{ Results, Quotients, Sums }
+import asuna.proto.league.lucinda.AllChampionStatistics.{ Results, Quotients, Sums }
 import org.scalatest.{ Matchers, PropSpec }
 import org.scalatest.prop.PropertyChecks
 

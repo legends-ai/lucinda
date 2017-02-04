@@ -1,16 +1,16 @@
 package asuna.lucinda.statistics
 
 import asuna.proto.league.Role
-import asuna.proto.league.lucinda.ChampionStatistics
+import asuna.proto.league.lucinda.AllChampionStatistics
 import cats.Monoid
 import cats.implicits._
 
 object SumsHelpers {
 
-  implicit object ScalarsMonoid extends Monoid[ChampionStatistics.Sums.Scalars] {
+  implicit object ScalarsMonoid extends Monoid[AllChampionStatistics.Sums.Scalars] {
 
-    def combine(a: ChampionStatistics.Sums.Scalars, b: ChampionStatistics.Sums.Scalars): ChampionStatistics.Sums.Scalars = {
-      ChampionStatistics.Sums.Scalars(
+    def combine(a: AllChampionStatistics.Sums.Scalars, b: AllChampionStatistics.Sums.Scalars): AllChampionStatistics.Sums.Scalars = {
+      AllChampionStatistics.Sums.Scalars(
         plays = a.plays |+| b.plays,
         wins = a.wins |+| b.wins,
         goldEarned = a.goldEarned |+| b.goldEarned,
@@ -40,13 +40,13 @@ object SumsHelpers {
       )
     }
 
-    def empty = ChampionStatistics.Sums.Scalars()
+    def empty = AllChampionStatistics.Sums.Scalars()
   }
 
-  implicit object DeltaMonoid extends Monoid[ChampionStatistics.Sums.Deltas.Delta] {
+  implicit object DeltaMonoid extends Monoid[AllChampionStatistics.Sums.Deltas.Delta] {
 
-    def combine(a: ChampionStatistics.Sums.Deltas.Delta, b: ChampionStatistics.Sums.Deltas.Delta): ChampionStatistics.Sums.Deltas.Delta = {
-      ChampionStatistics.Sums.Deltas.Delta(
+    def combine(a: AllChampionStatistics.Sums.Deltas.Delta, b: AllChampionStatistics.Sums.Deltas.Delta): AllChampionStatistics.Sums.Deltas.Delta = {
+      AllChampionStatistics.Sums.Deltas.Delta(
         zeroToTen = a.zeroToTen |+| b.zeroToTen,
         tenToTwenty = a.tenToTwenty |+| b.tenToTwenty,
         twentyToThirty = a.twentyToThirty |+| b.twentyToThirty,
@@ -54,13 +54,13 @@ object SumsHelpers {
       )
     }
 
-    def empty = ChampionStatistics.Sums.Deltas.Delta()
+    def empty = AllChampionStatistics.Sums.Deltas.Delta()
   }
 
-  implicit object DeltasMonoid extends Monoid[ChampionStatistics.Sums.Deltas] {
+  implicit object DeltasMonoid extends Monoid[AllChampionStatistics.Sums.Deltas] {
 
-    def combine(a: ChampionStatistics.Sums.Deltas, b: ChampionStatistics.Sums.Deltas): ChampionStatistics.Sums.Deltas = {
-      ChampionStatistics.Sums.Deltas(
+    def combine(a: AllChampionStatistics.Sums.Deltas, b: AllChampionStatistics.Sums.Deltas): AllChampionStatistics.Sums.Deltas = {
+      AllChampionStatistics.Sums.Deltas(
         csDiff = a.csDiff |+| b.csDiff,
         xpDiff = a.xpDiff |+| b.xpDiff,
         damageTakenDiff = a.damageTakenDiff |+| b.damageTakenDiff,
@@ -72,7 +72,7 @@ object SumsHelpers {
       )
     }
 
-    def empty = ChampionStatistics.Sums.Deltas(
+    def empty = AllChampionStatistics.Sums.Deltas(
       csDiff = Some(DeltaMonoid.empty),
       xpDiff = Some(DeltaMonoid.empty),
       damageTakenDiff = Some(DeltaMonoid.empty),
@@ -84,12 +84,12 @@ object SumsHelpers {
     )
   }
 
-  implicit object DurationDistributionsMonoid extends Monoid[ChampionStatistics.Sums.DurationDistributions] {
+  implicit object DurationDistributionsMonoid extends Monoid[AllChampionStatistics.Sums.DurationDistributions] {
 
     def combine(
-      a: ChampionStatistics.Sums.DurationDistributions,
-      b: ChampionStatistics.Sums.DurationDistributions): ChampionStatistics.Sums.DurationDistributions = {
-      ChampionStatistics.Sums.DurationDistributions(
+      a: AllChampionStatistics.Sums.DurationDistributions,
+      b: AllChampionStatistics.Sums.DurationDistributions): AllChampionStatistics.Sums.DurationDistributions = {
+      AllChampionStatistics.Sums.DurationDistributions(
         zeroToTen = a.zeroToTen |+| b.zeroToTen,
         tenToTwenty = a.tenToTwenty |+| b.tenToTwenty,
         twentyToThirty = a.twentyToThirty |+| b.twentyToThirty,
@@ -97,42 +97,42 @@ object SumsHelpers {
       )
     }
 
-    def empty = ChampionStatistics.Sums.DurationDistributions()
+    def empty = AllChampionStatistics.Sums.DurationDistributions()
   }
 
-  implicit object SubscalarMonoid extends Monoid[ChampionStatistics.Sums.Subscalars.Subscalar] {
+  implicit object SubscalarMonoid extends Monoid[AllChampionStatistics.Sums.Subscalars.Subscalar] {
 
     def combine(
-      a: ChampionStatistics.Sums.Subscalars.Subscalar,
-      b: ChampionStatistics.Sums.Subscalars.Subscalar) : ChampionStatistics.Sums.Subscalars.Subscalar = {
-      ChampionStatistics.Sums.Subscalars.Subscalar(
+      a: AllChampionStatistics.Sums.Subscalars.Subscalar,
+      b: AllChampionStatistics.Sums.Subscalars.Subscalar) : AllChampionStatistics.Sums.Subscalars.Subscalar = {
+      AllChampionStatistics.Sums.Subscalars.Subscalar(
         plays = a.plays |+| b.plays,
         wins = a.wins |+| b.wins
       )
     }
 
-    def empty = ChampionStatistics.Sums.Subscalars.Subscalar()
+    def empty = AllChampionStatistics.Sums.Subscalars.Subscalar()
   }
 
-  implicit object SubscalarsMonoid extends Monoid[ChampionStatistics.Sums.Subscalars] {
+  implicit object SubscalarsMonoid extends Monoid[AllChampionStatistics.Sums.Subscalars] {
 
     def combine(
-      a: ChampionStatistics.Sums.Subscalars,
-      b: ChampionStatistics.Sums.Subscalars): ChampionStatistics.Sums.Subscalars = {
-      ChampionStatistics.Sums.Subscalars(
+      a: AllChampionStatistics.Sums.Subscalars,
+      b: AllChampionStatistics.Sums.Subscalars): AllChampionStatistics.Sums.Subscalars = {
+      AllChampionStatistics.Sums.Subscalars(
         bans = a.bans |+| b.bans,
         allies = a.allies |+| b.allies
       )
     }
 
-    def empty = ChampionStatistics.Sums.Subscalars()
+    def empty = AllChampionStatistics.Sums.Subscalars()
   }
 
-  implicit object SumsMonoid extends Monoid[ChampionStatistics.Sums] {
+  implicit object SumsMonoid extends Monoid[AllChampionStatistics.Sums] {
 
-    def combine(a: ChampionStatistics.Sums, b: ChampionStatistics.Sums): ChampionStatistics.Sums = {
+    def combine(a: AllChampionStatistics.Sums, b: AllChampionStatistics.Sums): AllChampionStatistics.Sums = {
       // TODO(igm): hard part
-      ChampionStatistics.Sums(
+      AllChampionStatistics.Sums(
         scalars = a.scalars |+| b.scalars,
         deltas = a.deltas |+| b.deltas,
         durationDistributions = a.durationDistributions |+| b.durationDistributions,
@@ -140,7 +140,7 @@ object SumsHelpers {
       )
     }
 
-    def empty = ChampionStatistics.Sums(
+    def empty = AllChampionStatistics.Sums(
       scalars = Some(ScalarsMonoid.empty),
       deltas = Some(DeltasMonoid.empty),
       durationDistributions = Some(DurationDistributionsMonoid.empty),

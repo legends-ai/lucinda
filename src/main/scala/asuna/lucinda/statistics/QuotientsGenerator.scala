@@ -3,7 +3,7 @@ package asuna.lucinda.statistics
 import scala.math.Numeric
 import scala.math.Numeric.Implicits._
 
-import asuna.proto.league.lucinda.ChampionStatistics.{ Quotients, Sums }
+import asuna.proto.league.lucinda.AllChampionStatistics.{ Quotients, Sums }
 
 object QuotientsGenerator {
 

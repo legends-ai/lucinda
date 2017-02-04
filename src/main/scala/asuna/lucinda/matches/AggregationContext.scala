@@ -1,7 +1,7 @@
 package asuna.lucinda.matches
 
 import asuna.proto.league.{ ChampionId, MatchSum, Role }
-import asuna.proto.league.lucinda.ChampionStatistics
+import asuna.proto.league.lucinda.AllChampionStatistics
 
 /**
   * Context for MatchAggregate aggregation.
@@ -12,7 +12,7 @@ case class AggregationContext(
 ) {
 
   def aggregate(
-    patchStats: Map[String, ChampionStatistics],
+    patchStats: Map[String, AllChampionStatistics],
     byRole: Map[Role, MatchSum],
     byPatch: Map[String, MatchSum]
   ) = {
