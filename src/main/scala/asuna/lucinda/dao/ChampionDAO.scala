@@ -5,7 +5,7 @@ import scala.collection.immutable.Vector
 
 import asuna.lucinda.VulgateHelpers
 import asuna.lucinda.matches.MatchAggregator
-import asuna.proto.league.{ ChampionId, PatchRange, QueueType, Region, Role, TierRange }
+import asuna.proto.league.{ PatchRange, QueueType, Region, Role, TierRange }
 import asuna.proto.league.charon.static
 import asuna.proto.league.lucinda.{ Champion, AllChampionStatistics, Matchup, MatchupOverview }
 import asuna.proto.league.vulgate.AggregationFactors
@@ -16,43 +16,9 @@ class ChampionDAO(
   vulgate: Vulgate, statisticsDAO: AllChampionStatisticsDAO, matchAggregateDAO: MatchAggregateDAO
 )(implicit ec: ExecutionContext) {
 
-  def getChampion(
-    factors: AggregationFactors,
-    champion: Option[ChampionId],
-    region: Region,
-    role: Role,
-    queues: Set[QueueType],
-    minPlayRate: Double,
-    enemy: Option[ChampionId],
-    forceRefresh: Boolean
-  ): Future[Champion] = {
-    // TODO(igm): locale
-    for {
-      // The match aggregate. Our main honcho.
-      // Contains all data that matters.
-      matchAggregate <- matchAggregateDAO.get(
-        champions = factors.champions.toSet,
-        patches = factors.patches.toSet,
-        lastFivePatches = factors.lastFivePatches.toList,
-        prevPatches = factors.prevPatches,
-        champion = champion,
-        tiers = factors.tiers.toSet,
-        region = region,
-        role = role,
-        enemy = enemy,
-        queues = queues,
-        minPlayRate = minPlayRate,
-        forceRefresh = forceRefresh
-      )
-    } yield Champion(
-      id = champion.map(_.value).orEmpty,
-      matchAggregate = Some(matchAggregate)
-    )
-  }
-
   def getMatchupOverviews(
     factors: AggregationFactors,
-    champion: Option[ChampionId],
+    champion: Option[Int],
     region: Region,
     role: Role,
     queues: Set[QueueType],

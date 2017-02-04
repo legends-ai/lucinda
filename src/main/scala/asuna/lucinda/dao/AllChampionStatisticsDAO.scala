@@ -7,7 +7,7 @@ import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.statistics.{ ChangeMarker, StatisticsAggregator }
 import asuna.lucinda.statistics.FilterChampionsHelpers._
 import asuna.lucinda.statistics.StatisticsCombiner._
-import asuna.proto.league.{ ChampionId, MatchFilters, QueueType, Region, Role, Tier }
+import asuna.proto.league.{ MatchFilters, QueueType, Region, Role, Tier }
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc.GetSumRequest
 import asuna.proto.league.lucinda.AllChampionStatistics
@@ -34,7 +34,7 @@ object AllChampionStatisticsId {
     patch: String,
     region: Region,
     role: Role,
-    enemy: Option[ChampionId],
+    enemy: Option[Int],
     queues: Set[QueueType]
   ): AllChampionStatisticsId = AllChampionStatisticsId(
     tiers = tiers.toList.sortBy(_.value),
@@ -93,7 +93,7 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     region: Region,
     role: Role,
     queues: Set[QueueType],
-    enemy: Option[ChampionId],
+    enemy: Option[Int],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[AllChampionStatistics] = {
@@ -115,14 +115,14 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     * Gets a AllChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
     */
   def getSingle(
-    champions: Set[ChampionId],
+    champions: Set[Int],
     tiers: Set[Tier],
     patch: String,
     prevPatch: Option[String],
     region: Region,
     role: Role,
     queues: Set[QueueType],
-    enemy: Option[ChampionId],
+    enemy: Option[Int],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[AllChampionStatistics] = {
@@ -164,14 +164,14 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     * Runs get across multiple patches and aggregates into one AllChampionStatistics object.
     */
   private[this] def getForPatches(
-    champions: Set[ChampionId],
+    champions: Set[Int],
     tiers: Set[Tier],
     patches: Set[String],
     prevPatches: Map[String, String],
     region: Region,
     role: Role,
     queues: Set[QueueType],
-    enemy: Option[ChampionId],
+    enemy: Option[Int],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[AllChampionStatistics] = {
@@ -195,12 +195,12 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     *  This does not take caching into account.
     */
   private def forceGet(
-    champions: Set[ChampionId],
+    champions: Set[Int],
     tiers: Set[Tier],
     patch: String,
     region: Region,
     role: Role,
-    enemy: Option[ChampionId],
+    enemy: Option[Int],
     queues: Set[QueueType],
     reverse: Boolean
   ): Future[AllChampionStatistics] = {

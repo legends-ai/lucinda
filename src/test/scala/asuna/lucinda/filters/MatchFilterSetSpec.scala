@@ -1,7 +1,7 @@
 package asuna.lucinda.filters
 
 import asuna.lucinda.statistics.MatchSumGeneratorHelper
-import asuna.proto.league.{ ChampionId, Region, Role, QueueType }
+import asuna.proto.league.{ Region, Role, QueueType }
 import cats.implicits._
 import org.scalatest.{ Matchers, PropSpec }
 import org.scalatest.prop.PropertyChecks
@@ -16,7 +16,7 @@ class MatchFilterSetSpec extends PropSpec
       (championId: Int, patch: String, tiers: Set[Int],
        region: Region, role: Role, enemy: Int) =>
 
-      val result = MatchFilterSet(ChampionId(id = championId).some, patch, tiers, region, ChampionId(id = enemy).some, role, queues).toFilterSet
+      val result = MatchFilterSet(championId.some, patch, tiers, region, enemy.some, role, queues).toFilterSet
 
       result.size should be (tiers.size)
     }
@@ -27,7 +27,7 @@ class MatchFilterSetSpec extends PropSpec
       (championId: Int, patch: String, tiers: Set[Int],
        region: Region, role: Role, enemy: Int) =>
 
-      val result = MatchFilterSet(ChampionId(id = championId).some, patch, tiers, region, ChampionId(id = enemy).some, role, queues).toFilterSet
+      val result = MatchFilterSet(championId.some, patch, tiers, region, enemy.some, role, queues).toFilterSet
 
       // constants
       result.filter(_.championId == championId).size should be (result.size)
@@ -47,7 +47,7 @@ class MatchFilterSetSpec extends PropSpec
       (championId: Int, patch: String, tiers: Set[Int],
       region: Region, role: Role, enemy: Int) =>
 
-      val result = MatchFilterSet(ChampionId(id = championId).some, patch, tiers, region, ChampionId(id = enemy).some, role, queues).toFilterSet
+      val result = MatchFilterSet(championId.some, patch, tiers, region, enemy.some, role, queues).toFilterSet
 
       whenever (!tiers.isEmpty) {
         result.groupBy(_.championId).size should be (1)
@@ -63,7 +63,7 @@ class MatchFilterSetSpec extends PropSpec
   property("Empty result for empty tiers") {
     forAll {
       (championId: Int, patch: String, region: Region, role: Role, enemy: Int) =>
-      val result = MatchFilterSet(ChampionId(id = championId).some, patch, tiers, region, ChampionId(id = enemy).some, role, queues).toFilterSet
+      val result = MatchFilterSet(championId.some, patch, tiers, region, enemy.some, role, queues).toFilterSet
       result.size should be (0)
     }
   }

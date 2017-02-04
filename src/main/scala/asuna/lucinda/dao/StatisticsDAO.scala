@@ -125,7 +125,7 @@ class StatisticsDAO(alexandria: Alexandria, redis: RedisClient, statistics: AllC
     patches: Set[String],
     lastFivePatches: Seq[String],
     prevPatches: Map[String, String],
-    champions: Option[ChampionId],
+    champions: Set[Int],
     tiers: Set[Tier],
     regions: Set[Region],
     roles: Set[Role],

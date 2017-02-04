@@ -1,6 +1,6 @@
 package asuna.lucinda.matches
 
-import asuna.proto.league.{ ChampionId, MatchSum, Role }
+import asuna.proto.league.{ MatchSum, Role }
 import asuna.proto.league.lucinda.AllChampionStatistics
 
 /**
@@ -26,7 +26,7 @@ case class AggregationContext(
 
 object AggregationContext {
 
-  def apply(champion: Option[ChampionId], minPlayRate: Double): AggregationContext = {
+  def apply(champion: Option[Int], minPlayRate: Double): AggregationContext = {
     AggregationContext(champion.map(_.value).getOrElse(-1), minPlayRate)
   }
 

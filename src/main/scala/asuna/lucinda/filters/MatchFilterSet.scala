@@ -1,15 +1,15 @@
 package asuna.lucinda.filters
 
 import asuna.proto.league.{
-  ChampionId, MatchFilters, QueueType, Region, Role, Tier
+  MatchFilters, QueueType, Region, Role, Tier
 }
 
 case class MatchFilterSet(
-  champion: Option[ChampionId],
+  champion: Option[Int],
   versions: Set[String],
   tiers: Set[Tier],
   region: Region,
-  enemy: Option[ChampionId],
+  enemy: Option[Int],
   role: Role,
   queues: Set[QueueType]
 ) {
@@ -39,11 +39,11 @@ case class MatchFilterSet(
 object MatchFilterSet {
 
   def apply(
-    champion: Option[ChampionId],
+    champion: Option[Int],
     version: String,
     tiers: Set[Tier],
     region: Region,
-    enemy: Option[ChampionId],
+    enemy: Option[Int],
     role: Role,
     queues: Set[QueueType]
   ): MatchFilterSet = MatchFilterSet(
