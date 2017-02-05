@@ -19,30 +19,30 @@ import redis.RedisClient
   * String representation of champ statistics. Used for a redis key.
   */
 case class AllChampionStatisticsId(
-  tiers: List[Tier],
-  patch: String,
-  region: Region,
-  role: Role,
-  enemy: Int,
-  queues: List[QueueType]
+  tiers: Seq[Tier],
+  patch: Seq[String],
+  region: Seq[Region],
+  role: Seq[Role],
+  enemy: Seq[Int],
+  queues: Seq[QueueType]
 )
 
 object AllChampionStatisticsId {
 
   def fromSets(
     tiers: Set[Tier],
-    patch: String,
-    region: Region,
-    role: Role,
-    enemy: Option[Int],
+    patch: Set[String],
+    region: Set[Region],
+    role: Set[Role],
+    enemy: Set[Int],
     queues: Set[QueueType]
   ): AllChampionStatisticsId = AllChampionStatisticsId(
     tiers = tiers.toList.sortBy(_.value),
-    patch = patch,
-    region = region,
-    role = role,
-    enemy = enemy.map(_.value).getOrElse(-1),
-    queues = queues.toList.sortBy(_.value)
+    patch = patch.toSeq.sorted,
+    region = region.toSeq.sortBy(_.value),
+    role = role.toSeq.sortBy(_.value),
+    enemy = enemy.sorted,
+    queues = queues.toSeq.sortBy(_.value)
   )
 
 }
@@ -100,10 +100,10 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
   def getSingle(
     champions: Set[Int],
     tiers: Set[Tier],
-    patch: String,
+    patch: Set[String],
     prevPatch: Option[String],
-    region: Region,
-    role: Role,
+    region: Set[Region],
+    role: Set[Role],
     queues: Set[QueueType],
     enemy: Option[Int],
     reverse: Boolean = false,
@@ -130,8 +130,8 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
             // If the key is not found, recalculate it and write it
             case None => for {
               // TODO(igm): don't force get the previous patch, but instead read it back from redis
-              prev <- forceGet(champions, tiers, prevPatch.get, region, role, enemy, queues, reverse)
-              stats <- forceGet(champions, tiers, patch, region, role, enemy, queues, reverse)
+              prev <- forceGet(champions, tiers, prevPatch.map(Set(_)).getOrElse(Set()), region, role, enemy, queues, reverse)
+              stats <- forceGet(champions, tiers, Set(patch), region, role, enemy, queues, reverse)
               _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
             } yield ChangeMarker.mark(stats, prev)
 
@@ -180,9 +180,9 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
   private def forceGet(
     champions: Set[Int],
     tiers: Set[Tier],
-    patch: String,
-    region: Region,
-    role: Role,
+    patch: Set[String],
+    region: Set[Region],
+    role: Set[Role],
     enemy: Option[Int],
     queues: Set[QueueType],
     reverse: Boolean

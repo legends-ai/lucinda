@@ -44,9 +44,9 @@ object StatisticsId {
     lastFivePatches = lastFivePatches,
     champions = champions.toSeq,
     tiers = tiers.toSeq.sortBy(_.value),
-    regions = regions.toSeq,
-    roles = roles.toSeq,
-    enemies = enemies.toSeq,
+    regions = regions.toSeq.sortBy(_.value),
+    roles = roles.toSeq.sortBy(_.value),
+    enemies = enemies.toSeq.sorted,
     queues = queues.toSeq.sortBy(_.value),
     minPlayRate = minPlayRate
   )
