@@ -6,19 +6,19 @@ import asuna.common.legends.MatchSumHelpers._
 import asuna.lucinda.statistics.StatisticsCombiner._
 import asuna.proto.league.{ Ability, IntRange, MatchSum, Region, Role }
 import asuna.proto.league.lucinda.{ AllChampionStatistics, MatchQuotient, Statistic }
-import asuna.proto.league.lucinda.Champion.MatchAggregate
-import asuna.proto.league.lucinda.Champion.MatchAggregate.Graphs.GoldPerTime
+import asuna.proto.league.lucinda.Statistics
+import asuna.proto.league.lucinda.Statistics.Graphs.GoldPerTime
 import cats.implicits._
 
-object MatchAggregator {
+object StatisticsGenerator {
 
-  def makeAggregate(
+  def makeStatistics(
     champion: Int,
     minPlayRate: Double,
     patchStats: Map[String, AllChampionStatistics],
     byRole: Map[Role, MatchSum],
     byPatch: Map[String, MatchSum]
-  ): MatchAggregate = {
+  ): Statistics = {
     // First, we will combine all statistics objects from all patches in the range.
     // This uses the StatisticsMonoid.
     val allPatches = patchStats.values.toList
@@ -30,18 +30,19 @@ object MatchAggregator {
     // This is the quotient of the champion for the entire search space.
     val quot = QuotientGenerator.generate(byPatch.values.toList.combineAll)
 
-    MatchAggregate(
-      roles = Some(makeRoleStats(allStats, byRole)),
-      statistics = Some(makeStatistics(champion, allStats)),
-      graphs = Some(makeGraphs(allStats, patchStats, quot, champion)),
-      collections = Some(makeCollections(quot, minPlayRate))
+    Statistics(
+      roles = makeRoleStats(allStats, byRole).some,
+      scalars = makeScalars(champion, allStats).some,
+      deltas = makeDeltas(champion, allStats).some,
+      graphs = makeGraphs(allStats, patchStats, quot, champion).some,
+      collections = makeCollections(quot, minPlayRate).some
     )
   }
 
   /**
-    * Prepares the MatchAggregateRoles object.
+    * Prepares the StatisticsRoles object.
     */
-  private[this] def makeRoleStats(allStats: AllChampionStatistics, roleSums: Map[Role, MatchSum]): MatchAggregate.Roles = {
+  private[this] def makeRoleStats(allStats: AllChampionStatistics, roleSums: Map[Role, MatchSum]): Statistics.Roles = {
     // We get the total champions in role based on number of win rates in map.
     val totalChampionsInRole = allStats.results.flatMap(_.scalars)
       .map(_.wins.keys.filter(_ > 0).size).getOrElse(0)
@@ -55,13 +56,13 @@ object MatchAggregator {
     // Stats by role.
     val roleStats = for {
       (role, numMatches) <- gamesByRole
-    } yield MatchAggregate.Roles.RoleStats(
+    } yield Statistics.Roles.RoleStats(
       role = role,
       pickRate = if (totalGames == 0) 0 else (numMatches.toDouble / totalGames),
       numMatches = numMatches.toInt
     )
 
-    MatchAggregate.Roles(
+    Statistics.Roles(
       role = allStats.role,
       totalChampionsInRole = totalChampionsInRole,
       roleStats = roleStats.toSeq
@@ -72,13 +73,13 @@ object MatchAggregator {
     obj.flatMap(accessor(_).get(champion)).getOrElse(Statistic()).some
   }
 
-  private def getDelta(deltas: Option[AllChampionStatistics.Results.Deltas], champion: Int, accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]): Option[MatchAggregate.Statistics.Deltas.Delta] = {
+  private def getDelta(deltas: Option[AllChampionStatistics.Results.Deltas], champion: Int, accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]): Option[Statistics.Statistics.Deltas.Delta] = {
     val delta = deltas.flatMap(accessor)
     val get = getStat(delta, champion, _: AllChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic])
     if (!delta.isDefined) {
       return None
     }
-    Some(MatchAggregate.Statistics.Deltas.Delta(
+    Some(Statistics.Statistics.Deltas.Delta(
       zeroToTen = get(_.zeroToTen),
       tenToTwenty = get(_.tenToTwenty),
       twentyToThirty = get(_.twentyToThirty),
@@ -86,12 +87,12 @@ object MatchAggregator {
     ))
   }
 
-  def makeStatistics(champion: Int, roleStats: AllChampionStatistics): MatchAggregate.Statistics = {
-    val results = roleStats.results
-
-    val scalars = results.flatMap(_.scalars)
-    val getScalar = getStat(scalars, champion, _: AllChampionStatistics.Results.Scalars => Map[Int, Statistic])
-    val derivatives = results.flatMap(_.derivatives)
+  def makeScalars(champion: Int, roleStats: AllChampionStatistics): Statistics.Scalars = {
+    val getScalar = getStat(
+      roleStats.results.flatMap(_.scalars),
+      champion, _: AllChampionStatistics.Results.Scalars => Map[Int, Statistic]
+    )
+    val derivatives = roleStats.results.flatMap(_.derivatives)
 
     // We calculate the pick rate stat out here, as we need it to find the gamesPlayed stat.
     val pickRateStat = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champion, _.picks)
@@ -110,7 +111,7 @@ object MatchAggregator {
       // All other attributes of stat (rank, change, champ) are the same, so we are done.
     }
 
-    val scalarsStats = MatchAggregate.Statistics.Scalars(
+    Statistics.Scalars(
       winRate = getScalar(_.wins),
       pickRate = pickRateStat,
       banRate = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champion, _.bans),
@@ -137,10 +138,14 @@ object MatchAggregator {
       quadrakills = getScalar(_.quadrakills),
       pentakills = getScalar(_.pentakills)
     )
+  }
 
-    val deltas = results.flatMap(_.deltas)
-    val getDeltas = getDelta(deltas, champion, _: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta])
-    val deltasStats = MatchAggregate.Statistics.Deltas(
+  def makeDeltas(champion: Int, roleStats: AllChampionStatistics): Statistics.Deltas = {
+    val getDeltas = getDelta(
+      roleStats.results.flatMap(_.deltas),
+      champion, _: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]
+    )
+    Statistics.Deltas(
       csDiff = getDeltas(_.csDiff),
       xpDiff = getDeltas(_.xpDiff),
       damageTakenDiff = getDeltas(_.damageTakenDiff),
@@ -149,11 +154,6 @@ object MatchAggregator {
       towersPerMin = getDeltas(_.towersPerMin),
       wardsPlaced = getDeltas(_.wardsPlaced),
       damageTaken = getDeltas(_.damageTaken)
-    )
-
-    MatchAggregate.Statistics(
-      scalars = Some(scalarsStats),
-      deltas = Some(deltasStats)
     )
   }
 
@@ -167,11 +167,11 @@ object MatchAggregator {
     patchStats: Map[String, AllChampionStatistics],
     quot: MatchQuotient,
     id: Int
-  ): MatchAggregate.Graphs = {
+  ): Statistics.Graphs = {
     val results = roleStats.results
-    MatchAggregate.Graphs(
+    Statistics.Graphs(
       // Win/pick/ban distribution across all champions.
-      distribution = Some(MatchAggregate.Graphs.Distribution(
+      distribution = Some(Statistics.Graphs.Distribution(
         winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.value)).orEmpty,
         pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.value)).orEmpty,
         banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.value)).orEmpty
@@ -180,7 +180,7 @@ object MatchAggregator {
       // Per-patch statistics.
       // TODO(igm): investigate why this code is so freaking ugly
       byPatch = patchStats.mapValues(_.results).map { case (patch, patchResults) =>
-        MatchAggregate.Graphs.ByPatch(
+        Statistics.Graphs.ByPatch(
           patch = patch,
           winRate = patchResults.flatMap(_.scalars).flatMap(_.wins.mapValues(_.value).get(id)).orEmpty,
           pickRate = patchResults.flatMap(_.derivatives).flatMap(_.picks.mapValues(_.value).get(id)).orEmpty,
@@ -189,7 +189,7 @@ object MatchAggregator {
       }.toSeq,
 
       byGameLength = quot.durations.map { case (duration, stats) =>
-        MatchAggregate.Graphs.ByGameLength(
+        Statistics.Graphs.ByGameLength(
           gameLength = Some(IntRange(min = duration, max = duration)),
           winRate = stats.wins
         )
@@ -232,13 +232,13 @@ object MatchAggregator {
   /**
     * Makes our collections.
     */
-  def makeCollections(quot: MatchQuotient, minPlayRate: Double): MatchAggregate.Collections = {
+  def makeCollections(quot: MatchQuotient, minPlayRate: Double): Statistics.Collections = {
     // TODO(igm): figure out how we can do more code reuse here.
-    MatchAggregate.Collections(
+    Statistics.Collections(
       runes = quot.runes
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
         .safelyMap { case (runeSet, subscalars) =>
-          MatchAggregate.Collections.RuneSet(
+          Statistics.Collections.RuneSet(
             runes = deserializeBonusSet(runeSet),
             subscalars = Some(subscalars)
           )
@@ -247,7 +247,7 @@ object MatchAggregator {
       masteries = quot.masteries
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
         .safelyMap { case (masterySet, subscalars) =>
-          MatchAggregate.Collections.MasterySet(
+          Statistics.Collections.MasterySet(
             masteries = deserializeBonusSet(masterySet),
             subscalars = Some(subscalars)
           )
@@ -257,7 +257,7 @@ object MatchAggregator {
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
         .safelyMap { case (spells, subscalars) =>
           val (spell1, spell2) = deserializeSummoners(spells)
-          MatchAggregate.Collections.SummonerSet(
+          Statistics.Collections.SummonerSet(
             spell1 = spell1,
             spell2 = spell2,
             subscalars = Some(subscalars)
@@ -267,7 +267,7 @@ object MatchAggregator {
       skillOrders = quot.skillOrders
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
         .safelyMap { case (skillOrder, subscalars) =>
-          MatchAggregate.Collections.SkillOrder(
+          Statistics.Collections.SkillOrder(
             skillOrder = deserializeSkillOrder(skillOrder),
             subscalars = Some(subscalars)
           )
@@ -276,7 +276,7 @@ object MatchAggregator {
       starterItems = quot.starterItems
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
         .safelyMap { case (build, subscalars) =>
-          MatchAggregate.Collections.Build(
+          Statistics.Collections.Build(
             build = deserializeBuild(build),
             subscalars = Some(subscalars)
           )
@@ -285,7 +285,7 @@ object MatchAggregator {
       buildPath = quot.buildPath
         .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
         .safelyMap { case (build, subscalars) =>
-          MatchAggregate.Collections.Build(
+          Statistics.Collections.Build(
             build = deserializeBuild(build),
             subscalars = Some(subscalars)
           )

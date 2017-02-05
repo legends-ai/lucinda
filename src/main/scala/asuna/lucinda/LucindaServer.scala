@@ -15,17 +15,13 @@ import asuna.lucinda.dao.{ StatisticsDAO, AllChampionStatisticsDAO }
 import cats.implicits._
 import redis.RedisClient
 
-
 class LucindaServer(args: Seq[String])
     extends BaseGrpcService(args, LucindaConfigParser, LucindaGrpc.bindService)
     with LucindaGrpc.Lucinda {
 
   implicit val akkaSystem = akka.actor.ActorSystem()
 
-  // Setup alexandria connection
   val alexandria = AlexandriaGrpc.stub(clientFor("alexandria"))
-
-  // Setup vulgate connection
   val vulgate = VulgateGrpc.stub(clientFor("vulgate"))
 
   // Next, let's init all of our dependencies.
@@ -42,23 +38,26 @@ class LucindaServer(args: Seq[String])
     name = "lucinda:aggs"
   )
 
-  lazy val championStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria, statsRedis)
-  lazy val statisticsDAO = new StatisticsDAO(alexandria, aggRedis, championStatisticsDAO)
+  lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria, statsRedis)
+  lazy val statisticsDAO = new StatisticsDAO(alexandria, aggRedis, allChampionStatisticsDAO)
 
   override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
-          patches = req.patch,
-          tiers = req.tier
+          context = Some(VulgateHelpers.makeVulgateContext(req.patches, req.regions.head)),
+          patches = req.patches
         )
       )
-      results <- championStatisticsDAO.getResults(
-        factors = factors,
-        region = req.region,
-        role = req.role,
+      results <- allChampionStatisticsDAO.getResults(
+        allChampions = factors.champions.toSet,
+        patches = req.patches.toSet,
+        prevPatches = factors.prevPatches,
+        tiers = req.tiers,
+        regions = req.regions,
+        roles = req.roles,
         queues = defaultQueuesIfEmpty(req.queues),
+        enemies = req.enemyIds.toSet,
         forceRefresh = req.forceRefresh,
         minPlayRate = req.minPlayRate
       )
@@ -69,9 +68,8 @@ class LucindaServer(args: Seq[String])
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
-          patches = req.patch,
-          tiers = req.tier
+          context = Some(VulgateHelpers.makeVulgateContext(req.patches, req.regions.head)),
+          patches = req.patches
         )
       )
       statistics <- statisticsDAO.get(
@@ -95,9 +93,8 @@ class LucindaServer(args: Seq[String])
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(req.patch, req.region)),
-          patches = req.patch,
-          tiers = req.tier
+          context = Some(VulgateHelpers.makeVulgateContext(req.patches, req.regions.head)),
+          patches = req.patches
         )
       )
 

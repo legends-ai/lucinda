@@ -53,20 +53,28 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
    * Fetches a AllChampionStatistics.Results object.
    */
   def getResults(
-    factors: AggregationFactors,
-    region: Region,
-    role: Role,
+    allChampions: Set[Int],
+    patches: Set[String],
+    prevPatches: Set[String],
+    tiers: Set[Tiers],
+    regions: Set[Region],
+    roles: Set[Role],
     queues: Set[QueueType],
+    enemies: Set[Int],
     forceRefresh: Boolean = false,
     minPlayRate: Double = 0
   ): Future[AllChampionStatistics.Results] = {
     for {
-      statistics <- get(
-        factors = factors,
-        region = region,
-        role = role,
+      statistics <- getForPatches(
+        allChampions = factors.champions.toSet,
+        patches = factors.patches.toSet,
+        prevPatches = factors.prevPatches,
+        tiers = factors.tiers.toSet,
+        regions = regions,
+        roles = roles,
         queues = queues,
-        enemy = None,
+        enemy = enemy,
+        reverse = reverse,
         forceRefresh = forceRefresh
       )
     } yield {
@@ -86,33 +94,8 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
   }
 
   /**
-    * Get uses AggregationFactors to fetch.
-    */
-  def get(
-    factors: AggregationFactors,
-    region: Region,
-    role: Role,
-    queues: Set[QueueType],
-    enemy: Option[Int],
-    reverse: Boolean = false,
-    forceRefresh: Boolean = false
-  ): Future[AllChampionStatistics] = {
-    getForPatches(
-      champions = factors.champions.toSet,
-      tiers = factors.tiers.toSet,
-      patches = factors.patches.toSet,
-      prevPatches = factors.prevPatches,
-      region = region,
-      role = role,
-      queues = queues,
-      enemy = enemy,
-      reverse = reverse,
-      forceRefresh = forceRefresh
-    )
-  }
-
-  /**
-    * Gets a AllChampionStatistics object with Redis caching. We cache for 15 minutes. TODO(igm): make this duration configurable
+    * Gets a AllChampionStatistics object with Redis caching.
+    * We cache for 15 minutes. TODO(igm): make this duration configurable
     */
   def getSingle(
     champions: Set[Int],

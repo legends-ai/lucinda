@@ -78,9 +78,9 @@ class StatisticsDAO(alexandria: Alexandria, redis: RedisClient, statistics: AllC
       lastFivePatches = lastFivePatches,
       champion = champion,
       tiers = tiers,
-      region = region,
-      role = role,
-      enemy = enemy,
+      regions = regions,
+      roles = roles,
+      enemies = enemies,
       queues = queues,
       minPlayRate = minPlayRate
     )
@@ -92,15 +92,15 @@ class StatisticsDAO(alexandria: Alexandria, redis: RedisClient, statistics: AllC
       // If the key is not found or we're using force refresh, recalculate it and write it
       case None => for {
         stats <- forceGet(
-          champions = champions,
+          allChampions = allChampions,
           patches = patches,
           lastFivePatches = lastFivePatches,
           prevPatches = prevPatches,
           champion = champion,
           tiers = tiers,
-          regions = region,
-          roles = role,
-          enemies = enemy,
+          regions = regions,
+          roles = roles,
+          enemies = enemies,
           queues = queues,
           minPlayRate = minPlayRate,
           forceRefresh = forceRefresh
