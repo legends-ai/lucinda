@@ -15,7 +15,7 @@ class MatchupDAO(
     patches: Set[String],
     prevPatches: Map[String, String],
     tiers: Set[Tier],
-    champion: Option[Int],
+    champion: Int,
     region: Region,
     role: Role,
     queues: Set[QueueType],

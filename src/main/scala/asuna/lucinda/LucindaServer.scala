@@ -105,7 +105,7 @@ class LucindaServer(args: Seq[String])
         patches = req.patches.toSet,
         prevPatches = factors.prevPatches,
         tiers = req.tiers.toSet,
-        champion = req.championId.some,
+        champion = req.championId,
         region = req.region,
         role = req.role,
         queues = defaultQueuesIfEmpty(req.queues),
