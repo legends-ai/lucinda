@@ -110,37 +110,26 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     forceRefresh: Boolean = false
   ): Future[AllChampionStatistics] = {
     import scala.concurrent.duration._
-    role match {
-      case Role.UNDEFINED_ROLE => {
-        (Role.values.toSet - Role.UNDEFINED_ROLE).toList.map { theRole =>
-          getSingle(allChampions, tiers, patches, prevPatch,
-                    regions, theRole, queues, enemies, reverse, forceRefresh)
-        }.combineAll
-      }
+    if (!prevPatch.isDefined) {
+      forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
+    } else {
+      val id = AllChampionStatisticsId.fromSets(tiers, patches, regions, roles, enemies, queues)
+      val key = id.toString
 
-      case _ => {
-        if (!prevPatch.isDefined) {
-          forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
-        } else {
-          val id = AllChampionStatisticsId.fromSets(tiers, patches, regions, roles, enemies, queues)
-          val key = id.toString
+      val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
 
-          val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
+      redisResult flatMap {
+        // If the key is not found, recalculate it and write it
+        case None => for {
+          // TODO(igm): don't force get the previous patch, but instead read it back from redis
+          prev <- forceGet(allChampions, tiers, prevPatch.map(Set(_)).getOrElse(Set()),
+                            regions, roles, enemies, queues, reverse)
+          stats <- forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
+          _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
+        } yield ChangeMarker.mark(stats, prev)
 
-          redisResult flatMap {
-            // If the key is not found, recalculate it and write it
-            case None => for {
-              // TODO(igm): don't force get the previous patch, but instead read it back from redis
-              prev <- forceGet(allChampions, tiers, prevPatch.map(Set(_)).getOrElse(Set()),
-                               regions, roles, enemies, queues, reverse)
-              stats <- forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
-              _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
-            } yield ChangeMarker.mark(stats, prev)
-
-            // If the key is found, we shall parse it
-            case Some(bytes) => Future.successful(AllChampionStatistics.parseFrom(bytes.toArray[Byte]))
-          }
-        }
+        // If the key is found, we shall parse it
+        case Some(bytes) => Future.successful(AllChampionStatistics.parseFrom(bytes.toArray[Byte]))
       }
     }
   }
@@ -196,7 +185,7 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     // Here, we build the Set[MatchFilters] for every champion.
     val filtersMap: Map[Int, Set[MatchFilters]] = allChampions.map { champ =>
       val basis = MatchFilterSet(
-        champ.some, patches, tiers, regions, enemies, roles, queues
+        Set(champ), patches, tiers, regions, enemies, roles, queues
       )
       val nextSet = if (reverse) basis.inverse else basis
       (champ, nextSet.toFilterSet)

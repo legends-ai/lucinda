@@ -7,7 +7,7 @@ import asuna.common.BaseGrpcService
 import asuna.proto.league.{ QueueType, MatchSum }
 import asuna.proto.league.alexandria.AlexandriaGrpc
 import asuna.proto.league.alexandria.rpc.GetSumRequest
-import asuna.proto.league.lucinda.{ AllChampionStatistics, LucindaGrpc, Statistics }
+import asuna.proto.league.lucinda.{ AllChampionStatistics, LucindaGrpc, Statistics, SummonerOverview }
 import asuna.proto.league.lucinda.rpc._
 import asuna.proto.league.vulgate.VulgateGrpc
 import asuna.proto.league.vulgate.rpc.GetAggregationFactorsRequest
@@ -117,5 +117,12 @@ class LucindaServer(args: Seq[String])
 
   private[this] def defaultQueuesIfEmpty(queues: Seq[QueueType]): Set[QueueType] =
     if (queues.length == 0) config.service.defaultQueues else queues.toSet
+
+
+  def getAllSummonerChampions(request: GetAllSummonerChampionsRequest): Future[AllChampionStatistics.Results] = ???
+
+  def getSummonerOverview(request: GetSummonerRequest): Future[SummonerOverview] = ???
+
+  def getSummonerStatistics(request: GetSummonerRequest): Future[Statistics] = ???
 
 }

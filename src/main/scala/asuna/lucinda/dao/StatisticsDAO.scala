@@ -76,7 +76,7 @@ class StatisticsDAO(
     val id = StatisticsId.fromSets(
       patches = patches,
       lastFivePatches = lastFivePatches,
-      champion = champion,
+      champions = champions,
       tiers = tiers,
       regions = regions,
       roles = roles,
@@ -96,7 +96,7 @@ class StatisticsDAO(
           patches = patches,
           lastFivePatches = lastFivePatches,
           prevPatches = prevPatches,
-          champion = champion,
+          champions = champions,
           tiers = tiers,
           regions = regions,
           roles = roles,
@@ -136,7 +136,7 @@ class StatisticsDAO(
   ): Future[Statistics] = {
     // First, let's get per-role sums.
     val byRoleFilters = (Role.values.toSet - Role.UNDEFINED_ROLE).map { someRole =>
-      (someRole, MatchFilterSet(champion, patches, tiers, regions, enemies, someRole, queues).toFilterSet)
+      (someRole, MatchFilterSet(champions, patches, tiers, regions, enemies, roles, queues).toFilterSet)
     }.toMap
     val byRoleFuts = byRoleFilters
       .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq)))
@@ -144,18 +144,11 @@ class StatisticsDAO(
     for {
       byRole <- byRoleFuts.sequence
 
-      // Now, let's find the role we want to use to fetch other data.
-      // If the Role was not specified, we'll return the most popular role.
-      chosenRole = if (role == Role.UNDEFINED_ROLE) {
-        // Sort the list by number of plays, getting the Role with the most plays.
-        byRole.toList.sortBy(_._2.scalars.map(_.plays).orEmpty).last._1
-      } else role
-
       // Next, let's retrieve all stats for this combination.
       // This is used to get Statistic objects.
       allStatsFuts = patches.toList.map { patch =>
         allChampionStatisticsDAO.getSingle(
-          champions, tiers, patches, prevPatches.get(patch), regions, chosenRole, queues, enemies, forceRefresh
+          champions, tiers, patches, prevPatches.get(patch), regions, roles, queues, enemies, forceRefresh
         ).map((patch, _))
       }
 
@@ -166,14 +159,14 @@ class StatisticsDAO(
       // Finally, let's get the patch information.
       // We'll use a map with the key being the patch.
       byPatchFilters = lastFivePatches.map { patch =>
-        (patch, MatchFilterSet(champion, patches, tiers, regions, enemies, chosenRole, queues).toFilterSet)
+        (patch, MatchFilterSet(champions, patches, tiers, regions, enemies, roles, queues).toFilterSet)
       }.toMap
 
       // We will then sequence them.
       byPatch <- byPatchFilters
         .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq))).sequence
 
-    } yield StatisticsGenerator.makeStatistics(champion, minPlayRate, allStats, byRole, byPatch)
+    } yield StatisticsGenerator.makeStatistics(champions, minPlayRate, allStats, roles, byRole, byPatch)
   }
 
 }

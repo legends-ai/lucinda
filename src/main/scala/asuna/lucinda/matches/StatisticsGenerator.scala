@@ -13,9 +13,10 @@ import cats.implicits._
 object StatisticsGenerator {
 
   def makeStatistics(
-    champion: Int,
+    champions: Set[Int],
     minPlayRate: Double,
     patchStats: Map[String, AllChampionStatistics],
+    roles: Set[Role],
     byRole: Map[Role, MatchSum],
     byPatch: Map[String, MatchSum]
   ): Statistics = {
@@ -23,7 +24,7 @@ object StatisticsGenerator {
     // This uses the StatisticsMonoid.
     val allPatches = patchStats.values.toList
     val allStats = allPatches.headOption match {
-      case Some(patch) => allPatches.combineAll.copy(role = patch.role)
+      case Some(patch) => allPatches.combineAll
       case None => allPatches.combineAll
     }
 
@@ -31,10 +32,10 @@ object StatisticsGenerator {
     val quot = QuotientGenerator.generate(byPatch.values.toList.combineAll)
 
     Statistics(
-      roles = makeRoleStats(allStats, byRole).some,
-      scalars = makeScalars(champion, allStats).some,
-      deltas = makeDeltas(champion, allStats).some,
-      graphs = makeGraphs(allStats, patchStats, quot, champion).some,
+      roles = makeRoleStats(allStats, roles, byRole).some,
+      scalars = makeScalars(champions, allStats).some,
+      deltas = makeDeltas(champions, allStats).some,
+      graphs = makeGraphs(allStats, patchStats, quot, champions).some,
       collections = makeCollections(quot, minPlayRate).some
     )
   }
@@ -42,7 +43,7 @@ object StatisticsGenerator {
   /**
     * Prepares the StatisticsRoles object.
     */
-  private[this] def makeRoleStats(allStats: AllChampionStatistics, roleSums: Map[Role, MatchSum]): Statistics.Roles = {
+  private[this] def makeRoleStats(allStats: AllChampionStatistics, roles: Set[Role], roleSums: Map[Role, MatchSum]): Statistics.Roles = {
     // We get the total champions in role based on number of win rates in map.
     val totalChampionsInRole = allStats.results.flatMap(_.scalars)
       .map(_.wins.keys.filter(_ > 0).size).getOrElse(0)
@@ -63,19 +64,24 @@ object StatisticsGenerator {
     )
 
     Statistics.Roles(
-      role = allStats.role,
+      // TODO(igm): return correct role
+      role = roles.toSeq.headOption.getOrElse(Role.UNDEFINED_ROLE),
       totalChampionsInRole = totalChampionsInRole,
       roleStats = roleStats.toSeq
     )
   }
 
-  private def getStat[T](obj: Option[T], champion: Int, accessor: T => Map[Int, Statistic]): Option[Statistic] = {
-    obj.flatMap(accessor(_).get(champion)).getOrElse(Statistic()).some
+  private def getStat[T](obj: Option[T], champions: Set[Int], accessor: T => Map[Int, Statistic]): Option[Statistic] = {
+    // TODO(igm): support multiple champs
+    val champion = champions.toSeq.headOption.getOrElse(0)
+    obj
+      .flatMap(accessor(_).get(champion))
+      .getOrElse(Statistic()).some
   }
 
-  private def getDelta(deltas: Option[AllChampionStatistics.Results.Deltas], champion: Int, accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]): Option[Statistics.Deltas.Delta] = {
+  private def getDelta(deltas: Option[AllChampionStatistics.Results.Deltas], champions: Set[Int], accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]): Option[Statistics.Deltas.Delta] = {
     val delta = deltas.flatMap(accessor)
-    val get = getStat(delta, champion, _: AllChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic])
+    val get = getStat(delta, champions, _: AllChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic])
     if (!delta.isDefined) {
       return None
     }
@@ -87,18 +93,20 @@ object StatisticsGenerator {
     ))
   }
 
-  def makeScalars(champion: Int, roleStats: AllChampionStatistics): Statistics.Scalars = {
+  def makeScalars(champions: Set[Int], roleStats: AllChampionStatistics): Statistics.Scalars = {
     val getScalar = getStat(
       roleStats.results.flatMap(_.scalars),
-      champion, _: AllChampionStatistics.Results.Scalars => Map[Int, Statistic]
+      champions, _: AllChampionStatistics.Results.Scalars => Map[Int, Statistic]
     )
     val derivatives = roleStats.results.flatMap(_.derivatives)
 
     // We calculate the pick rate stat out here, as we need it to find the gamesPlayed stat.
-    val pickRateStat = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champion, _.picks)
+    val pickRateStat = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champions, _.picks)
 
     // Number of games played by this champion in this role.
-    val gamesPlayed = roleStats.sums.flatMap(_.scalars).flatMap(_.plays.get(champion)).getOrElse(0L)
+    val gamesPlayed = roleStats.sums.flatMap(_.scalars)
+      .flatMap(map => champions.map(champion => map.plays.get(champion)).toList.combineAll)
+      .getOrElse(0L)
 
     // We can derive the gamesPlayed stat from the pickRate stat as they are virtually identical.
     val gamesPlayedStat = pickRateStat.map { stat =>
@@ -114,7 +122,7 @@ object StatisticsGenerator {
     Statistics.Scalars(
       winRate = getScalar(_.wins),
       pickRate = pickRateStat,
-      banRate = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champion, _.bans),
+      banRate = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champions, _.bans),
       gamesPlayed = gamesPlayedStat,
       goldEarned = getScalar(_.goldEarned),
       kills = getScalar(_.kills),
@@ -140,10 +148,10 @@ object StatisticsGenerator {
     )
   }
 
-  def makeDeltas(champion: Int, roleStats: AllChampionStatistics): Statistics.Deltas = {
+  def makeDeltas(champions: Set[Int], roleStats: AllChampionStatistics): Statistics.Deltas = {
     val getDeltas = getDelta(
       roleStats.results.flatMap(_.deltas),
-      champion, _: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]
+      champions, _: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]
     )
     Statistics.Deltas(
       csDiff = getDeltas(_.csDiff),
@@ -166,9 +174,11 @@ object StatisticsGenerator {
     roleStats: AllChampionStatistics,
     patchStats: Map[String, AllChampionStatistics],
     quot: MatchQuotient,
-    id: Int
+    champions: Set[Int]
   ): Statistics.Graphs = {
     val results = roleStats.results
+    // TODO(igm): support multiple champions in graphs
+    val id = champions.toSeq.headOption.getOrElse(-1)
     Statistics.Graphs(
       // Win/pick/ban distribution across all champions.
       distribution = Some(Statistics.Graphs.Distribution(
@@ -182,9 +192,12 @@ object StatisticsGenerator {
       byPatch = patchStats.mapValues(_.results).map { case (patch, patchResults) =>
         Statistics.Graphs.ByPatch(
           patch = patch,
-          winRate = patchResults.flatMap(_.scalars).flatMap(_.wins.mapValues(_.value).get(id)).orEmpty,
-          pickRate = patchResults.flatMap(_.derivatives).flatMap(_.picks.mapValues(_.value).get(id)).orEmpty,
-          banRate = patchResults.flatMap(_.derivatives).flatMap(_.bans.mapValues(_.value).get(id)).orEmpty
+          winRate = patchResults.flatMap(_.scalars)
+            .flatMap(_.wins.mapValues(_.value).get(id)).orEmpty,
+          pickRate = patchResults.flatMap(_.derivatives)
+            .flatMap(_.picks.mapValues(_.value).get(id)).orEmpty,
+          banRate = patchResults.flatMap(_.derivatives)
+            .flatMap(_.bans.mapValues(_.value).get(id)).orEmpty
         )
       }.toSeq,
 
