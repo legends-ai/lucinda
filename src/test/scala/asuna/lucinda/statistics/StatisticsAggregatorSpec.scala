@@ -11,7 +11,7 @@ class StatisticsAggregatorSpec extends PropSpec
 
   property("preservation of role") {
     forAll { (role: Role) =>
-      val stats = makeStatistics(role, Map())
+      val stats = makeStatistics(Map())
       stats.role should be (role)
     }
   }

@@ -17,7 +17,6 @@ object StatisticsCombiner {
       val results = (sums |@| quotients).map(ResultsGenerator).map(_.generate)
       AllChampionStatistics(
         // Roles should be the same. If they're not, fuck my ass.
-        role = a.role,
         results = results,
         quotients = quotients,
         sums = sums

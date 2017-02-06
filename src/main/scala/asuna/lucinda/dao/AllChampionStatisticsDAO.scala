@@ -23,7 +23,7 @@ case class AllChampionStatisticsId(
   patch: Seq[String],
   region: Seq[Region],
   role: Seq[Role],
-  enemy: Seq[Int],
+  enemies: Seq[Int],
   queues: Seq[QueueType]
 )
 
@@ -34,14 +34,14 @@ object AllChampionStatisticsId {
     patch: Set[String],
     region: Set[Region],
     role: Set[Role],
-    enemy: Set[Int],
+    enemies: Set[Int],
     queues: Set[QueueType]
   ): AllChampionStatisticsId = AllChampionStatisticsId(
     tiers = tiers.toList.sortBy(_.value),
     patch = patch.toSeq.sorted,
     region = region.toSeq.sortBy(_.value),
     role = role.toSeq.sortBy(_.value),
-    enemy = enemy.sorted,
+    enemies = enemies.toSeq.sorted,
     queues = queues.toSeq.sortBy(_.value)
   )
 
@@ -55,8 +55,8 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
   def getResults(
     allChampions: Set[Int],
     patches: Set[String],
-    prevPatches: Set[String],
-    tiers: Set[Tiers],
+    prevPatches: Map[String, String],
+    tiers: Set[Tier],
     regions: Set[Region],
     roles: Set[Role],
     queues: Set[QueueType],
@@ -66,15 +66,15 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
   ): Future[AllChampionStatistics.Results] = {
     for {
       statistics <- getForPatches(
-        allChampions = factors.champions.toSet,
-        patches = factors.patches.toSet,
-        prevPatches = factors.prevPatches,
-        tiers = factors.tiers.toSet,
+        allChampions = allChampions,
+        patches = patches,
+        prevPatches = prevPatches,
+        tiers = tiers,
         regions = regions,
         roles = roles,
         queues = queues,
-        enemy = enemy,
-        reverse = reverse,
+        enemies = enemies,
+        reverse = false,
         forceRefresh = forceRefresh
       )
     } yield {
@@ -98,14 +98,14 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     * We cache for 15 minutes. TODO(igm): make this duration configurable
     */
   def getSingle(
-    champions: Set[Int],
+    allChampions: Set[Int],
     tiers: Set[Tier],
-    patch: Set[String],
+    patches: Set[String],
     prevPatch: Option[String],
-    region: Set[Region],
-    role: Set[Role],
+    regions: Set[Region],
+    roles: Set[Role],
     queues: Set[QueueType],
-    enemy: Option[Int],
+    enemies: Set[Int],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[AllChampionStatistics] = {
@@ -113,15 +113,16 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     role match {
       case Role.UNDEFINED_ROLE => {
         (Role.values.toSet - Role.UNDEFINED_ROLE).toList.map { theRole =>
-          getSingle(champions, tiers, patch, prevPatch, region, theRole, queues, enemy, reverse, forceRefresh)
+          getSingle(allChampions, tiers, patches, prevPatch,
+                    regions, theRole, queues, enemies, reverse, forceRefresh)
         }.combineAll
       }
 
       case _ => {
         if (!prevPatch.isDefined) {
-          forceGet(champions, tiers, patch, region, role, enemy, queues, reverse)
+          forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
         } else {
-          val id = AllChampionStatisticsId.fromSets(tiers, patch, region, role, enemy, queues)
+          val id = AllChampionStatisticsId.fromSets(tiers, patches, regions, roles, enemies, queues)
           val key = id.toString
 
           val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
@@ -130,8 +131,9 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
             // If the key is not found, recalculate it and write it
             case None => for {
               // TODO(igm): don't force get the previous patch, but instead read it back from redis
-              prev <- forceGet(champions, tiers, prevPatch.map(Set(_)).getOrElse(Set()), region, role, enemy, queues, reverse)
-              stats <- forceGet(champions, tiers, Set(patch), region, role, enemy, queues, reverse)
+              prev <- forceGet(allChampions, tiers, prevPatch.map(Set(_)).getOrElse(Set()),
+                               regions, roles, enemies, queues, reverse)
+              stats <- forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
               _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
             } yield ChangeMarker.mark(stats, prev)
 
@@ -146,24 +148,25 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
   /**
     * Runs get across multiple patches and aggregates into one AllChampionStatistics object.
     */
-  private[this] def getForPatches(
-    champions: Set[Int],
+  def getForPatches(
+    allChampions: Set[Int],
     tiers: Set[Tier],
     patches: Set[String],
     prevPatches: Map[String, String],
-    region: Region,
-    role: Role,
+    regions: Set[Region],
+    roles: Set[Role],
     queues: Set[QueueType],
-    enemy: Option[Int],
+    enemies: Set[Int],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[AllChampionStatistics] = {
     for {
-      statsList <- patches.toList.map(patch =>
+      statsList <- patches.toList.map { patch =>
         getSingle(
-          champions, tiers, patch, prevPatches.get(patch),
-          region, role, queues, enemy, reverse, forceRefresh = forceRefresh
-        )).sequence
+          allChampions, tiers, patches, prevPatches.get(patch),
+          regions, roles, queues, enemies, reverse, forceRefresh = forceRefresh
+        )
+      }.sequence
     } yield statsList.toList.combineAll
   }
 
@@ -178,12 +181,12 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     *  This does not take caching into account.
     */
   private def forceGet(
-    champions: Set[Int],
+    allChampions: Set[Int],
     tiers: Set[Tier],
-    patch: Set[String],
-    region: Set[Region],
-    role: Set[Role],
-    enemy: Option[Int],
+    patches: Set[String],
+    regions: Set[Region],
+    roles: Set[Role],
+    enemies: Set[Int],
     queues: Set[QueueType],
     reverse: Boolean
   ): Future[AllChampionStatistics] = {
@@ -191,16 +194,12 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     // I'll try to explain every step in detail.
 
     // Here, we build the Set[MatchFilters] for every champion.
-    val filtersMap: Map[Int, Set[MatchFilters]] = champions.map { champ =>
+    val filtersMap: Map[Int, Set[MatchFilters]] = allChampions.map { champ =>
       val basis = MatchFilterSet(
-        champ.some, patch, tiers, region, enemy, role, queues
+        champ.some, patches, tiers, regions, enemies, roles, queues
       )
-      val nextSet = if (reverse) {
-        basis.inverse
-      } else {
-        basis
-      }
-      (champ.value, nextSet.toFilterSet)
+      val nextSet = if (reverse) basis.inverse else basis
+      (champ, nextSet.toFilterSet)
     }.toMap
 
     // Next, we'll compute the MatchSums. This is where the function is no longer
@@ -218,7 +217,7 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     // object for each value. Thus we end up with a Future[AllChampionStatistics],
     // and we are done.
     sumsMapFut.map { sumsMap =>
-      StatisticsAggregator.makeStatistics(role, sumsMap)
+      StatisticsAggregator.makeStatistics(sumsMap)
     }
   }
 

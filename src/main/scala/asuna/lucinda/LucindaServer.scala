@@ -11,7 +11,7 @@ import asuna.proto.league.lucinda.{ AllChampionStatistics, LucindaGrpc, Statisti
 import asuna.proto.league.lucinda.rpc._
 import asuna.proto.league.vulgate.VulgateGrpc
 import asuna.proto.league.vulgate.rpc.GetAggregationFactorsRequest
-import asuna.lucinda.dao.{ StatisticsDAO, AllChampionStatisticsDAO }
+import asuna.lucinda.dao.{ MatchupDAO, StatisticsDAO, AllChampionStatisticsDAO }
 import cats.implicits._
 import redis.RedisClient
 
@@ -40,6 +40,7 @@ class LucindaServer(args: Seq[String])
 
   lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria, statsRedis)
   lazy val statisticsDAO = new StatisticsDAO(alexandria, aggRedis, allChampionStatisticsDAO)
+  lazy val matchupDAO = new MatchupDAO(allChampionStatisticsDAO)
 
   override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
     for {
@@ -53,9 +54,9 @@ class LucindaServer(args: Seq[String])
         allChampions = factors.champions.toSet,
         patches = req.patches.toSet,
         prevPatches = factors.prevPatches,
-        tiers = req.tiers,
-        regions = req.regions,
-        roles = req.roles,
+        tiers = req.tiers.toSet,
+        regions = req.regions.toSet,
+        roles = req.roles.toSet,
         queues = defaultQueuesIfEmpty(req.queues),
         enemies = req.enemyIds.toSet,
         forceRefresh = req.forceRefresh,
@@ -93,15 +94,18 @@ class LucindaServer(args: Seq[String])
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(req.patches, req.regions.head)),
+          context = Some(VulgateHelpers.makeVulgateContext(req.patches, req.region)),
           patches = req.patches
         )
       )
 
       // Get all of the matchup overviews of this champion
-      matchups <- championDAO.getMatchupOverviews(
-        factors = factors,
-        champion = req.championId,
+      matchups <- matchupDAO.getMatchupOverviews(
+        allChampions = factors.champions.toSet,
+        patches = req.patches.toSet,
+        prevPatches = factors.prevPatches,
+        tiers = req.tiers.toSet,
+        champion = req.championId.some,
         region = req.region,
         role = req.role,
         queues = defaultQueuesIfEmpty(req.queues),

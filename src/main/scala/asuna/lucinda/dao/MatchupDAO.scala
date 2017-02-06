@@ -1,23 +1,20 @@
 package asuna.lucinda.dao
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.collection.immutable.Vector
 
-import asuna.lucinda.VulgateHelpers
-import asuna.lucinda.matches.MatchAggregator
-import asuna.proto.league.{ PatchRange, QueueType, Region, Role, TierRange }
-import asuna.proto.league.charon.static
-import asuna.proto.league.lucinda.{ Champion, AllChampionStatistics, Matchup, MatchupOverview }
-import asuna.proto.league.vulgate.AggregationFactors
-import asuna.proto.league.vulgate.VulgateGrpc.Vulgate
+import asuna.proto.league.{ QueueType, Region, Role, Tier }
+import asuna.proto.league.lucinda.MatchupOverview
 import cats.implicits._
 
-class ChampionDAO(
-  vulgate: Vulgate, statisticsDAO: AllChampionStatisticsDAO, matchAggregateDAO: MatchAggregateDAO
+class MatchupDAO(
+  allChampionStatisticsDAO: AllChampionStatisticsDAO
 )(implicit ec: ExecutionContext) {
 
   def getMatchupOverviews(
-    factors: AggregationFactors,
+    allChampions: Set[Int],
+    patches: Set[String],
+    prevPatches: Map[String, String],
+    tiers: Set[Tier],
     champion: Option[Int],
     region: Region,
     role: Role,
@@ -27,12 +24,15 @@ class ChampionDAO(
   ): Future[Vector[MatchupOverview]] = {
     for {
       // First, let's get our statistics against each enemy.
-      championStatistics <- statisticsDAO.get(
-        factors = factors,
-        region = region,
-        role = role,
-        enemy = champion,
+      championStatistics <- allChampionStatisticsDAO.getForPatches(
+        allChampions = allChampions,
+        tiers = tiers,
+        patches = patches,
+        prevPatches = prevPatches,
+        regions = Set(region),
+        roles = Set(role),
         queues = queues,
+        enemies = Set(champion),
         reverse = true,
         forceRefresh = forceRefresh
       )

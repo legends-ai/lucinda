@@ -129,7 +129,7 @@ object QuotientGenerator {
       .map { case (str, subscalars) =>
         // TODO(igm): this is ugly and lots of unnecessary calculations
         // We can easily write a version without deserializing
-        val set = MatchAggregator.deserializeBonusSet(str)
+        val set = StatisticsGenerator.deserializeBonusSet(str)
         val ids = set.map(_._1)
         (ids.find(keystones).orEmpty, subscalars)
       }
@@ -141,7 +141,7 @@ object QuotientGenerator {
   def makeCoreBuilds(builds: Map[String, MatchSum.Subscalars]): Map[String, MatchSum.Subscalars] = {
     builds
       .map { case (str, subscalars) =>
-        val build = MatchAggregator.deserializeBuild(str)
+        val build = StatisticsGenerator.deserializeBuild(str)
         (build.filter(coreItems), subscalars)
       }
 

@@ -3,7 +3,7 @@ package asuna.lucinda.dao
 import scala.concurrent.{ ExecutionContext, Future }
 
 import asuna.lucinda.filters.MatchFilterSet
-import asuna.lucinda.matches.AggregationContext
+import asuna.lucinda.matches.StatisticsGenerator
 import asuna.proto.league.{ QueueType, Region, Role, Tier }
 import asuna.proto.league.lucinda.Statistics
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
@@ -53,9 +53,9 @@ object StatisticsId {
 
 }
 
-class StatisticsDAO(alexandria: Alexandria, redis: RedisClient, statistics: AllChampionStatisticsDAO)(
-  implicit ec: ExecutionContext
-) {
+class StatisticsDAO(
+  alexandria: Alexandria, redis: RedisClient, allChampionStatisticsDAO: AllChampionStatisticsDAO
+)(implicit ec: ExecutionContext) {
 
   def get(
     allChampions: Set[Int],
@@ -136,7 +136,7 @@ class StatisticsDAO(alexandria: Alexandria, redis: RedisClient, statistics: AllC
   ): Future[Statistics] = {
     // First, let's get per-role sums.
     val byRoleFilters = (Role.values.toSet - Role.UNDEFINED_ROLE).map { someRole =>
-      (someRole, MatchFilterSet(champion, patches, tiers, region, enemy, someRole, queues).toFilterSet)
+      (someRole, MatchFilterSet(champion, patches, tiers, regions, enemies, someRole, queues).toFilterSet)
     }.toMap
     val byRoleFuts = byRoleFilters
       .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq)))
@@ -154,8 +154,8 @@ class StatisticsDAO(alexandria: Alexandria, redis: RedisClient, statistics: AllC
       // Next, let's retrieve all stats for this combination.
       // This is used to get Statistic objects.
       allStatsFuts = patches.toList.map { patch =>
-        statistics.getSingle(
-          champions, tiers, patch, prevPatches.get(patch), region, chosenRole, queues, enemy, forceRefresh
+        allChampionStatisticsDAO.getSingle(
+          champions, tiers, patches, prevPatches.get(patch), regions, chosenRole, queues, enemies, forceRefresh
         ).map((patch, _))
       }
 
@@ -166,18 +166,14 @@ class StatisticsDAO(alexandria: Alexandria, redis: RedisClient, statistics: AllC
       // Finally, let's get the patch information.
       // We'll use a map with the key being the patch.
       byPatchFilters = lastFivePatches.map { patch =>
-        (patch, MatchFilterSet(champion, patch, tiers, region, enemy, chosenRole, queues).toFilterSet)
+        (patch, MatchFilterSet(champion, patches, tiers, regions, enemies, chosenRole, queues).toFilterSet)
       }.toMap
 
       // We will then sequence them.
       byPatch <- byPatchFilters
         .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq))).sequence
 
-    } yield AggregationContext(champion, minPlayRate).aggregate(
-      patchStats = allStats,
-      byRole = byRole,
-      byPatch = byPatch
-    )
+    } yield StatisticsGenerator.makeStatistics(champion, minPlayRate, allStats, byRole, byPatch)
   }
 
 }

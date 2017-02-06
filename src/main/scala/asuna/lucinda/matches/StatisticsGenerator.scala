@@ -73,13 +73,13 @@ object StatisticsGenerator {
     obj.flatMap(accessor(_).get(champion)).getOrElse(Statistic()).some
   }
 
-  private def getDelta(deltas: Option[AllChampionStatistics.Results.Deltas], champion: Int, accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]): Option[Statistics.Statistics.Deltas.Delta] = {
+  private def getDelta(deltas: Option[AllChampionStatistics.Results.Deltas], champion: Int, accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]): Option[Statistics.Deltas.Delta] = {
     val delta = deltas.flatMap(accessor)
     val get = getStat(delta, champion, _: AllChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic])
     if (!delta.isDefined) {
       return None
     }
-    Some(Statistics.Statistics.Deltas.Delta(
+    Some(Statistics.Deltas.Delta(
       zeroToTen = get(_.zeroToTen),
       tenToTwenty = get(_.tenToTwenty),
       twentyToThirty = get(_.twentyToThirty),

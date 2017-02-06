@@ -220,7 +220,7 @@ trait MatchSumGeneratorHelper {
       // This is probably the most expensive operation here. #bigdata
       patchSums <- Gen.containerOfN[List, Map[Int, MatchSum]](patches.size, makeMatchSumMap(champs))
       patchStats = patches.zip(patchSums).map { case (patch, sumMap) =>
-        (patch, StatisticsAggregator.makeStatistics(role, sumMap))
+        (patch, StatisticsAggregator.makeStatistics(sumMap))
       }.toMap
 
       // Generate a MatchSum for every role.
