@@ -40,15 +40,6 @@ object StatisticsGenerator {
     * Prepares the StatisticsRoles object.
     */
   private[this] def makeRoleStats(allStats: AllChampionStatistics, roles: Set[Role], roleSums: Map[Role, MatchSum]): Statistics.Roles = {
-    // Gets the most picked role out of all roles passed in.
-    def maxRole: Role = {
-      val roleSpace = if (roles.size == 0) (Role.values.toSet - Role.UNDEFINED_ROLE) else roles
-      roleStats
-        .filter(stats => roleSpace(stats.role)).toSeq
-        .sortBy(_.pickRate).map(_.role)
-        .lastOption.getOrElse(Role.UNDEFINED_ROLE)
-    }
-
     // We get the total champions in role based on number of win rates in map.
     val totalChampionsInRole = allStats.results.flatMap(_.scalars)
       .map(_.wins.keys.filter(_ > 0).size).getOrElse(0)
@@ -67,6 +58,15 @@ object StatisticsGenerator {
       pickRate = if (totalGames == 0) 0 else (numMatches.toDouble / totalGames),
       numMatches = numMatches.toInt
     )
+
+    // Gets the most picked role out of all roles passed in.
+    def maxRole: Role = {
+      val roleSpace = if (roles.size == 0) (Role.values.toSet - Role.UNDEFINED_ROLE) else roles
+      roleStats
+        .filter(stats => roleSpace(stats.role)).toSeq
+        .sortBy(_.pickRate).map(_.role)
+        .lastOption.getOrElse(Role.UNDEFINED_ROLE)
+    }
 
     Statistics.Roles(
       // TODO(igm): return correct role
