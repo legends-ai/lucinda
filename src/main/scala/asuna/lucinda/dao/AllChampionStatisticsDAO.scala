@@ -122,9 +122,26 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
         // If the key is not found, recalculate it and write it
         case None => for {
           // TODO(igm): don't force get the previous patch, but instead read it back from redis
-          prev <- forceGet(allChampions, tiers, prevPatch.map(Set(_)).getOrElse(Set()),
-                            regions, roles, enemies, queues, reverse)
-          stats <- forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
+          prev <- forceGet(
+            allChampions,
+            tiers,
+            prevPatch.map(Set(_)).getOrElse(Set()),
+            regions,
+            roles,
+            enemies,
+            queues,
+            reverse
+          )
+          stats <- forceGet(
+            allChampions,
+            tiers,
+            patches,
+            regions,
+            roles,
+            enemies,
+            queues,
+            reverse
+          )
           _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
         } yield ChangeMarker.mark(stats, prev)
 
@@ -152,8 +169,16 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     for {
       statsList <- patches.toList.map { patch =>
         getSingle(
-          allChampions, tiers, patches, prevPatches.get(patch),
-          regions, roles, queues, enemies, reverse, forceRefresh = forceRefresh
+          allChampions = allChampions,
+          tiers = tiers,
+          patches = patches,
+          prevPatch = prevPatches.get(patch),
+          regions = regions,
+          roles = roles,
+          queues = queues,
+          enemies = enemies,
+          reverse = reverse,
+          forceRefresh = forceRefresh
         )
       }.sequence
     } yield statsList.toList.combineAll

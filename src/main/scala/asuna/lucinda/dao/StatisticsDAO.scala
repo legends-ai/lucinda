@@ -136,7 +136,7 @@ class StatisticsDAO(
   ): Future[Statistics] = {
     // First, let's get per-role sums.
     val byRoleFilters = (Role.values.toSet - Role.UNDEFINED_ROLE).map { someRole =>
-      (someRole, MatchFilterSet(champions, patches, tiers, regions, enemies, roles, queues).toFilterSet)
+      (someRole, MatchFilterSet(champions, patches, tiers, regions, enemies, Set(someRole), queues).toFilterSet)
     }.toMap
     val byRoleFuts = byRoleFilters
       .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq)))
@@ -166,7 +166,9 @@ class StatisticsDAO(
       byPatch <- byPatchFilters
         .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq))).sequence
 
-    } yield StatisticsGenerator.makeStatistics(champions, minPlayRate, allStats, roles, byRole, byPatch)
+    } yield StatisticsGenerator.makeStatistics(
+      champions, minPlayRate, allStats, roles, byRole, byPatch
+    )
   }
 
 }

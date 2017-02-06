@@ -16,23 +16,38 @@ case class MatchFilterSet(
 ) {
 
   def toFilterSet: Set[MatchFilters] = {
-    for {
-      champion <- champions
+    // Apply usual (non-empty) filters
+    val baseFilters = for {
       version <- versions
       tier <- tiers
       region <- regions
-      enemy <- enemies
       role <- roles
       queue <- queues
     } yield MatchFilters(
-      championId = champion.some,
       version = version,
       tier = tier,
       region = region,
-      enemyId = enemy.some,
       role = role,
       queue = queue
     )
+
+    // Apply champ filters
+    val champFilters = if (champions.size > 0) {
+      baseFilters.flatMap(
+        filters => champions.map(c =>
+          filters.copy(championId = c.some)))
+    } else {
+      baseFilters
+    }
+
+    // Apply enemy filters
+    if (enemies.size > 0) {
+      champFilters.flatMap(
+        filters => enemies.map(c =>
+          filters.copy(enemyId = c.some)))
+    } else {
+      champFilters
+    }
   }.toSet
 
   def inverse = {
