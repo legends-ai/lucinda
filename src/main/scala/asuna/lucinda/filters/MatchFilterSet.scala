@@ -27,7 +27,8 @@ case class MatchFilterSet(
       version = version,
       tier = tier,
       region = region,
-      queue = queue
+      queue = queue,
+      role = role
     )
 
     // Apply champ filters
