@@ -305,7 +305,7 @@ object StatisticsGenerator {
   }
 
   def deserializeBonusSet(serialized: String): Map[Int, Int] = {
-    serialized.split("\\|").map { part =>
+    serialized.split("\\|").filter(!_.isEmpty()).map { part =>
       var element = part.split(":").map(_.toInt)
       (element(0), element(1))
     }.toMap
