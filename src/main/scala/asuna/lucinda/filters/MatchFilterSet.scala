@@ -19,15 +19,14 @@ case class MatchFilterSet(
     // Apply usual (non-empty) filters
     val baseFilters = for {
       version <- versions
-      tier <- tiers
+      tier <- if (tiers.size == 0) Tier.values.toSet else tiers
       region <- regions
-      role <- roles
       queue <- queues
+      role <- if (roles.size == 0) (Role.values.toSet - Role.UNDEFINED_ROLE) else roles
     } yield MatchFilters(
       version = version,
       tier = tier,
       region = region,
-      role = role,
       queue = queue
     )
 
