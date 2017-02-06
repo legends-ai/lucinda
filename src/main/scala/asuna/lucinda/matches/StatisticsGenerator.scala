@@ -22,8 +22,7 @@ object StatisticsGenerator {
   ): Statistics = {
     // First, we will combine all statistics objects from all patches in the range.
     // This uses the StatisticsMonoid.
-    val allPatches = patchStats.values.toList
-    val allStats = allPatches.combineAll
+    val allStats = patchStats.values.toList.combineAll
 
     // This is the quotient of the champion for the entire search space.
     val quot = QuotientGenerator.generate(byPatch.values.toList.combineAll)
@@ -41,6 +40,15 @@ object StatisticsGenerator {
     * Prepares the StatisticsRoles object.
     */
   private[this] def makeRoleStats(allStats: AllChampionStatistics, roles: Set[Role], roleSums: Map[Role, MatchSum]): Statistics.Roles = {
+    // Gets the most picked role out of all roles passed in.
+    def maxRole: Role = {
+      val roleSpace = if (roles.size == 0) (Role.values.toSet - Role.UNDEFINED_ROLE) else roles
+      roleStats
+        .filter(stats => roleSpace(stats.role)).toSeq
+        .sortBy(_.pickRate).map(_.role)
+        .lastOption.getOrElse(Role.UNDEFINED_ROLE)
+    }
+
     // We get the total champions in role based on number of win rates in map.
     val totalChampionsInRole = allStats.results.flatMap(_.scalars)
       .map(_.wins.keys.filter(_ > 0).size).getOrElse(0)
@@ -62,7 +70,7 @@ object StatisticsGenerator {
 
     Statistics.Roles(
       // TODO(igm): return correct role
-      role = roles.toSeq.headOption.getOrElse(Role.UNDEFINED_ROLE),
+      role = maxRole,
       totalChampionsInRole = totalChampionsInRole,
       roleStats = roleStats.toSeq
     )
