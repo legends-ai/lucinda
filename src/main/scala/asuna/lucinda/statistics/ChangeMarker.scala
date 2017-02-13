@@ -10,7 +10,10 @@ object ChangeMarker {
 
   implicit object MarkStatisticSemigroup extends Semigroup[Statistic] {
     def combine(stat: Statistic, prev: Statistic): Statistic = {
-      stat.copy(change = prev.rank - stat.rank)
+      stat.copy(
+        changeInRank = prev.rank - stat.rank,
+        changeInValue = prev.value - stat.value
+      )
     }
   }
 
@@ -113,6 +116,8 @@ object ChangeMarker {
   }
 
   def mark(stats: AllChampionStatistics, prev: AllChampionStatistics) =
-    stats.copy(results = stats.results |+| prev.results)
+    stats.copy(
+      results = stats.results |+| prev.results
+    )
 
 }

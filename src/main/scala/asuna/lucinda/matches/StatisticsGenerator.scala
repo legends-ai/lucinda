@@ -14,7 +14,6 @@ object StatisticsGenerator {
 
   def makeStatistics(
     champions: Set[Int],
-    minPlayRate: Double,
     patchStats: Map[String, AllChampionStatistics],
     roles: Set[Role],
     byRole: Map[Role, MatchSum],
@@ -32,7 +31,7 @@ object StatisticsGenerator {
       scalars = makeScalars(champions, allStats).some,
       deltas = makeDeltas(champions, allStats).some,
       graphs = makeGraphs(allStats, patchStats, quot, champions).some,
-      collections = makeCollections(quot, minPlayRate).some
+      collections = quot.collections
     )
   }
 
@@ -206,10 +205,10 @@ object StatisticsGenerator {
         )
       }.toSeq,
 
-      byGameLength = quot.durations.map { case (duration, stats) =>
+      byGameLength = quot.collections.map(_.durations).getOrElse(Map()).map { case (duration, stats) =>
         Statistics.Graphs.ByGameLength(
           gameLength = Some(IntRange(min = duration, max = duration)),
-          winRate = stats.wins
+          winRate = stats.winRate
         )
       }.toSeq,
 
@@ -239,105 +238,6 @@ object StatisticsGenerator {
         )
       }
     )
-  }
-
-  implicit class SafeMap[T](coll: Traversable[T]) {
-    def safelyMap[U](f: T => U): Traversable[U] = {
-      coll.map(el => Try { f(el) }) collect { case Success(x) => x }
-    }
-  }
-
-  /**
-    * Makes our collections.
-    */
-  def makeCollections(quot: MatchQuotient, minPlayRate: Double): Statistics.Collections = {
-    // TODO(igm): figure out how we can do more code reuse here.
-    Statistics.Collections(
-      runes = quot.runes
-        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .safelyMap { case (runeSet, subscalars) =>
-          Statistics.Collections.RuneSet(
-            runes = deserializeBonusSet(runeSet),
-            subscalars = Some(subscalars)
-          )
-      }.toSeq,
-
-      masteries = quot.masteries
-        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .safelyMap { case (masterySet, subscalars) =>
-          Statistics.Collections.MasterySet(
-            masteries = deserializeBonusSet(masterySet),
-            subscalars = Some(subscalars)
-          )
-      }.toSeq,
-
-      summonerSpells = quot.summoners
-        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .safelyMap { case (spells, subscalars) =>
-          val (spell1, spell2) = deserializeSummoners(spells)
-          Statistics.Collections.SummonerSet(
-            spell1 = spell1,
-            spell2 = spell2,
-            subscalars = Some(subscalars)
-          )
-      }.toSeq,
-
-      skillOrders = quot.skillOrders
-        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .safelyMap { case (skillOrder, subscalars) =>
-          Statistics.Collections.SkillOrder(
-            skillOrder = deserializeSkillOrder(skillOrder),
-            subscalars = Some(subscalars)
-          )
-      }.toSeq,
-
-      starterItems = quot.starterItems
-        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .safelyMap { case (build, subscalars) =>
-          Statistics.Collections.Build(
-            build = deserializeBuild(build),
-            subscalars = Some(subscalars)
-          )
-      }.toSeq,
-
-      buildPath = quot.buildPath
-        .filter(_._2.plays >= minPlayRate)  // Ensure minimum play rate is met
-        .safelyMap { case (build, subscalars) =>
-          Statistics.Collections.Build(
-            build = deserializeBuild(build),
-            subscalars = Some(subscalars)
-          )
-      }.toSeq
-
-    )
-  }
-
-  def deserializeBonusSet(serialized: String): Map[Int, Int] = {
-    serialized.split("\\|").filter(!_.isEmpty()).map { part =>
-      var element = part.split(":").map(_.toInt)
-      (element(0), element(1))
-    }.toMap
-  }
-
-  def deserializeSummoners(serialized: String): (Int, Int) = {
-    val Array(a, b) = serialized.split("\\|")
-    (a.toInt, b.toInt)
-  }
-
-  def deserializeSkillOrder(serialized: String): Seq[Ability] = {
-    serialized.map(
-      _ match {
-        case 'Q' => Ability.Q
-        case 'W' => Ability.W
-        case 'E' => Ability.E
-        case 'R' => Ability.R
-        case _ => Ability.U
-      }
-    )
-  }
-
-  def deserializeBuild(serialized: String): Seq[Int] = {
-    serialized.split("\\|").filter(!_.isEmpty()).map(_.toInt)
   }
 
 }

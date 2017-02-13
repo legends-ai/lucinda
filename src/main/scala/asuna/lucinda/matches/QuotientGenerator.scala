@@ -3,15 +3,11 @@ package asuna.lucinda.matches
 import asuna.common.legends.MatchSumHelpers._
 import asuna.proto.league.MatchSum
 import asuna.proto.league.lucinda.MatchQuotient
+import MatchQuotient._
+import MatchQuotient.Collections._
 import cats.implicits._
 
 object QuotientGenerator {
-
-  val keystones = Set(
-    6161, 6162, 6164,
-    6361, 6362, 6363,
-    6261, 6262, 6263
-  )
 
   // Items that could be core items.
   val coreItems: Set[Int] = Set(
@@ -19,141 +15,216 @@ object QuotientGenerator {
   )
 
   def generate(sum: MatchSum): MatchQuotient = {
-    val justPlays = sum.scalars.map(_.plays)
-
-    val divScalar = divideScalar(_: Long, justPlays)
-    val divDelta = divideDelta(sum.durationDistribution, _: Option[MatchSum.Deltas.Delta])
-
-    val scalars = sum.scalars.getOrElse(MatchSum.Scalars())
-    val deltas = sum.deltas.getOrElse(MatchSum.Deltas())
-
+    // Total number of plays. This is the divisor for the quotient.
+    val plays = sum.scalars.map(_.plays).orEmpty
     MatchQuotient(
-      scalars = Some(MatchQuotient.Scalars(
-        wins = divScalar(scalars.wins),
-        goldEarned = divScalar(scalars.goldEarned),
-        kills = divScalar(scalars.kills),
-        deaths = divScalar(scalars.deaths),
-        assists = divScalar(scalars.assists),
-        damageDealt = divScalar(scalars.damageDealt),
-        damageTaken = divScalar(scalars.damageTaken),
-        minionsKilled = divScalar(scalars.minionsKilled),
-        teamJungleMinionsKilled = divScalar(scalars.teamJungleMinionsKilled),
-        enemyJungleMinionsKilled = divScalar(scalars.enemyJungleMinionsKilled),
-        structureDamage = divScalar(scalars.structureDamage),
-        killingSpree = divScalar(scalars.killingSpree),
-        wardsBought = divScalar(scalars.wardsBought),
-        wardsPlaced = divScalar(scalars.wardsPlaced),
-        wardsKilled = divScalar(scalars.wardsKilled),
-        crowdControl = divScalar(scalars.crowdControl),
-        firstBlood = divScalar(scalars.firstBlood),
-        firstBloodAssist = divScalar(scalars.firstBloodAssist),
-        doublekills = divScalar(scalars.doublekills),
-        triplekills = divScalar(scalars.triplekills),
-        quadrakills = divScalar(scalars.quadrakills),
-        pentakills = divScalar(scalars.pentakills),
-        physicalDamage = divScalar(scalars.physicalDamage),
-        magicDamage = divScalar(scalars.magicDamage),
-        trueDamage = divScalar(scalars.trueDamage)
-      )),
-      deltas = Some(MatchQuotient.Deltas(
-        csDiff = divDelta(deltas.csDiff),
-        xpDiff = divDelta(deltas.xpDiff),
-        damageTakenDiff = divDelta(deltas.damageTakenDiff),
-        xpPerMin = divDelta(deltas.xpPerMin),
-        goldPerMin = divDelta(deltas.goldPerMin),
-        towersPerMin = divDelta(deltas.towersPerMin),
-        wardsPlaced = divDelta(deltas.wardsPlaced),
-        damageTaken = divDelta(deltas.damageTaken)
-      )),
-      masteries = divideSubscalarMap(justPlays, sum.masteries),
-      runes = divideSubscalarMap(justPlays, sum.runes),
-      summoners = divideSubscalarMap(justPlays, sum.summoners),
-      keystones = divideSubscalarMap(justPlays, makeKeystones(keystones, sum.masteries)),
-      startingTrinkets = divideSubscalarMap(justPlays, sum.startingTrinkets),
-      endingTrinkets = divideSubscalarMap(justPlays, sum.endingTrinkets),
-      skillOrders = divideSubscalarMap(justPlays, mergeSkillOrders(sum.skillOrders)),
-      durations = divideSubscalarMap(justPlays, sum.durations),
-      bans = divideSubscalarMap(justPlays, sum.bans),
-      allies = divideSubscalarMap(justPlays, sum.allies),
-      enemies = divideSubscalarMap(justPlays, sum.enemies),
-      starterItems = divideSubscalarMap(justPlays, sum.starterItems),
-      buildPath = divideSubscalarMap(justPlays, sum.buildPath),
-      coreBuilds = divideSubscalarMap(justPlays, makeCoreBuilds(sum.buildPath)),
-      items = divideSubscalarMap(justPlays, sum.items)
+      scalars = sum.scalars.map(scalars => makeScalars(plays, scalars)),
+      deltas = sum.deltas.map(makeDeltas),
+      collections = sum.collections.map(colls => makeCollections(plays, colls))
     )
   }
 
-  private def divideScalar[S](num: S, divisor: Option[Long])(implicit s: scala.math.Numeric[S]): Double = {
+  def makeScalars(plays: Long, sum: MatchSum.Scalars): Scalars = {
+    val divScalar = divideScalar(_: Long, plays)
+    Scalars(
+      wins = divScalar(sum.wins),
+      goldEarned = divScalar(sum.goldEarned),
+      kills = divScalar(sum.kills),
+      deaths = divScalar(sum.deaths),
+      assists = divScalar(sum.assists),
+      damageDealt = divScalar(sum.damageDealt),
+      damageTaken = divScalar(sum.damageTaken),
+      minionsKilled = divScalar(sum.minionsKilled),
+      teamJungleMinionsKilled = divScalar(sum.teamJungleMinionsKilled),
+      enemyJungleMinionsKilled = divScalar(sum.enemyJungleMinionsKilled),
+      structureDamage = divScalar(sum.structureDamage),
+      killingSpree = divScalar(sum.killingSpree),
+      wardsBought = divScalar(sum.wardsBought),
+      wardsPlaced = divScalar(sum.wardsPlaced),
+      wardsKilled = divScalar(sum.wardsKilled),
+      crowdControl = divScalar(sum.crowdControl),
+      firstBlood = divScalar(sum.firstBlood),
+      firstBloodAssist = divScalar(sum.firstBloodAssist),
+      doublekills = divScalar(sum.doublekills),
+      triplekills = divScalar(sum.triplekills),
+      quadrakills = divScalar(sum.quadrakills),
+      pentakills = divScalar(sum.pentakills),
+      physicalDamage = divScalar(sum.physicalDamage),
+      magicDamage = divScalar(sum.magicDamage),
+      trueDamage = divScalar(sum.trueDamage)
+    )
+  }
+
+  def divideDeltaOpt(
+    dd: MatchSum.Deltas.DurationDistribution, deltaOpt: Option[MatchSum.Deltas.Delta]
+  ): Option[MatchQuotient.Deltas.Delta] = {
+    deltaOpt.map(delta => divideDelta(dd, delta))
+  }
+
+  private def divideDelta(
+    dd: MatchSum.Deltas.DurationDistribution, delta: MatchSum.Deltas.Delta
+  ): MatchQuotient.Deltas.Delta = {
+     MatchQuotient.Deltas.Delta(
+      zeroToTen = divideScalar(delta.zeroToTen, dd.zeroToTen),
+      tenToTwenty = divideScalar(delta.tenToTwenty, dd.tenToTwenty),
+      twentyToThirty = divideScalar(delta.twentyToThirty, dd.twentyToThirty),
+      thirtyToEnd = divideScalar(delta.thirtyToEnd, dd.thirtyToEnd)
+    )
+  }
+
+  def makeDeltas(sum: MatchSum.Deltas): Deltas = {
+    val divDelta = divideDeltaOpt(sum.durationDistribution.getOrElse(MatchSum.Deltas.DurationDistribution()), _: Option[MatchSum.Deltas.Delta])
+    Deltas(
+      csDiff = divDelta(sum.csDiff),
+      xpDiff = divDelta(sum.xpDiff),
+      damageTakenDiff = divDelta(sum.damageTakenDiff),
+      xpPerMin = divDelta(sum.xpPerMin),
+      goldPerMin = divDelta(sum.goldPerMin),
+      towersPerMin = divDelta(sum.towersPerMin),
+      wardsPlaced = divDelta(sum.wardsPlaced),
+      damageTaken = divDelta(sum.damageTaken)
+    )
+  }
+
+  private def divideScalar[S](num: S, divisor: Long)(implicit s: scala.math.Numeric[S]): Double = {
     divisor match {
-      case Some(plays) if plays != 0 => s.toDouble(num) / plays
+      case plays if plays != 0 => s.toDouble(num) / plays
       case _ => 0
     }
   }
 
-  private def divideDelta(
-    dd: Option[MatchSum.DurationDistribution], deltaOpt: Option[MatchSum.Deltas.Delta]
-  ): Option[MatchQuotient.Deltas.Delta] = {
-    for {
-      delta <- deltaOpt
-    } yield MatchQuotient.Deltas.Delta(
-      zeroToTen = divideScalar(delta.zeroToTen, dd.map(_.zeroToTen)),
-      tenToTwenty = divideScalar(delta.tenToTwenty, dd.map(_.tenToTwenty)),
-      twentyToThirty = divideScalar(delta.twentyToThirty, dd.map(_.twentyToThirty)),
-      thirtyToEnd = divideScalar(delta.thirtyToEnd, dd.map(_.thirtyToEnd))
+  /**
+    * Divides a subscalars by a total.
+    */
+  def divideSubscalars(total: Long, sum: MatchSum.Collections.Subscalars): Subscalars = {
+    Subscalars(
+      playRate = divideScalar(sum.plays, total),
+      winRate = divideScalar(sum.wins, sum.plays.toLong),
+      playCount = sum.plays.toInt
     )
   }
 
-  private def divideSubscalarMap[T](total: Option[Long], map: Map[T, MatchSum.Subscalars]): Map[T, MatchQuotient.Subscalars] = {
-    map.mapValues { subscalars =>
-      MatchQuotient.Subscalars(
-        plays = divideScalar(subscalars.plays, total),
-        wins = divideScalar(subscalars.wins, Some(subscalars.plays.toLong)),
-        playCount = subscalars.plays.toInt
-      )
+  private def divideSubscalarMap[T](total: Long, map: Map[T, MatchSum.Collections.Subscalars]): Map[T, Subscalars] = {
+    map.mapValues(ss => divideSubscalars(total, ss))
+  }
+
+  /**
+    * Performs a division operation on a list of items containing subscalars.
+    */
+  def divideSubscalarsList[S, T](
+    total: Long,
+    sums: Seq[S],
+    extractor: S => Option[MatchSum.Collections.Subscalars],
+    builder: (S, Option[Subscalars]) => T
+  ): Seq[T] = {
+    sums.map { sum =>
+      builder(sum, divideSubscalars(total, extractor(sum).orEmpty).some)
     }
+  }
+
+  /**
+    * Constructs our collections objects
+    * Static typing is a double edged sword.
+    */
+  def makeCollections(totalPlays: Long, sum: MatchSum.Collections): Collections = {
+    Collections(
+
+      masteries = divideSubscalarsList[MatchSum.Collections.MasterySet, MasterySet](
+        totalPlays,
+        sum.masteries,
+        _.subscalars,
+        (s, sc) => MasterySet(masteries = s.masteries, subscalars = sc)
+      ),
+
+      runes = divideSubscalarsList[MatchSum.Collections.RuneSet, RuneSet](
+        totalPlays,
+        sum.runes,
+        _.subscalars,
+        (s, sc) => RuneSet(runes = s.runes, subscalars = sc)
+      ),
+
+      keystones = divideSubscalarsList[MatchSum.Collections.Keystone, Keystone](
+        totalPlays,
+        sum.keystones,
+        _.subscalars,
+        (s, sc) => Keystone(keystone = s.keystone, subscalars = sc)
+      ),
+
+      summoners = divideSubscalarsList[MatchSum.Collections.SummonerSet, SummonerSet](
+        totalPlays,
+        sum.summoners,
+        _.subscalars,
+        (s, sc) => SummonerSet(spell1 = s.spell1, spell2 = s.spell2, subscalars = sc)
+      ),
+
+      startingTrinkets = divideSubscalarsList[MatchSum.Collections.Trinket, Trinket](
+        totalPlays,
+        sum.startingTrinkets,
+        _.subscalars,
+        (s, sc) => Trinket(trinket = s.trinket, subscalars = sc)
+      ),
+
+      endingTrinkets = divideSubscalarsList[MatchSum.Collections.Trinket, Trinket](
+        totalPlays,
+        sum.endingTrinkets,
+        _.subscalars,
+        (s, sc) => Trinket(trinket = s.trinket, subscalars = sc)
+      ),
+
+      skillOrders = divideSubscalarsList[MatchSum.Collections.SkillOrder, SkillOrder](
+        totalPlays,
+        mergeSkillOrders(sum.skillOrders),
+        _.subscalars,
+        (s, sc) => SkillOrder(skillOrder = s.skillOrder, subscalars = sc)
+      ),
+
+      durations = divideSubscalarMap(totalPlays, sum.durations),
+
+      bans = divideSubscalarMap(totalPlays, sum.bans),
+
+      allies = divideSubscalarMap(totalPlays, sum.allies),
+
+      enemies = divideSubscalarMap(totalPlays, sum.enemies),
+
+      starterItems = divideSubscalarsList[MatchSum.Collections.ItemList, ItemList](
+        totalPlays,
+        sum.starterItems,
+        _.subscalars,
+        (s, sc) => ItemList(items = s.items, subscalars = sc)
+      ),
+
+      coreBuilds = divideSubscalarsList[MatchSum.Collections.ItemList, ItemList](
+        totalPlays,
+        sum.coreBuilds,
+        _.subscalars,
+        (s, sc) => ItemList(items = s.items, subscalars = sc)
+      )
+
+    )
   }
 
   /**
     * Merges skill orders lesser than 18 in length.
     */
-  def mergeSkillOrders(skillOrders: Map[String, MatchSum.Subscalars]): Map[String, MatchSum.Subscalars] = {
+  def mergeSkillOrders(skillOrders: Seq[MatchSum.Collections.SkillOrder]): Seq[MatchSum.Collections.SkillOrder] = {
     // TODO(igm): this is pretty inefficient. we can use a trie for slightly faster calculations.
-    // Verify if this is worth it.
-    skillOrders.filterKeys(_.length() == 18).transform { (skillOrder, _) =>
-      skillOrders.filterKeys(skillOrder startsWith _).values.toList.combineAll
+    // Verify if this pretty code is worth it.
+
+    // build a map of the skill orders
+    val soMap = skillOrders
+      .groupBy(_.skillOrder)
+      .mapValues(_.headOption.getOrElse(MatchSum.Collections.Subscalars()))
+
+    // find all matching prefix
+    skillOrders.filter(_.skillOrder.size == 18).map { order =>
+      val so = order.skillOrder
+      val subscalars = skillOrders
+        // check if skill orders are the same
+        .filter(k => so.take(k.skillOrder.size) == k.skillOrder)
+        // combine
+        .toList.map(_.subscalars).combineAll
+      order.copy(subscalars = subscalars)
     }
-  }
-
-  def makeKeystones(keystones: Set[Int], masteries: Map[String, MatchSum.Subscalars]): Map[Int, MatchSum.Subscalars] = {
-    masteries
-      .map { case (str, subscalars) =>
-        // TODO(igm): this is ugly and lots of unnecessary calculations
-        // We can easily write a version without deserializing
-        val set = StatisticsGenerator.deserializeBonusSet(str)
-        val ids = set.map(_._1)
-        (ids.find(keystones).orEmpty, subscalars)
-      }
-      .groupBy { case (keystone, _) => keystone }
-      // Get all of the subscalars and combine them
-      .mapValues(_.toList.map(_._2).combineAll)
-  }
-
-  def makeCoreBuilds(builds: Map[String, MatchSum.Subscalars]): Map[String, MatchSum.Subscalars] = {
-    builds
-      .map { case (str, subscalars) =>
-        val build = StatisticsGenerator.deserializeBuild(str)
-        (build.filter(coreItems), subscalars)
-      }
-
-      .groupBy { case (items, _) => items }
-
-      // Get all of the subscalars and combine them
-      .mapValues(_.toList.map(_._2).combineAll)
-
-      // turn things back into an item list
-      .map { case (items, v) =>
-        (items.map(_.toString).mkString("|"), v)
-      }.toMap
   }
 
 }

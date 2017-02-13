@@ -2,6 +2,7 @@ package asuna.lucinda.dao
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+import asuna.lucinda.matches.MinPlayRateDecorator
 import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.matches.StatisticsGenerator
 import asuna.proto.league.{ QueueType, Region, Role, Tier }
@@ -20,8 +21,7 @@ case class StatisticsId(
   regions: Seq[Region],
   roles: Seq[Role],
   enemies: Seq[Int],
-  queues: Seq[QueueType],
-  minPlayRate: Double
+  queues: Seq[QueueType]
 )
 
 object StatisticsId {
@@ -37,8 +37,7 @@ object StatisticsId {
     regions: Set[Region],
     roles: Set[Role],
     enemies: Set[Int],
-    queues: Set[QueueType],
-    minPlayRate: Double
+    queues: Set[QueueType]
   ): StatisticsId = StatisticsId(
     patches = patches.toSeq.sorted,
     lastFivePatches = lastFivePatches,
@@ -47,8 +46,7 @@ object StatisticsId {
     regions = regions.toSeq.sortBy(_.value),
     roles = roles.toSeq.sortBy(_.value),
     enemies = enemies.toSeq.sorted,
-    queues = queues.toSeq.sortBy(_.value),
-    minPlayRate = minPlayRate
+    queues = queues.toSeq.sortBy(_.value)
   )
 
 }
@@ -81,14 +79,13 @@ class StatisticsDAO(
       regions = regions,
       roles = roles,
       enemies = enemies,
-      queues = queues,
-      minPlayRate = minPlayRate
+      queues = queues
     )
     val key = id.toString
 
     val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
 
-    redisResult flatMap {
+    val statsFut = redisResult flatMap {
       // If the key is not found or we're using force refresh, recalculate it and write it
       case None => for {
         stats <- forceGet(
@@ -102,7 +99,6 @@ class StatisticsDAO(
           roles = roles,
           enemies = enemies,
           queues = queues,
-          minPlayRate = minPlayRate,
           forceRefresh = forceRefresh
         )
         // TODO(igm): make this time configurable.
@@ -111,6 +107,9 @@ class StatisticsDAO(
 
       // If the key is found, we shall parse it
       case Some(bytes) => Future.successful(Statistics.parseFrom(bytes.toArray[Byte]))
+    }
+    statsFut.map { stats =>
+      MinPlayRateDecorator.decorate(minPlayRate, stats)
     }
   }
 
@@ -131,7 +130,6 @@ class StatisticsDAO(
     roles: Set[Role],
     enemies: Set[Int],
     queues: Set[QueueType],
-    minPlayRate: Double,
     forceRefresh: Boolean
   ): Future[Statistics] = {
     // First, let's get per-role sums.
@@ -167,7 +165,7 @@ class StatisticsDAO(
         .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq))).sequence
 
     } yield StatisticsGenerator.makeStatistics(
-      champions, minPlayRate, allStats, roles, byRole, byPatch
+      champions, allStats, roles, byRole, byPatch
     )
   }
 

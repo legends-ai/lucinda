@@ -72,7 +72,7 @@ object SumConversionHelpers {
 
   }
 
-  implicit class DurationDistributionsConversion(dd: MatchSum.DurationDistribution) {
+  implicit class DurationDistributionsConversion(dd: MatchSum.Deltas.DurationDistribution) {
 
     def asAggregate(champion: Int): Sums.DurationDistributions = {
       Sums.DurationDistributions(
@@ -85,7 +85,7 @@ object SumConversionHelpers {
 
   }
 
-  implicit class SubscalarsMapConversion(ss: Map[Int, MatchSum.Subscalars]) {
+  implicit class SubscalarsMapConversion(ss: Map[Int, MatchSum.Collections.Subscalars]) {
 
     def asAggregate(champion: Int): Map[Int, Sums.Subscalars.Subscalar] = {
       ss.mapValues { indiv =>
@@ -104,15 +104,19 @@ object SumConversionHelpers {
       Sums(
         scalars = Some(sum.scalars.orEmpty.asAggregate(champion)),
         deltas = Some(sum.deltas.orEmpty.asAggregate(champion)),
-        durationDistributions = Some(sum.durationDistribution.orEmpty.asAggregate(champion)),
+        durationDistributions = Some(
+          sum.deltas.flatMap(_.durationDistribution).orEmpty.asAggregate(champion)
+        ),
         subscalars = Some(asSubscalarsAggregate(champion))
       )
     }
 
     def asSubscalarsAggregate(champion: Int): Sums.Subscalars = {
       Sums.Subscalars(
-        bans = sum.bans.asAggregate(champion),
-        allies = sum.allies.asAggregate(champion)
+        bans = sum.collections.map(_.bans)
+          .getOrElse(Map()).asAggregate(champion),
+        allies = sum.collections.map(_.allies)
+          .getOrElse(Map()).asAggregate(champion)
       )
     }
 
