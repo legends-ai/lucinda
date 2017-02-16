@@ -230,13 +230,13 @@ object QuotientGenerator {
     // Verify if this pretty code is worth it.
 
     // Find item lists that are leaves
-    val fullItemLists = itemLists.filter { itemList =>
+    val fullItemLists = itemLists.filterNot { itemList =>
       itemLists
         // find item lists that are longer
         .filter(_.items.size > itemList.items.size)
-        // Check for same prefix
-        .find(x => x.items == itemList.items.take(x.items.size))
-        // Filter this out if it exists
+        // Check for prefix equaling the item list
+        .find(_.items.take(itemList.items.size) == itemList.items)
+        // Filter this out if this is non empty
         .isDefined
     }
 
