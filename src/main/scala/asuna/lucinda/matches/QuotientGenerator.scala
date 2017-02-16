@@ -195,7 +195,7 @@ object QuotientGenerator {
 
       coreBuilds = divideSubscalarsList[MatchSum.Collections.ItemList, ItemList](
         totalPlays,
-        sum.coreBuilds,
+        mergeItemLists(sum.coreBuilds),
         _.subscalars,
         (s, sc) => ItemList(items = s.items, subscalars = sc)
       )
@@ -210,20 +210,46 @@ object QuotientGenerator {
     // TODO(igm): this is pretty inefficient. we can use a trie for slightly faster calculations.
     // Verify if this pretty code is worth it.
 
-    // build a map of the skill orders
-    val soMap = skillOrders
-      .groupBy(_.skillOrder)
-      .mapValues(_.headOption.getOrElse(MatchSum.Collections.Subscalars()))
-
     // find all matching prefix
     skillOrders.filter(_.skillOrder.size == 18).map { order =>
       val so = order.skillOrder
       val subscalars = skillOrders
-        // check if skill orders are the same
+      // check if skill orders are the same
         .filter(k => so.take(k.skillOrder.size) == k.skillOrder)
-        // combine
+      // combine
         .toList.map(_.subscalars).combineAll
       order.copy(subscalars = subscalars)
+    }
+  }
+
+  /**
+    * Merges item lists that share a common prefix.
+    */
+  def mergeItemLists(itemLists: Seq[MatchSum.Collections.ItemList]): Seq[MatchSum.Collections.ItemList] = {
+    // TODO(igm): this is pretty inefficient -- n^2. we can use a trie for better runtime.
+    // Verify if this pretty code is worth it.
+
+    // Find item lists that are leaves
+    val fullItemLists = itemLists.filter { itemList =>
+      itemLists
+        // find item lists that are longer
+        .filter(_.items.size > itemList.items.size)
+        // Check for same prefix
+        .find(x => x.items == itemList.items.take(x.items.size))
+        // Filter this out if it exists
+        .isDefined
+    }
+
+    // find all matching prefix
+    fullItemLists.map { itemList =>
+      val lists = itemLists
+        // find comparable
+        .filter(_.items.size < itemList.items.size)
+        // check for same prefix
+        .filter(x => x.items == itemList.items.take(x.items.size))
+      // combine subscalars
+      val subscalarList = itemList.subscalars :: lists.map(_.subscalars).toList
+      itemList.copy(subscalars = subscalarList.combineAll)
     }
   }
 
