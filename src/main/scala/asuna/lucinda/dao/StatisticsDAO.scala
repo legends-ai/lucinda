@@ -168,7 +168,12 @@ class StatisticsDAO(
         .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq))).sequence
 
     } yield StatisticsGenerator.makeStatistics(
-      champions, allStats, roles, byRole, byPatch
+      champions = champions,
+      allStats = allStats,
+      roles = roles,
+      byRole = byRole,
+      byPatch = byPatch,
+      patches = patches
     )
   }
 

@@ -14,33 +14,32 @@ object StatisticsGenerator {
 
   def makeStatistics(
     champions: Set[Int],
-    patchStats: Map[String, AllChampionStatistics],
+    allStats: Map[String, AllChampionStatistics],
     roles: Set[Role],
     byRole: Map[Role, MatchSum],
-    byPatch: Map[String, MatchSum]
+    byPatch: Map[String, MatchSum],
+    patches: Set[String]
   ): Statistics = {
-    // First, we will combine all statistics objects from all patches in the range.
-    // This uses the StatisticsMonoid.
-    val allStats = patchStats.values.toList.combineAll
+    // First, we will combine all statistics objects from all patches in the filter set.
+    val patchAllStats = allStats.filterKeys(patches).values.toList.combineAll
+    val roleStats = makeRoleStats(patchAllStats, roles, byRole)
 
-    val roleStats = makeRoleStats(allStats, roles, byRole)
-
+    // Then, we will fetch the stats for this patch for the champion.
     val roleKeys = if (roles.size == 0) {
       Set(roleStats.role)
     } else {
       roles
     }
-
-    val all = byRole.filterKeys(roleKeys).values.toList.combineAll
+    val patchStats = byRole.filterKeys(roleKeys).values.toList.combineAll
 
     // This is the quotient of the champion for the entire search space.
-    val quot = QuotientGenerator.generate(all)
+    val quot = QuotientGenerator.generate(patchStats)
 
     Statistics(
       roles = roleStats.some,
-      scalars = makeScalars(champions, allStats).some,
-      deltas = makeDeltas(champions, allStats).some,
-      graphs = makeGraphs(allStats, patchStats, quot, champions).some,
+      scalars = makeScalars(champions, patchAllStats).some,
+      deltas = makeDeltas(champions, patchAllStats).some,
+      graphs = makeGraphs(patchAllStats, allStats, quot, champions).some,
       collections = quot.collections
     )
   }
