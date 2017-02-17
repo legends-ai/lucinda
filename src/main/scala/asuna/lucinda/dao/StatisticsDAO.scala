@@ -2,6 +2,7 @@ package asuna.lucinda.dao
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+import asuna.proto.league.lucinda.AllChampionStatistics
 import asuna.lucinda.matches.MinPlayRateDecorator
 import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.matches.StatisticsGenerator
@@ -144,7 +145,9 @@ class StatisticsDAO(
 
       // Next, let's retrieve all stats for this combination.
       // This is used to get Statistic objects.
-      allStatsFuts = patches.toList.map { patch =>
+      // allStatsPatches = patches union lastFivePatches.toSet
+      allStatsPatches = patches
+      allStatsFuts = allStatsPatches.toList.map { patch =>
         allChampionStatisticsDAO.getSingle(
           allChampions, tiers, Set(patch), prevPatches.get(patch), regions, roles, queues, enemies, forceRefresh
         ).map((patch, _))
