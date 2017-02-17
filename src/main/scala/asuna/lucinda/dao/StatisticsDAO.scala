@@ -146,7 +146,7 @@ class StatisticsDAO(
       // This is used to get Statistic objects.
       allStatsFuts = patches.toList.map { patch =>
         allChampionStatisticsDAO.getSingle(
-          allChampions, tiers, patches, prevPatches.get(patch), regions, roles, queues, enemies, forceRefresh
+          allChampions, tiers, Set(patch), prevPatches.get(patch), regions, roles, queues, enemies, forceRefresh
         ).map((patch, _))
       }
 
@@ -157,7 +157,7 @@ class StatisticsDAO(
       // Finally, let's get the patch information.
       // We'll use a map with the key being the patch.
       byPatchFilters = lastFivePatches.map { patch =>
-        (patch, MatchFilterSet(champions, patches, tiers, regions, enemies, roles, queues).toFilterSet)
+        (patch, MatchFilterSet(champions, Set(patch), tiers, regions, enemies, roles, queues).toFilterSet)
       }.toMap
 
       // We will then sequence them.

@@ -23,11 +23,21 @@ object StatisticsGenerator {
     // This uses the StatisticsMonoid.
     val allStats = patchStats.values.toList.combineAll
 
+    val roleStats = makeRoleStats(allStats, roles, byRole)
+
+    val roleKeys = if (roles.size == 0) {
+      Set(roleStats.role)
+    } else {
+      roles
+    }
+
+    val all = byRole.filterKeys(roleKeys).values.toList.combineAll
+
     // This is the quotient of the champion for the entire search space.
-    val quot = QuotientGenerator.generate(byPatch.values.toList.combineAll)
+    val quot = QuotientGenerator.generate(all)
 
     Statistics(
-      roles = makeRoleStats(allStats, roles, byRole).some,
+      roles = roleStats.some,
       scalars = makeScalars(champions, allStats).some,
       deltas = makeDeltas(champions, allStats).some,
       graphs = makeGraphs(allStats, patchStats, quot, champions).some,
