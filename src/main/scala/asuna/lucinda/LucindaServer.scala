@@ -7,58 +7,44 @@ import asuna.common.BaseGrpcService
 import asuna.proto.league.{ QueueType, MatchSum }
 import asuna.proto.league.alexandria.AlexandriaGrpc
 import asuna.proto.league.alexandria.rpc.GetSumRequest
-import asuna.proto.league.lucinda.{ AllChampionStatistics, LucindaGrpc, Statistics, SummonerOverview }
+import asuna.proto.league.lucinda._
 import asuna.proto.league.lucinda.rpc._
 import asuna.proto.league.vulgate.VulgateGrpc
 import asuna.proto.league.vulgate.rpc.GetAggregationFactorsRequest
 import asuna.lucinda.dao.{ MatchupDAO, StatisticsDAO, AllChampionStatisticsDAO }
 import cats.implicits._
-import redis.RedisClient
 
 class LucindaServer(args: Seq[String])
     extends BaseGrpcService(args, LucindaConfigParser, LucindaGrpc.bindService)
     with LucindaGrpc.Lucinda {
 
-  implicit val akkaSystem = akka.actor.ActorSystem()
-
   val alexandria = AlexandriaGrpc.stub(clientFor("alexandria"))
   val vulgate = VulgateGrpc.stub(clientFor("vulgate"))
 
-  // Next, let's init all of our dependencies.
-  lazy val statsRedis = RedisClient(
-    host = config.service.redisHost,
-    port = config.service.redisPort,
-    db = Some(0),
-    name = "lucinda:stats"
-  )
-  lazy val aggRedis = RedisClient(
-    host = config.service.redisHost,
-    port = config.service.redisPort,
-    db = Some(1),
-    name = "lucinda:aggs"
-  )
-
-  lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria, statsRedis)
-  lazy val statisticsDAO = new StatisticsDAO(alexandria, aggRedis, allChampionStatisticsDAO)
+  lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria)
+  lazy val statisticsDAO = new StatisticsDAO(alexandria, allChampionStatisticsDAO)
   lazy val matchupDAO = new MatchupDAO(allChampionStatisticsDAO)
 
   override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
+    val key = req.query.getOrElse(AllChampionStatisticsKey())
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(req.patches, req.regions.head)),
-          patches = req.patches
+          context = Some(VulgateHelpers.makeVulgateContext(key.patches, key.regions.head)),
+          patches = key.patches
         )
       )
       results <- allChampionStatisticsDAO.getResults(
         allChampions = factors.champions.toSet,
-        patches = req.patches.toSet,
         prevPatches = factors.prevPatches,
-        tiers = req.tiers.toSet,
-        regions = req.regions.toSet,
-        roles = req.roles.toSet,
-        queues = defaultQueuesIfEmpty(req.queues),
-        enemies = req.enemyIds.toSet,
+
+        patches = key.patches.toSet,
+        tiers = key.tiers.toSet,
+        regions = key.regions.toSet,
+        roles = key.roles.toSet,
+        queues = defaultQueuesIfEmpty(key.queues),
+        enemies = key.enemyIds.toSet,
+
         forceRefresh = req.forceRefresh,
         minPlayRate = req.minPlayRate
       )
@@ -66,24 +52,27 @@ class LucindaServer(args: Seq[String])
   }
 
   override def getStatistics(req: GetStatisticsRequest): Future[Statistics] = {
+    val key = req.query.getOrElse(StatisticsKey())
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(req.patches, req.regions.head)),
-          patches = req.patches
+          context = Some(VulgateHelpers.makeVulgateContext(key.patches, key.regions.head)),
+          patches = key.patches
         )
       )
       statistics <- statisticsDAO.get(
         allChampions = factors.champions.toSet,
-        patches = req.patches.toSet,
         lastFivePatches = factors.lastFivePatches, //
         prevPatches = factors.prevPatches,
-        champions = req.championIds.toSet,
-        tiers = req.tiers.toSet,
-        regions = req.regions.toSet,
-        roles = req.roles.toSet,
-        queues = defaultQueuesIfEmpty(req.queues),
-        enemies = req.enemyIds.toSet,
+
+        patches = key.patches.toSet,
+        champions = key.championIds.toSet,
+        tiers = key.tiers.toSet,
+        regions = key.regions.toSet,
+        roles = key.roles.toSet,
+        queues = defaultQueuesIfEmpty(key.queues),
+        enemies = key.enemyIds.toSet,
+
         minPlayRate = req.minPlayRate,
         forceRefresh = req.forceRefresh
       )

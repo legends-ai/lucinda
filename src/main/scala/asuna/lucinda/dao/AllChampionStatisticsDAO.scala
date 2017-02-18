@@ -1,5 +1,8 @@
 package asuna.lucinda.dao
 
+import asuna.proto.league.alexandria.StoredAllChampionStatistics
+import asuna.proto.league.alexandria.rpc.UpsertAllChampionStatisticsRequest
+import asuna.proto.league.lucinda.AllChampionStatisticsKey
 import scala.concurrent.{ExecutionContext, Future}
 
 import asuna.lucinda.LucindaConfig
@@ -13,41 +16,9 @@ import asuna.proto.league.alexandria.rpc.GetSumRequest
 import asuna.proto.league.lucinda.AllChampionStatistics
 import asuna.proto.league.vulgate.AggregationFactors
 import cats.implicits._
-import redis.RedisClient
 
-/**
-  * String representation of champ statistics. Used for a redis key.
-  */
-case class AllChampionStatisticsId(
-  tiers: Seq[Tier],
-  patch: Seq[String],
-  region: Seq[Region],
-  role: Seq[Role],
-  enemies: Seq[Int],
-  queues: Seq[QueueType]
-)
-
-object AllChampionStatisticsId {
-
-  def fromSets(
-    tiers: Set[Tier],
-    patch: Set[String],
-    region: Set[Region],
-    role: Set[Role],
-    enemies: Set[Int],
-    queues: Set[QueueType]
-  ): AllChampionStatisticsId = AllChampionStatisticsId(
-    tiers = tiers.toList.sortBy(_.value),
-    patch = patch.toSeq.sorted,
-    region = region.toSeq.sortBy(_.value),
-    role = role.toSeq.sortBy(_.value),
-    enemies = enemies.toSeq.sorted,
-    queues = queues.toSeq.sortBy(_.value)
-  )
-
-}
-
-class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, redis: RedisClient)(implicit ec: ExecutionContext) {
+class AllChampionStatisticsDAO(
+  config: LucindaConfig, alexandria: Alexandria)(implicit ec: ExecutionContext) {
 
   /**
    * Fetches a AllChampionStatistics.Results object.
@@ -94,7 +65,7 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
   }
 
   /**
-    * Gets a AllChampionStatistics object with Redis caching.
+    * Gets a AllChampionStatistics object with caching.
     * We cache for 15 minutes. TODO(igm): make this duration configurable
     */
   def getSingle(
@@ -113,15 +84,24 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     if (!prevPatch.isDefined) {
       forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
     } else {
-      val id = AllChampionStatisticsId.fromSets(tiers, patches, regions, roles, enemies, queues)
-      val key = id.toString
+      val key = keyFromSets(tiers, patches, regions, roles, enemies, queues)
 
-      val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
+      // Fetch champ statistics from the cache
+      val cacheResult = if (forceRefresh) {
+        Future.successful(None)
+      } else {
+        alexandria.getAllChampionStatistics(key)
+      }
 
-      redisResult flatMap {
-        // If the key is not found, recalculate it and write it
-        case None => for {
-          // TODO(igm): don't force get the previous patch, but instead read it back from redis
+      cacheResult flatMap {
+        // If the key is found, we shall parse it
+        // TODO(igm): if TS time remaining is low enough, refetch
+        case StoredAllChampionStatistics(Some(data), _) => Future.successful(data)
+
+        // If the key is not found (or some other bs), recalculate it and write it
+        case _ => for {
+          // TODO(igm): don't force get the previous patch, but instead attempt
+          // to read it back from the cache
           prev <- forceGet(
             allChampions,
             tiers,
@@ -142,11 +122,14 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
             queues,
             reverse
           )
-          _ <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
-        } yield ChangeMarker.mark(stats, prev)
 
-        // If the key is found, we shall parse it
-        case Some(bytes) => Future.successful(AllChampionStatistics.parseFrom(bytes.toArray[Byte]))
+          // Insert back to alexandria
+          req = UpsertAllChampionStatisticsRequest(
+            key = key.some,
+            value = stats.some
+          )
+          _ <- alexandria.upsertAllChampionStatistics(req)
+        } yield ChangeMarker.mark(stats, prev)
       }
     }
   }
@@ -223,14 +206,10 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
     val sumsMapFuts = filtersMap
       .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq)))
 
-    // Next, we'll extract the Future from the value using some map magic.
-    // Thus we end up with a Future[Map[Int, MatchSum]].
-    val sumsMapFut = sumsMapFuts.sequence
-
     // Finally, we'll map over the values of this map to generate a Statistics
     // object for each value. Thus we end up with a Future[AllChampionStatistics],
     // and we are done.
-    sumsMapFut.map { sumsMap =>
+    sumsMapFuts.sequence.map { sumsMap =>
       StatisticsAggregator.makeStatistics(sumsMap)
     }
   }
@@ -238,5 +217,21 @@ class AllChampionStatisticsDAO(config: LucindaConfig, alexandria: Alexandria, re
   private def invertFilters(filters: MatchFilters): MatchFilters = {
     filters.copy(championId = filters.championId, enemyId = filters.enemyId)
   }
+
+  private def keyFromSets(
+    tiers: Set[Tier],
+    patch: Set[String],
+    region: Set[Region],
+    role: Set[Role],
+    enemies: Set[Int],
+    queues: Set[QueueType]
+  ): AllChampionStatisticsKey = AllChampionStatisticsKey(
+    tiers = tiers.toSeq,
+    patches = patch.toSeq,
+    regions = region.toSeq,
+    roles = role.toSeq,
+    enemyIds = enemies.toSeq,
+    queues = queues.toSeq
+  )
 
 }

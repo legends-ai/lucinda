@@ -1,8 +1,10 @@
 package asuna.lucinda.dao
 
+import asuna.proto.league.alexandria.StoredStatistics
+import asuna.proto.league.alexandria.rpc.UpsertStatisticsRequest
+import asuna.proto.league.lucinda.StatisticsKey
 import scala.concurrent.{ ExecutionContext, Future }
 
-import asuna.proto.league.lucinda.AllChampionStatistics
 import asuna.lucinda.matches.MinPlayRateDecorator
 import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.matches.StatisticsGenerator
@@ -11,49 +13,13 @@ import asuna.proto.league.lucinda.Statistics
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc.GetSumRequest
 import cats.implicits._
-import redis.RedisClient
-
-case class StatisticsId(
-  // TODO(igm): don't cache based on minPlayRate -- calculate on the fly
-  patches: Seq[String],
-  lastFivePatches: Seq[String],
-  champions: Seq[Int],
-  tiers: Seq[Tier],
-  regions: Seq[Region],
-  roles: Seq[Role],
-  enemies: Seq[Int],
-  queues: Seq[QueueType]
-)
 
 object StatisticsId {
-
-  /**
-    * Since Seq has a deterministic print order, we convert Sets to Seqs.
-    */
-  def fromSets(
-    patches: Set[String],
-    lastFivePatches: Seq[String],
-    champions: Set[Int],
-    tiers: Set[Tier],
-    regions: Set[Region],
-    roles: Set[Role],
-    enemies: Set[Int],
-    queues: Set[QueueType]
-  ): StatisticsId = StatisticsId(
-    patches = patches.toSeq.sorted,
-    lastFivePatches = lastFivePatches,
-    champions = champions.toSeq,
-    tiers = tiers.toSeq.sortBy(_.value),
-    regions = regions.toSeq.sortBy(_.value),
-    roles = roles.toSeq.sortBy(_.value),
-    enemies = enemies.toSeq.sorted,
-    queues = queues.toSeq.sortBy(_.value)
-  )
 
 }
 
 class StatisticsDAO(
-  alexandria: Alexandria, redis: RedisClient, allChampionStatisticsDAO: AllChampionStatisticsDAO
+  alexandria: Alexandria, allChampionStatisticsDAO: AllChampionStatisticsDAO
 )(implicit ec: ExecutionContext) {
 
   def get(
@@ -72,9 +38,8 @@ class StatisticsDAO(
   ): Future[Statistics] = {
     import scala.concurrent.duration._
 
-    val id = StatisticsId.fromSets(
+    val key = keyFromSets(
       patches = patches,
-      lastFivePatches = lastFivePatches,
       champions = champions,
       tiers = tiers,
       regions = regions,
@@ -82,13 +47,21 @@ class StatisticsDAO(
       enemies = enemies,
       queues = queues
     )
-    val key = id.toString
 
-    val redisResult = if (forceRefresh) Future.successful(None) else redis.get(key)
+    // Fetch champ statistics from the cache
+    val cacheResult = if (forceRefresh) {
+      Future.successful(None)
+    } else {
+      alexandria.getStatistics(key)
+    }
 
-    val statsFut = redisResult flatMap {
+    val statsFut = cacheResult flatMap {
+      // If the key is found, we shall parse it
+      // TODO(igm): if TS time remaining is low enough, refetch
+      case StoredStatistics(Some(data), _) => Future.successful(data)
+
       // If the key is not found or we're using force refresh, recalculate it and write it
-      case None => for {
+      case _ => for {
         stats <- forceGet(
           allChampions = allChampions,
           patches = patches,
@@ -102,13 +75,16 @@ class StatisticsDAO(
           queues = queues,
           forceRefresh = forceRefresh
         )
-        // TODO(igm): make this time configurable.
-        result <- redis.set(key, stats.toByteArray, exSeconds = Some((15 minutes) toSeconds))
-      } yield stats
 
-      // If the key is found, we shall parse it
-      case Some(bytes) => Future.successful(Statistics.parseFrom(bytes.toArray[Byte]))
+        // Insert back to alexandria
+        req = UpsertStatisticsRequest(
+          key = key.some,
+          value = stats.some
+        )
+        _ <- alexandria.upsertStatistics(req)
+      } yield stats
     }
+
     statsFut.map { stats =>
       MinPlayRateDecorator.decorate(minPlayRate, stats)
     }
@@ -178,5 +154,24 @@ class StatisticsDAO(
       patches = patches
     )
   }
+
+  private def keyFromSets(
+    patches: Set[String],
+    champions: Set[Int],
+    tiers: Set[Tier],
+    regions: Set[Region],
+    roles: Set[Role],
+    enemies: Set[Int],
+    queues: Set[QueueType]
+  ): StatisticsKey = StatisticsKey(
+    championIds = champions.toSeq,
+    patches = patches.toSeq,
+    tiers = tiers.toSeq,
+    regions = regions.toSeq,
+    roles = roles.toSeq,
+    enemyIds = enemies.toSeq,
+    queues = queues.toSeq
+  )
+
 
 }

@@ -4,10 +4,7 @@ import asuna.common.config.ConfigParser
 import asuna.proto.league.QueueType
 import buildinfo.BuildInfo
 
-case class LucindaConfig(
-  redisHost: String = "localhost",
-  redisPort: Int = 6379
-) {
+case class LucindaConfig() {
   val defaultQueues = Set(
     QueueType.RANKED_FLEX_SR, // S7 Flex
     QueueType.RANKED_SOLO_5x5, // S7 Solo
@@ -22,14 +19,4 @@ object LucindaConfigParser extends ConfigParser[LucindaConfig](
   port = 45045,
   metaPort = 45046,
   initial = LucindaConfig()
-) {
-
-  opt[String]("redis_host").valueName("<host>")
-    .action((x, c) => c.copy(service = c.service.copy(redisHost = x)))
-    .text("Redis host to connect to.")
-
-  opt[Int]("redis_port").valueName("<port>")
-    .action((x, c) => c.copy(service = c.service.copy(redisPort = x)))
-    .text("Redis port to connect to.")
-
-}
+)
