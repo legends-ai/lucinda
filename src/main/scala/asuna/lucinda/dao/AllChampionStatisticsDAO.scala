@@ -90,13 +90,13 @@ class AllChampionStatisticsDAO(
       val cacheResult = if (forceRefresh) {
         Future.successful(None)
       } else {
-        alexandria.getAllChampionStatistics(key)
+        alexandria.getAllChampionStatistics(key).map(_.some)
       }
 
       cacheResult flatMap {
         // If the key is found, we shall parse it
         // TODO(igm): if TS time remaining is low enough, refetch
-        case StoredAllChampionStatistics(Some(data), _) => Future.successful(data)
+        case Some(StoredAllChampionStatistics(Some(data), _)) => Future.successful(data)
 
         // If the key is not found (or some other bs), recalculate it and write it
         case _ => for {
