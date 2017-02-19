@@ -121,10 +121,7 @@ class StatisticsDAO(
 
       // Next, let's retrieve all stats for this combination.
       // This is used to get Statistic objects.
-      // TODO(igm): when casssandra perf is better, use lastFivePatches. We need this to calculate historical perf.
-      // We can also calculate a matchquotient wholly derived from a MatchSum. Figure out how important this feature is.
-      // allStatsPatches = patches union lastFivePatches.toSet
-      allStatsPatches = patches
+      allStatsPatches = patches union lastFivePatches.toSet
       allStatsFuts = allStatsPatches.toList.map { patch =>
         allChampionStatisticsDAO.getSingle(
           allChampions, tiers, Set(patch), prevPatches.get(patch), regions, roles, queues, enemies, forceRefresh
