@@ -3,6 +3,7 @@ package asuna.lucinda
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import asuna.common.AsunaError
 import asuna.common.BaseGrpcService
 import asuna.proto.league.{ Queue, MatchSum }
 import asuna.proto.league.alexandria.AlexandriaGrpc
@@ -26,7 +27,10 @@ class LucindaServer(args: Seq[String])
   lazy val matchupDAO = new MatchupDAO(allChampionStatisticsDAO)
 
   override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
-    val key = req.query.getOrElse(AllChampionStatisticsKey())
+    if (!req.query.isDefined) {
+      Future.failed(new AsunaError("query unspecified"))
+    }
+    val key = req.query.get
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
@@ -52,7 +56,10 @@ class LucindaServer(args: Seq[String])
   }
 
   override def getStatistics(req: GetStatisticsRequest): Future[Statistics] = {
-    val key = req.query.getOrElse(StatisticsKey())
+    if (!req.query.isDefined) {
+      Future.failed(new AsunaError("query unspecified"))
+    }
+    val key = req.query.get
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
