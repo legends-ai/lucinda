@@ -80,57 +80,84 @@ class AllChampionStatisticsDAO(
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[AllChampionStatistics] = {
-    import scala.concurrent.duration._
     if (!prevPatch.isDefined) {
-      forceGet(allChampions, tiers, patches, regions, roles, enemies, queues, reverse)
+      bareGetSingle(allChampions, tiers, patches, regions, roles, queues, enemies, reverse)
     } else {
-      val key = keyFromSets(tiers, patches, regions, roles, enemies, queues)
-
-      // Fetch champ statistics from the cache
-      val cacheResult = if (forceRefresh) {
-        Future.successful(None)
-      } else {
-        alexandria.getAllChampionStatistics(key).map(_.some)
+      val prevFut = bareGetSingle(
+        allChampions,
+        tiers,
+        prevPatch.map(Set(_)).getOrElse(Set()),
+        regions,
+        roles,
+        queues,
+        enemies,
+        reverse
+      )
+      val curFut = bareGetSingle(
+        allChampions,
+        tiers,
+        patches,
+        regions,
+        roles,
+        queues,
+        enemies,
+        reverse
+      )
+      (prevFut |@| curFut).map { (prev, cur) =>
+        ChangeMarker.mark(cur, prev)
       }
+    }
+  }
 
-      cacheResult flatMap {
-        // If the key is found, we shall parse it
-        // TODO(igm): if TS time remaining is low enough, refetch
-        case Some(StoredAllChampionStatistics(Some(data), _)) => Future.successful(data)
+  /**
+    * Gets a AllChampionStatistics object with caching.
+    * We cache for 15 minutes. TODO(igm): make this duration configurable
+    */
+  private def bareGetSingle(
+    allChampions: Set[Int],
+    tiers: Set[Tier],
+    patches: Set[String],
+    regions: Set[Region],
+    roles: Set[Role],
+    queues: Set[Queue],
+    enemies: Set[Int],
+    reverse: Boolean = false,
+    forceRefresh: Boolean = false
+  ): Future[AllChampionStatistics] = {
+    val key = keyFromSets(tiers, patches, regions, roles, enemies, queues)
 
-        // If the key is not found (or some other bs), recalculate it and write it
-        case _ => for {
-          // TODO(igm): don't force get the previous patch, but instead attempt
-          // to read it back from the cache
-          prev <- forceGet(
-            allChampions,
-            tiers,
-            prevPatch.map(Set(_)).getOrElse(Set()),
-            regions,
-            roles,
-            enemies,
-            queues,
-            reverse
-          )
-          stats <- forceGet(
-            allChampions,
-            tiers,
-            patches,
-            regions,
-            roles,
-            enemies,
-            queues,
-            reverse
-          )
+    // Fetch champ statistics from the cache
+    val cacheResult = if (forceRefresh) {
+      Future.successful(None)
+    } else {
+      alexandria.getAllChampionStatistics(key).map(_.some)
+    }
 
-          // Insert back to alexandria
-          req = UpsertAllChampionStatisticsRequest(
-            key = key.some,
-            value = stats.some
-          )
-          _ <- alexandria.upsertAllChampionStatistics(req)
-        } yield ChangeMarker.mark(stats, prev)
-      }
+    cacheResult flatMap {
+      // If the key is found, we shall parse it
+      // TODO(igm): if TS time remaining is low enough, refetch
+      case Some(StoredAllChampionStatistics(Some(data), _)) => Future.successful(data)
+
+      // If the key is not found (or some other bs), recalculate it and write it
+      case _ => for {
+        stats <- forceGet(
+          allChampions,
+          tiers,
+          patches,
+          regions,
+          roles,
+          enemies,
+          queues,
+          reverse
+        )
+
+        // Insert back to alexandria
+        req = UpsertAllChampionStatisticsRequest(
+          key = key.some,
+          value = stats.some
+        )
+        _ <- alexandria.upsertAllChampionStatistics(req)
+      } yield stats
     }
   }
 
