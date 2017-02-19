@@ -2,7 +2,7 @@ package asuna.lucinda.filters
 
 import cats.implicits._
 import asuna.proto.league.{
-  MatchFilters, QueueType, Region, Role, Tier
+  MatchFilters, Queue, Region, Role, Tier
 }
 
 case class MatchFilterSet(
@@ -12,7 +12,7 @@ case class MatchFilterSet(
   regions: Set[Region],
   enemies: Set[Int],
   roles: Set[Role],
-  queues: Set[QueueType]
+  queues: Set[Queue]
 ) {
 
   def toFilterSet: Set[MatchFilters] = {

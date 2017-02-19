@@ -2,7 +2,7 @@ package asuna.lucinda.dao
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-import asuna.proto.league.{ QueueType, Region, Role, Tier }
+import asuna.proto.league.{ Queue, Region, Role, Tier }
 import asuna.proto.league.lucinda.MatchupOverview
 import cats.implicits._
 
@@ -18,7 +18,7 @@ class MatchupDAO(
     champion: Int,
     region: Region,
     role: Role,
-    queues: Set[QueueType],
+    queues: Set[Queue],
     minPlayRate: Double,
     forceRefresh: Boolean = false
   ): Future[Vector[MatchupOverview]] = {

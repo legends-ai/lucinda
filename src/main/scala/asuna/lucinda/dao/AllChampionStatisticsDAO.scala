@@ -10,7 +10,7 @@ import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.statistics.{ ChangeMarker, StatisticsAggregator }
 import asuna.lucinda.statistics.FilterChampionsHelpers._
 import asuna.lucinda.statistics.StatisticsCombiner._
-import asuna.proto.league.{ MatchFilters, QueueType, Region, Role, Tier }
+import asuna.proto.league.{ MatchFilters, Queue, Region, Role, Tier }
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc.GetSumRequest
 import asuna.proto.league.lucinda.AllChampionStatistics
@@ -30,7 +30,7 @@ class AllChampionStatisticsDAO(
     tiers: Set[Tier],
     regions: Set[Region],
     roles: Set[Role],
-    queues: Set[QueueType],
+    queues: Set[Queue],
     enemies: Set[Int],
     forceRefresh: Boolean = false,
     minPlayRate: Double = 0
@@ -75,7 +75,7 @@ class AllChampionStatisticsDAO(
     prevPatch: Option[String],
     regions: Set[Region],
     roles: Set[Role],
-    queues: Set[QueueType],
+    queues: Set[Queue],
     enemies: Set[Int],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
@@ -144,7 +144,7 @@ class AllChampionStatisticsDAO(
     prevPatches: Map[String, String],
     regions: Set[Region],
     roles: Set[Role],
-    queues: Set[QueueType],
+    queues: Set[Queue],
     enemies: Set[Int],
     reverse: Boolean = false,
     forceRefresh: Boolean = false
@@ -184,7 +184,7 @@ class AllChampionStatisticsDAO(
     regions: Set[Region],
     roles: Set[Role],
     enemies: Set[Int],
-    queues: Set[QueueType],
+    queues: Set[Queue],
     reverse: Boolean
   ): Future[AllChampionStatistics] = {
     // A lot goes on in this function, especially since we're dealing with Futures.
@@ -224,7 +224,7 @@ class AllChampionStatisticsDAO(
     region: Set[Region],
     role: Set[Role],
     enemies: Set[Int],
-    queues: Set[QueueType]
+    queues: Set[Queue]
   ): AllChampionStatisticsKey = AllChampionStatisticsKey(
     tiers = tiers.toSeq,
     patches = patch.toSeq,

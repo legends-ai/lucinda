@@ -4,7 +4,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import asuna.common.BaseGrpcService
-import asuna.proto.league.{ QueueType, MatchSum }
+import asuna.proto.league.{ Queue, MatchSum }
 import asuna.proto.league.alexandria.AlexandriaGrpc
 import asuna.proto.league.alexandria.rpc.GetSumRequest
 import asuna.proto.league.lucinda._
@@ -104,7 +104,7 @@ class LucindaServer(args: Seq[String])
     } yield GetAllMatchupsResponse(matchups = matchups)
   }
 
-  private[this] def defaultQueuesIfEmpty(queues: Seq[QueueType]): Set[QueueType] =
+  private[this] def defaultQueuesIfEmpty(queues: Seq[Queue]): Set[Queue] =
     if (queues.length == 0) config.service.defaultQueues else queues.toSet
 
 

@@ -1,14 +1,14 @@
 package asuna.lucinda
 
 import asuna.common.config.ConfigParser
-import asuna.proto.league.QueueType
+import asuna.proto.league.Queue
 import buildinfo.BuildInfo
 
 case class LucindaConfig() {
   val defaultQueues = Set(
-    QueueType.RANKED_FLEX_SR, // S7 Flex
-    QueueType.RANKED_SOLO_5x5, // S7 Solo
-    QueueType.TEAM_BUILDER_RANKED_SOLO // S6 Solo
+    Queue.RANKED_FLEX_SR, // S7 Flex
+    Queue.RANKED_SOLO_5x5, // S7 Solo
+    Queue.TEAM_BUILDER_RANKED_SOLO // S6 Solo
   )
 }
 

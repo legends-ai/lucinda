@@ -8,7 +8,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import asuna.lucinda.matches.MinPlayRateDecorator
 import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.matches.StatisticsGenerator
-import asuna.proto.league.{ QueueType, Region, Role, Tier }
+import asuna.proto.league.{ Queue, Region, Role, Tier }
 import asuna.proto.league.lucinda.Statistics
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc.GetSumRequest
@@ -31,7 +31,7 @@ class StatisticsDAO(
     tiers: Set[Tier],
     regions: Set[Region],
     roles: Set[Role],
-    queues: Set[QueueType],
+    queues: Set[Queue],
     enemies: Set[Int],
     minPlayRate: Double,
     forceRefresh: Boolean = false
@@ -106,7 +106,7 @@ class StatisticsDAO(
     regions: Set[Region],
     roles: Set[Role],
     enemies: Set[Int],
-    queues: Set[QueueType],
+    queues: Set[Queue],
     forceRefresh: Boolean
   ): Future[Statistics] = {
     // First, let's get per-role sums.
@@ -162,7 +162,7 @@ class StatisticsDAO(
     regions: Set[Region],
     roles: Set[Role],
     enemies: Set[Int],
-    queues: Set[QueueType]
+    queues: Set[Queue]
   ): StatisticsKey = StatisticsKey(
     championIds = champions.toSeq,
     patches = patches.toSeq,
