@@ -13,7 +13,7 @@ import cats.implicits._
 
 class SummonerChampionsDAO(alexandria: Alexandria)(implicit ec: ExecutionContext) {
 
-  def get(
+  def getResults(
     id: SummonerId,
     allChampions: Set[Int],
     prevPatch: Option[String],
@@ -22,12 +22,12 @@ class SummonerChampionsDAO(alexandria: Alexandria)(implicit ec: ExecutionContext
     queues: Set[Queue],
     enemyIds: Set[Int]
   ): Future[AllChampionStatistics.Results] = {
-    bareGet(
+    get(
       id, allChampions, prevPatch, roles, patches, queues, enemyIds
     ).map(_.results.getOrElse(AllChampionStatistics.Results()))
   }
 
-  def bareGet(
+  def get(
     id: SummonerId,
     allChampions: Set[Int],
     prevPatch: Option[String],
@@ -48,7 +48,7 @@ class SummonerChampionsDAO(alexandria: Alexandria)(implicit ec: ExecutionContext
     }
   }
 
-  def bareGet(
+  private def bareGet(
     id: SummonerId,
     allChampions: Set[Int],
     roles: Set[Role],

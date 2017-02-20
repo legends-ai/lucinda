@@ -27,6 +27,7 @@ class LucindaServer(args: Seq[String])
   lazy val matchupDAO = new MatchupDAO(allChampionStatisticsDAO)
 
   lazy val summonerChampionsDAO = new SummonerChampionsDAO(alexandria)
+  lazy val summonerStatisticsDAO = new SummonerStatisticsDAO(alexandria, summonerChampionsDAO)
 
   override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
     if (!req.query.isDefined) {
@@ -71,7 +72,7 @@ class LucindaServer(args: Seq[String])
       )
       statistics <- statisticsDAO.get(
         allChampions = factors.champions.toSet,
-        lastFivePatches = factors.lastFivePatches, //
+        lastFivePatches = factors.lastFivePatches,
         prevPatches = factors.prevPatches,
 
         patches = key.patches.toSet,
@@ -128,7 +129,7 @@ class LucindaServer(args: Seq[String])
           patches = req.patches
         )
       )
-      results <- summonerChampionsDAO.get(
+      results <- summonerChampionsDAO.getResults(
         id = req.summonerId.get,
         allChampions = factors.champions.toSet,
         prevPatch = factors.prevPatches.get(factors.earliestPatch),
@@ -143,6 +144,30 @@ class LucindaServer(args: Seq[String])
 
   def getSummonerOverview(req: GetSummonerRequest): Future[SummonerOverview] = ???
 
-  def getSummonerStatistics(req: GetSummonerRequest): Future[Statistics] = ???
+  def getSummonerStatistics(req: GetSummonerRequest): Future[Statistics] = {
+    if (!req.summonerId.isDefined) {
+      Future.failed(new AsunaError("summoner id unspecified"))
+    }
+    for {
+      factors <- vulgate.getAggregationFactors(
+        GetAggregationFactorsRequest(
+          context = VulgateHelpers.makeVulgateContext(req.patches, req.summonerId.get.region).some,
+          patches = req.patches
+        )
+      )
+      results <- summonerStatisticsDAO.get(
+        id = req.summonerId.get,
+        allChampions = factors.champions.toSet,
+        lastFivePatches = factors.lastFivePatches,
+        prevPatches = factors.prevPatches,
+
+        champions = req.championIds.toSet,
+        roles = req.role.toSet,
+        patches = req.patches.toSet,
+        queues = req.queues.toSet,
+        enemyIds = req.enemyChampionIds.toSet
+      )
+    } yield results
+  }
 
 }

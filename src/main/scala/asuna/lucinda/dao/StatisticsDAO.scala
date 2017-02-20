@@ -32,8 +32,6 @@ class StatisticsDAO(
     minPlayRate: Double,
     forceRefresh: Boolean = false
   ): Future[Statistics] = {
-    import scala.concurrent.duration._
-
     val key = keyFromSets(
       patches = patches,
       champions = champions,
