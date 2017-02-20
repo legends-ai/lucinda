@@ -181,7 +181,7 @@ class AllChampionStatisticsDAO(
         getSingle(
           allChampions = allChampions,
           tiers = tiers,
-          patches = patches,
+          patches = Set(patch),
           prevPatch = prevPatches.get(patch),
           regions = regions,
           roles = roles,

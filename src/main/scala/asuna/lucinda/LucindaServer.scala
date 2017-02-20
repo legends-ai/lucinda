@@ -1,9 +1,9 @@
 package asuna.lucinda
 
+import asuna.common.AsunaError
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import asuna.common.AsunaError
 import asuna.common.BaseGrpcService
 import asuna.proto.league.{ Queue, MatchSum }
 import asuna.proto.league.alexandria.AlexandriaGrpc
@@ -12,7 +12,7 @@ import asuna.proto.league.lucinda._
 import asuna.proto.league.lucinda.rpc._
 import asuna.proto.league.vulgate.VulgateGrpc
 import asuna.proto.league.vulgate.rpc.GetAggregationFactorsRequest
-import asuna.lucinda.dao.{ MatchupDAO, StatisticsDAO, AllChampionStatisticsDAO }
+import asuna.lucinda.dao._
 import cats.implicits._
 
 class LucindaServer(args: Seq[String])
@@ -25,6 +25,8 @@ class LucindaServer(args: Seq[String])
   lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria)
   lazy val statisticsDAO = new StatisticsDAO(alexandria, allChampionStatisticsDAO)
   lazy val matchupDAO = new MatchupDAO(allChampionStatisticsDAO)
+
+  lazy val summonerChampionsDAO = new SummonerChampionsDAO(alexandria)
 
   override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
     if (!req.query.isDefined) {
@@ -115,10 +117,32 @@ class LucindaServer(args: Seq[String])
     if (queues.length == 0) config.service.defaultQueues else queues.toSet
 
 
-  def getAllSummonerChampions(request: GetAllSummonerChampionsRequest): Future[AllChampionStatistics.Results] = ???
+  def getAllSummonerChampions(req: GetAllSummonerChampionsRequest): Future[AllChampionStatistics.Results] = {
+    if (!req.summonerId.isDefined) {
+      Future.failed(new AsunaError("summoner id unspecified"))
+    }
+    for {
+      factors <- vulgate.getAggregationFactors(
+        GetAggregationFactorsRequest(
+          context = VulgateHelpers.makeVulgateContext(req.patches, req.summonerId.get.region).some,
+          patches = req.patches
+        )
+      )
+      results <- summonerChampionsDAO.get(
+        id = req.summonerId.get,
+        allChampions = factors.champions.toSet,
+        prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
-  def getSummonerOverview(request: GetSummonerRequest): Future[SummonerOverview] = ???
+        roles = req.role.toSet,
+        patches = req.patches.toSet,
+        queues = req.queues.toSet,
+        enemyIds = req.enemyIds.toSet
+      )
+    } yield results
+  }
 
-  def getSummonerStatistics(request: GetSummonerRequest): Future[Statistics] = ???
+  def getSummonerOverview(req: GetSummonerRequest): Future[SummonerOverview] = ???
+
+  def getSummonerStatistics(req: GetSummonerRequest): Future[Statistics] = ???
 
 }

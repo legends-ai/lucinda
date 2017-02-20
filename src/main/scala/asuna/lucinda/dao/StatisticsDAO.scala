@@ -14,10 +14,6 @@ import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc.GetSumRequest
 import cats.implicits._
 
-object StatisticsId {
-
-}
-
 class StatisticsDAO(
   alexandria: Alexandria, allChampionStatisticsDAO: AllChampionStatisticsDAO
 )(implicit ec: ExecutionContext) {
