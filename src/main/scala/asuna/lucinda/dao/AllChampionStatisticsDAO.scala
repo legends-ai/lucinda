@@ -1,12 +1,13 @@
 package asuna.lucinda.dao
 
+import asuna.lucinda.filters.MatchFilterSpaceHelpers
+import asuna.proto.league.MatchFiltersSpace
 import asuna.proto.league.alexandria.StoredAllChampionStatistics
 import asuna.proto.league.alexandria.rpc.UpsertAllChampionStatisticsRequest
 import asuna.proto.league.lucinda.AllChampionStatisticsKey
 import scala.concurrent.{ExecutionContext, Future}
 
 import asuna.lucinda.LucindaConfig
-import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.statistics.{ ChangeMarker, StatisticsAggregator }
 import asuna.lucinda.statistics.FilterChampionsHelpers._
 import asuna.lucinda.statistics.StatisticsCombiner._
@@ -217,21 +218,26 @@ class AllChampionStatisticsDAO(
     // A lot goes on in this function, especially since we're dealing with Futures.
     // I'll try to explain every step in detail.
 
-    // Here, we build the Set[MatchFilters] for every champion.
-    val filtersMap: Map[Int, Set[MatchFilters]] = allChampions.map { champ =>
-      val basis = MatchFilterSet(
-        Set(champ), patches, tiers, regions, enemies, roles, queues
-      )
-      val nextSet = if (reverse) basis.inverse else basis
-      (champ, nextSet.toFilterSet)
-    }.toMap
+    // Here, we build the MatchFiltersSpace for every champion.
+    val filtersMap: Map[Int, MatchFiltersSpace] = allChampions
+      .map(c => (c, c)).toMap
+      .mapValues { champ =>
+        val basis = MatchFilterSpaceHelpers.generate(
+          Set(champ), patches, tiers, regions, enemies, roles, queues
+        )
+        if (reverse) {
+          basis.copy(championIds = basis.enemyIds, enemyIds = basis.championIds)
+        } else {
+          basis
+        }
+      }
 
     // Next, we'll compute the MatchSums. This is where the function is no longer
     // pure, and we make a database call. (Note that since we're using futures,
     // no database call is made at the time of execution.) This returns a
     // Map[Int, Future[MatchSum]].
     val sumsMapFuts = filtersMap
-      .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq)))
+      .mapValues(space => alexandria.getSum(GetSumRequest(space = space.some)))
 
     // Finally, we'll map over the values of this map to generate a Statistics
     // object for each value. Thus we end up with a Future[AllChampionStatistics],

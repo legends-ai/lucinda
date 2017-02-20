@@ -1,12 +1,12 @@
 package asuna.lucinda.dao
 
+import asuna.lucinda.filters.MatchFilterSpaceHelpers
 import asuna.proto.league.alexandria.StoredStatistics
 import asuna.proto.league.alexandria.rpc.UpsertStatisticsRequest
 import asuna.proto.league.lucinda.StatisticsKey
 import scala.concurrent.{ ExecutionContext, Future }
 
 import asuna.lucinda.matches.MinPlayRateDecorator
-import asuna.lucinda.filters.MatchFilterSet
 import asuna.lucinda.matches.StatisticsGenerator
 import asuna.proto.league.{ Queue, Region, Role, Tier }
 import asuna.proto.league.lucinda.Statistics
@@ -103,12 +103,17 @@ class StatisticsDAO(
     queues: Set[Queue],
     forceRefresh: Boolean
   ): Future[Statistics] = {
+    val space = MatchFilterSpaceHelpers.generate(
+      champions, patches, tiers, regions, enemies, roles, queues)
+
     // First, let's get per-role sums.
-    val byRoleFilters = (Role.values.toSet - Role.UNDEFINED_ROLE).map { someRole =>
-      (someRole, MatchFilterSet(champions, patches, tiers, regions, enemies, Set(someRole), queues).toFilterSet)
-    }.toMap
+    val byRoleFilters = (Role.values.toSet - Role.UNDEFINED_ROLE)
+      .map(r => (r, r)).toMap
+      .mapValues { someRole =>
+        space.copy(roles = Seq(someRole))
+      }
     val byRoleFuts = byRoleFilters
-      .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq)))
+      .mapValues(subspace => alexandria.getSum(GetSumRequest(space = subspace.some)))
 
     for {
       byRole <- byRoleFuts.sequence
@@ -128,13 +133,15 @@ class StatisticsDAO(
 
       // Finally, let's get the patch information.
       // We'll use a map with the key being the patch.
-      byPatchFilters = lastFivePatches.map { patch =>
-        (patch, MatchFilterSet(champions, Set(patch), tiers, regions, enemies, roles, queues).toFilterSet)
-      }.toMap
+      byPatchFilters = lastFivePatches
+        .map(p => (p, p)).toMap
+        .mapValues { patch =>
+          space.copy(versions = Seq(patch))
+        }.toMap
 
       // We will then sequence them.
       byPatch <- byPatchFilters
-        .mapValues(filters => alexandria.getSum(GetSumRequest(filters = filters.toSeq))).sequence
+        .mapValues(subspace => alexandria.getSum(GetSumRequest(space = subspace.some))).sequence
 
     } yield StatisticsGenerator.makeStatistics(
       champions = champions,
