@@ -26,8 +26,8 @@ class AllChampionStatisticsDAO(
    */
   def getResults(
     allChampions: Set[Int],
+    prevPatch: Option[String],
     patches: Set[String],
-    prevPatches: Map[String, String],
     tiers: Set[Tier],
     regions: Set[Region],
     roles: Set[Role],
@@ -37,10 +37,10 @@ class AllChampionStatisticsDAO(
     minPlayRate: Double = 0
   ): Future[AllChampionStatistics.Results] = {
     for {
-      statistics <- getForPatches(
+      statistics <- get(
         allChampions = allChampions,
         patches = patches,
-        prevPatches = prevPatches,
+        prevPatch = prevPatch,
         tiers = tiers,
         regions = regions,
         roles = roles,
@@ -69,7 +69,7 @@ class AllChampionStatisticsDAO(
     * Gets a AllChampionStatistics object with caching.
     * We cache for 15 minutes. TODO(igm): make this duration configurable
     */
-  def getSingle(
+  def get(
     allChampions: Set[Int],
     tiers: Set[Tier],
     patches: Set[String],
@@ -166,39 +166,6 @@ class AllChampionStatisticsDAO(
         _ <- alexandria.upsertAllChampionStatistics(req)
       } yield stats
     }
-  }
-
-  /**
-    * Runs get across multiple patches and aggregates into one AllChampionStatistics object.
-    */
-  def getForPatches(
-    allChampions: Set[Int],
-    tiers: Set[Tier],
-    patches: Set[String],
-    prevPatches: Map[String, String],
-    regions: Set[Region],
-    roles: Set[Role],
-    queues: Set[Queue],
-    enemies: Set[Int],
-    reverse: Boolean = false,
-    forceRefresh: Boolean = false
-  ): Future[AllChampionStatistics] = {
-    for {
-      statsList <- patches.toList.map { patch =>
-        getSingle(
-          allChampions = allChampions,
-          tiers = tiers,
-          patches = Set(patch),
-          prevPatch = prevPatches.get(patch),
-          regions = regions,
-          roles = roles,
-          queues = queues,
-          enemies = enemies,
-          reverse = reverse,
-          forceRefresh = forceRefresh
-        )
-      }.sequence
-    } yield statsList.toList.combineAll
   }
 
   /**

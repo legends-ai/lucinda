@@ -43,7 +43,7 @@ class LucindaServer(args: Seq[String])
       )
       results <- allChampionStatisticsDAO.getResults(
         allChampions = factors.champions.toSet,
-        prevPatches = factors.prevPatches,
+        prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
         patches = key.patches.toSet,
         tiers = key.tiers.toSet,
@@ -102,7 +102,7 @@ class LucindaServer(args: Seq[String])
       matchups <- matchupDAO.getMatchupOverviews(
         allChampions = factors.champions.toSet,
         patches = req.patches.toSet,
-        prevPatches = factors.prevPatches,
+        prevPatch = factors.prevPatches.get(factors.earliestPatch),
         tiers = req.tiers.toSet,
         champion = req.championId,
         region = req.region,

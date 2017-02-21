@@ -13,7 +13,7 @@ class MatchupDAO(
   def getMatchupOverviews(
     allChampions: Set[Int],
     patches: Set[String],
-    prevPatches: Map[String, String],
+    prevPatch: Option[String],
     tiers: Set[Tier],
     champion: Int,
     region: Region,
@@ -24,11 +24,11 @@ class MatchupDAO(
   ): Future[Vector[MatchupOverview]] = {
     for {
       // First, let's get our statistics against each enemy.
-      championStatistics <- allChampionStatisticsDAO.getForPatches(
+      championStatistics <- allChampionStatisticsDAO.get(
         allChampions = allChampions,
+        prevPatch = prevPatch,
         tiers = tiers,
         patches = patches,
-        prevPatches = prevPatches,
         regions = Set(region),
         roles = Set(role),
         queues = queues,

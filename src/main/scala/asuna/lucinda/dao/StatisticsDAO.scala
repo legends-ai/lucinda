@@ -122,8 +122,9 @@ class StatisticsDAO(
       // This is used to get Statistic objects.
       allStatsPatches = patches union lastFivePatches.toSet
       allStatsFuts = allStatsPatches.toList.map { patch =>
-        allChampionStatisticsDAO.getSingle(
-          allChampions, tiers, Set(patch), prevPatches.get(patch), regions, roles, queues, enemies, forceRefresh
+        allChampionStatisticsDAO.get(
+          allChampions, tiers, Set(patch), prevPatches.get(patch),
+          regions, roles, queues, enemies, forceRefresh
         ).map((patch, _))
       }
 
