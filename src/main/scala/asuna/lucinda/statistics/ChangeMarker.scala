@@ -116,7 +116,6 @@ object ChangeMarker {
   }
 
   def mark(stats: AllChampionStatistics, prev: AllChampionStatistics): AllChampionStatistics = {
-    println("we markin our shit")
     stats.copy(
       results = stats.results |+| prev.results
     )

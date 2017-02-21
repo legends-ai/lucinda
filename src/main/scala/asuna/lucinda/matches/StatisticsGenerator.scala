@@ -14,15 +14,14 @@ object StatisticsGenerator {
 
   def makeStatistics(
     champions: Set[Int],
-    allStats: Map[String, AllChampionStatistics],
+    allStats: AllChampionStatistics,
+    lastFive: Map[String, AllChampionStatistics],
     roles: Set[Role],
     byRole: Map[Role, MatchSum],
     byPatch: Map[String, MatchSum],
     patches: Set[String]
   ): Statistics = {
-    // First, we will combine all statistics objects from all patches in the filter set.
-    val patchAllStats = allStats.filterKeys(patches).values.toList.combineAll
-    val roleStats = makeRoleStats(patchAllStats, roles, byRole)
+    val roleStats = makeRoleStats(allStats, roles, byRole)
 
     // Then, we will fetch the stats for this patch for the champion.
     val roleKeys = if (roles.size == 0) {
@@ -37,9 +36,9 @@ object StatisticsGenerator {
 
     Statistics(
       roles = roleStats.some,
-      scalars = makeScalars(champions, patchAllStats).some,
-      deltas = makeDeltas(champions, patchAllStats).some,
-      graphs = makeGraphs(patchAllStats, allStats, quot, champions).some,
+      scalars = makeScalars(champions, allStats).some,
+      deltas = makeDeltas(champions, allStats).some,
+      graphs = makeGraphs(allStats, lastFive, quot, champions).some,
       collections = quot.collections
     )
   }

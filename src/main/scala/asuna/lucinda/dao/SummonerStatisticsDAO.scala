@@ -19,7 +19,7 @@ class SummonerStatisticsDAO(
     id: SummonerId,
     allChampions: Set[Int],
     lastFivePatches: Seq[String],
-    prevPatches: Map[String, String],
+    prevPatch: Option[String],
 
     champions: Set[Int],
     roles: Set[Role],
@@ -49,22 +49,22 @@ class SummonerStatisticsDAO(
 
       // Next, let's retrieve all stats for this combination.
       // This is used to get Statistic objects.
-      allStatsPatches = patches union lastFivePatches.toSet
-      allStatsFuts = allStatsPatches.toList.map { patch =>
+      allStats <- summonerChampionsDAO.get(
+        id, allChampions, prevPatch,
+        roles, patches, queues, enemyIds
+      )
+
+      // TODO(igm): reuse prev call data
+      lastFiveFuts = lastFivePatches.toList.map { patch =>
         summonerChampionsDAO.get(
-          id = id,
-          allChampions = allChampions,
-          prevPatch = prevPatches.get(patch),
-          roles = roles,
-          patches = Set(patch),
-          queues = queues,
-          enemyIds = enemyIds
+          id, allChampions, prevPatch,
+          roles, Set(patch), queues, enemyIds
         ).map((patch, _))
       }
 
       // This contains an element of the form Map[String, AllChampionStatistics]
       // where key is the patch and value is the stats.
-      allStats <- allStatsFuts.sequence.map(_.toMap)
+      lastFive <- lastFiveFuts.sequence.map(_.toMap)
 
       // Finally, let's get the patch information.
       // We'll use a map with the key being the patch.
@@ -86,6 +86,7 @@ class SummonerStatisticsDAO(
     } yield StatisticsGenerator.makeStatistics(
       champions = champions,
       allStats = allStats,
+      lastFive = lastFive,
       roles = roles,
       byRole = byRole.mapValues(_.matchSum.orEmpty),
       byPatch = byPatch.mapValues(_.matchSum.orEmpty),

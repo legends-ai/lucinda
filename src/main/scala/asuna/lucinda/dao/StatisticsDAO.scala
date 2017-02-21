@@ -22,7 +22,7 @@ class StatisticsDAO(
     allChampions: Set[Int],
     patches: Set[String],
     lastFivePatches: Seq[String],
-    prevPatches: Map[String, String],
+    prevPatch: Option[String],
     champions: Set[Int],
     tiers: Set[Tier],
     regions: Set[Region],
@@ -60,7 +60,7 @@ class StatisticsDAO(
           allChampions = allChampions,
           patches = patches,
           lastFivePatches = lastFivePatches,
-          prevPatches = prevPatches,
+          prevPatch = prevPatch,
           champions = champions,
           tiers = tiers,
           regions = regions,
@@ -94,7 +94,8 @@ class StatisticsDAO(
     allChampions: Set[Int],
     patches: Set[String],
     lastFivePatches: Seq[String],
-    prevPatches: Map[String, String],
+    prevPatch: Option[String],
+
     champions: Set[Int],
     tiers: Set[Tier],
     regions: Set[Region],
@@ -120,17 +121,22 @@ class StatisticsDAO(
 
       // Next, let's retrieve all stats for this combination.
       // This is used to get Statistic objects.
-      allStatsPatches = patches union lastFivePatches.toSet
-      allStatsFuts = allStatsPatches.toList.map { patch =>
+      allStats <- allChampionStatisticsDAO.get(
+        allChampions, tiers, patches, prevPatch,
+        regions, roles, queues, enemies, forceRefresh
+      )
+
+      // TODO(igm): reuse prev call data
+      lastFiveFuts = lastFivePatches.toList.map { patch =>
         allChampionStatisticsDAO.get(
-          allChampions, tiers, Set(patch), prevPatches.get(patch),
+          allChampions, tiers, Set(patch), None,
           regions, roles, queues, enemies, forceRefresh
         ).map((patch, _))
       }
 
       // This contains an element of the form Map[String, AllChampionStatistics]
       // where key is the patch and value is the stats.
-      allStats <- allStatsFuts.sequence.map(_.toMap)
+      lastFive <- lastFiveFuts.sequence.map(_.toMap)
 
       // Finally, let's get the patch information.
       // We'll use a map with the key being the patch.
@@ -147,6 +153,7 @@ class StatisticsDAO(
     } yield StatisticsGenerator.makeStatistics(
       champions = champions,
       allStats = allStats,
+      lastFive = lastFive,
       roles = roles,
       byRole = byRole,
       byPatch = byPatch,
