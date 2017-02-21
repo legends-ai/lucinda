@@ -81,31 +81,37 @@ class AllChampionStatisticsDAO(
     reverse: Boolean = false,
     forceRefresh: Boolean = false
   ): Future[AllChampionStatistics] = {
-    if (!prevPatch.isDefined) {
-      bareGetSingle(allChampions, tiers, patches, regions, roles, queues, enemies, reverse)
-    } else {
-      val prevFut = bareGetSingle(
-        allChampions,
-        tiers,
-        prevPatch.map(Set(_)).getOrElse(Set()),
-        regions,
-        roles,
-        queues,
-        enemies,
-        reverse
-      )
-      val curFut = bareGetSingle(
-        allChampions,
-        tiers,
-        patches,
-        regions,
-        roles,
-        queues,
-        enemies,
-        reverse
-      )
-      (prevFut |@| curFut).map { (prev, cur) =>
-        ChangeMarker.mark(cur, prev)
+    prevPatch match {
+      case Some(patch) => {
+        val prevFut = bareGetSingle(
+          allChampions,
+          tiers,
+          Set(patch),
+          regions,
+          roles,
+          queues,
+          enemies,
+          reverse
+        )
+        val curFut = bareGetSingle(
+          allChampions,
+          tiers,
+          patches,
+          regions,
+          roles,
+          queues,
+          enemies,
+          reverse
+        )
+        (prevFut |@| curFut).map { (prev, cur) =>
+          ChangeMarker.mark(cur, prev)
+        }
+      }
+      case None => {
+        bareGetSingle(
+          allChampions, tiers, patches, regions,
+          roles, queues, enemies, reverse
+        )
       }
     }
   }
