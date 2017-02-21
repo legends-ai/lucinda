@@ -67,7 +67,6 @@ class AllChampionStatisticsDAO(
 
   /**
     * Gets a AllChampionStatistics object with caching.
-    * We cache for 15 minutes. TODO(igm): make this duration configurable
     */
   def get(
     allChampions: Set[Int],
