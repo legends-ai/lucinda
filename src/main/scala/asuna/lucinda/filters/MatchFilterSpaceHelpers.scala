@@ -16,11 +16,11 @@ object MatchFilterSpaceHelpers {
     roles: Set[Role],
     queues: Set[Queue]
   ): MatchFiltersSpace = MatchFiltersSpace(
-    championIds = champions.toSeq,
+    championIds = championIds.toSeq,
     versions = versions.toSeq,
     tiers = tiers.toSeq,
     regions = regions.toSeq,
-    enemyIds = enemies.toSeq,
+    enemyIds = enemyIds.toSeq,
     roles = roles.toSeq,
     queues = queues.toSeq
   )
