@@ -66,7 +66,7 @@ class LucindaServer(args: Seq[String])
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(key.patches, key.regions.head)),
+          context = VulgateHelpers.makeVulgateContext(key.patches, key.regions.head).some,
           patches = key.patches
         )
       )
@@ -93,7 +93,7 @@ class LucindaServer(args: Seq[String])
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = Some(VulgateHelpers.makeVulgateContext(req.patches, req.region)),
+          context = VulgateHelpers.makeVulgateContext(req.patches, req.regions.head).some,
           patches = req.patches
         )
       )
@@ -103,10 +103,11 @@ class LucindaServer(args: Seq[String])
         allChampions = factors.champions.toSet,
         patches = req.patches.toSet,
         prevPatch = factors.prevPatches.get(factors.earliestPatch),
-        tiers = req.tiers.toSet,
+
         champion = req.championId,
-        region = req.region,
-        role = req.role,
+        tiers = req.tiers.toSet,
+        regions = req.regions.toSet,
+        roles = req.roles.toSet,
         queues = defaultQueuesIfEmpty(req.queues),
         minPlayRate = req.minPlayRate,
         forceRefresh = req.forceRefresh
@@ -134,7 +135,7 @@ class LucindaServer(args: Seq[String])
         allChampions = factors.champions.toSet,
         prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
-        roles = req.role.toSet,
+        roles = req.roles.toSet,
         patches = req.patches.toSet,
         queues = req.queues.toSet,
         enemyIds = req.enemyIds.toSet
@@ -162,7 +163,7 @@ class LucindaServer(args: Seq[String])
         prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
         champions = req.championIds.toSet,
-        roles = req.role.toSet,
+        roles = req.roles.toSet,
         patches = req.patches.toSet,
         queues = req.queues.toSet,
         enemyIds = req.enemyChampionIds.toSet
