@@ -47,7 +47,7 @@ class MatchupDAO(
       val commonChamps = wins.keys.toSet intersect picks.keys.toSet intersect plays.keys.toSet
 
       // Now, let's construct all of the MatchupOverviews.
-      commonChamps.toVector.map { enemy =>
+      commonChamps.toList.map { enemy =>
         // None of these should ever throw exceptions for not getting the option.
         MatchupOverview(
           enemy = enemy,
