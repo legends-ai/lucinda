@@ -20,8 +20,7 @@ class MatchupDAO(
     regions: Set[Region],
     roles: Set[Role],
     queues: Set[Queue],
-    minPlayRate: Double,
-    forceRefresh: Boolean = false
+    minPickRate: Double
   ): Future[Vector[MatchupOverview]] = {
     for {
       // First, let's get our statistics against each enemy.
@@ -34,8 +33,7 @@ class MatchupDAO(
         roles = roles,
         queues = queues,
         enemies = Set(champion),
-        reverse = true,
-        forceRefresh = forceRefresh
+        reverse = true
       )
     } yield {
       // First, let's extract all of our maps of interest.
@@ -47,7 +45,7 @@ class MatchupDAO(
       val commonChamps = wins.keys.toSet intersect picks.keys.toSet intersect plays.keys.toSet
 
       // Now, let's construct all of the MatchupOverviews.
-      commonChamps.toList.map { enemy =>
+      commonChamps.toVector.map { enemy =>
         // None of these should ever throw exceptions for not getting the option.
         MatchupOverview(
           enemy = enemy,
@@ -57,7 +55,7 @@ class MatchupDAO(
         )
 
       // Check that we obey the minimum play rate
-      }.filter(_.pickRate.map(_.value).orEmpty >= minPlayRate)
+      }.filter(_.pickRate.map(_.value).orEmpty >= minPickRate)
     }
   }
 

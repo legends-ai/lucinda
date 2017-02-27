@@ -33,8 +33,7 @@ class AllChampionStatisticsDAO(
     roles: Set[Role],
     queues: Set[Queue],
     enemies: Set[Int],
-    forceRefresh: Boolean = false,
-    minPlayRate: Double = 0
+    minPickRate: Double = 0
   ): Future[AllChampionStatistics.Results] = {
     for {
       statistics <- get(
@@ -46,8 +45,7 @@ class AllChampionStatisticsDAO(
         roles = roles,
         queues = queues,
         enemies = enemies,
-        reverse = false,
-        forceRefresh = forceRefresh
+        reverse = false
       )
     } yield {
       // Get the results object
@@ -57,7 +55,7 @@ class AllChampionStatisticsDAO(
       val pickRates = results.derivatives
         .map(_.picks.mapValues(_.value)).orEmpty
       val champs = pickRates.filter {
-        case (champ, pickRate) => pickRate >= minPlayRate
+        case (champ, pickRate) => pickRate >= minPickRate
       }.keys
 
       // Filter maps for keys that contain the champion
@@ -77,8 +75,7 @@ class AllChampionStatisticsDAO(
     roles: Set[Role],
     queues: Set[Queue],
     enemies: Set[Int],
-    reverse: Boolean = false,
-    forceRefresh: Boolean = false
+    reverse: Boolean = false
   ): Future[AllChampionStatistics] = {
     prevPatch match {
       case Some(patch) => {
@@ -127,19 +124,12 @@ class AllChampionStatisticsDAO(
     roles: Set[Role],
     queues: Set[Queue],
     enemies: Set[Int],
-    reverse: Boolean = false,
-    forceRefresh: Boolean = false
+    reverse: Boolean = false
   ): Future[AllChampionStatistics] = {
     val key = keyFromSets(tiers, patches, regions, roles, enemies, queues)
 
     // Fetch champ statistics from the cache
-    val cacheResult = if (forceRefresh) {
-      Future.successful(None)
-    } else {
-      alexandria.getAllChampionStatistics(key).map(_.some)
-    }
-
-    cacheResult flatMap {
+    alexandria.getAllChampionStatistics(key).map(_.some) flatMap {
       // If the key is found, we shall parse it
       // TODO(igm): if TS time remaining is low enough, refetch
       case Some(StoredAllChampionStatistics(Some(data), _)) => Future.successful(data)

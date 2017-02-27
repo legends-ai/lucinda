@@ -52,8 +52,7 @@ class LucindaServer(args: Seq[String])
         queues = defaultQueuesIfEmpty(key.queues),
         enemies = key.enemyIds.toSet,
 
-        forceRefresh = req.forceRefresh,
-        minPlayRate = req.minPlayRate
+        minPickRate = req.constraints.map(_.minPickRate).orEmpty
       )
     } yield results
   }
@@ -72,7 +71,7 @@ class LucindaServer(args: Seq[String])
       )
       statistics <- statisticsDAO.get(
         allChampions = factors.champions.toSet,
-        lastFivePatches = factors.lastFivePatches,
+        patchNeighborhood = factors.patchNeighborhood,
         prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
         patches = key.patches.toSet,
@@ -83,8 +82,7 @@ class LucindaServer(args: Seq[String])
         queues = defaultQueuesIfEmpty(key.queues),
         enemies = key.enemyIds.toSet,
 
-        minPlayRate = req.minPlayRate,
-        forceRefresh = req.forceRefresh
+        minPickRate = req.constraints.map(_.minPickRate).orEmpty
       )
     } yield statistics
   }
@@ -109,8 +107,7 @@ class LucindaServer(args: Seq[String])
         regions = req.regions.toSet,
         roles = req.roles.toSet,
         queues = defaultQueuesIfEmpty(req.queues),
-        minPlayRate = req.minPlayRate,
-        forceRefresh = req.forceRefresh
+        minPickRate = req.constraints.map(_.minPickRate).orEmpty
       )
     } yield GetAllMatchupsResponse(matchups = matchups)
   }
@@ -159,7 +156,7 @@ class LucindaServer(args: Seq[String])
       results <- summonerStatisticsDAO.get(
         id = req.summonerId.get,
         allChampions = factors.champions.toSet,
-        lastFivePatches = factors.lastFivePatches,
+        patchNeighborhood = factors.patchNeighborhood,
         prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
         champions = req.championIds.toSet,

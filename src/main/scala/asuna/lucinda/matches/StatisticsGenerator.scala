@@ -15,7 +15,7 @@ object StatisticsGenerator {
   def makeStatistics(
     champions: Set[Int],
     allStats: AllChampionStatistics,
-    lastFive: Map[String, AllChampionStatistics],
+    patchNbhd: Map[String, AllChampionStatistics],
     roles: Set[Role],
     byRole: Map[Role, MatchSum],
     byPatch: Map[String, MatchSum],
@@ -38,7 +38,7 @@ object StatisticsGenerator {
       roles = roleStats.some,
       scalars = makeScalars(champions, allStats).some,
       deltas = makeDeltas(champions, allStats).some,
-      graphs = makeGraphs(allStats, lastFive, quot, champions).some,
+      graphs = makeGraphs(allStats, patchNbhd, quot, champions).some,
       collections = quot.collections
     )
   }

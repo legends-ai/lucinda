@@ -6,7 +6,7 @@ import asuna.proto.league.alexandria.rpc.UpsertStatisticsRequest
 import asuna.proto.league.lucinda.StatisticsKey
 import scala.concurrent.{ ExecutionContext, Future }
 
-import asuna.lucinda.matches.MinPlayRateDecorator
+import asuna.lucinda.matches.MinPickRateDecorator
 import asuna.lucinda.matches.StatisticsGenerator
 import asuna.proto.league.{ Queue, Region, Role, Tier }
 import asuna.proto.league.lucinda.Statistics
@@ -21,7 +21,7 @@ class StatisticsDAO(
   def get(
     allChampions: Set[Int],
     patches: Set[String],
-    lastFivePatches: Seq[String],
+    patchNeighborhood: Seq[String],
     prevPatch: Option[String],
     champions: Set[Int],
     tiers: Set[Tier],
@@ -29,8 +29,7 @@ class StatisticsDAO(
     roles: Set[Role],
     queues: Set[Queue],
     enemies: Set[Int],
-    minPlayRate: Double,
-    forceRefresh: Boolean = false
+    minPickRate: Double
   ): Future[Statistics] = {
     val key = keyFromSets(
       patches = patches,
@@ -43,13 +42,7 @@ class StatisticsDAO(
     )
 
     // Fetch champ statistics from the cache
-    val cacheResult = if (forceRefresh) {
-      Future.successful(None)
-    } else {
-      alexandria.getStatistics(key)
-    }
-
-    val statsFut = cacheResult flatMap {
+    val statsFut = alexandria.getStatistics(key) flatMap {
       // If the key is found, we shall parse it
       // TODO(igm): if TS time remaining is low enough, refetch
       case StoredStatistics(Some(data), _) => Future.successful(data)
@@ -59,15 +52,14 @@ class StatisticsDAO(
         stats <- forceGet(
           allChampions = allChampions,
           patches = patches,
-          lastFivePatches = lastFivePatches,
+          patchNeighborhood = patchNeighborhood,
           prevPatch = prevPatch,
           champions = champions,
           tiers = tiers,
           regions = regions,
           roles = roles,
           enemies = enemies,
-          queues = queues,
-          forceRefresh = forceRefresh
+          queues = queues
         )
 
         // Insert back to alexandria
@@ -80,7 +72,7 @@ class StatisticsDAO(
     }
 
     statsFut.map { stats =>
-      MinPlayRateDecorator.decorate(minPlayRate, stats)
+      MinPickRateDecorator.decorate(minPickRate, stats)
     }
   }
 
@@ -88,12 +80,12 @@ class StatisticsDAO(
     * Fetches and aggregates information about a single champion.
     *
     * @param patches -- The patches in the patch range we are considering.
-    * @param lastFivePatches -- The last five patches of the game.
+    * @param patchNeighborhood -- The patch neighborhood of the patch range.
     */
   private def forceGet(
     allChampions: Set[Int],
     patches: Set[String],
-    lastFivePatches: Seq[String],
+    patchNeighborhood: Seq[String],
     prevPatch: Option[String],
 
     champions: Set[Int],
@@ -101,8 +93,7 @@ class StatisticsDAO(
     regions: Set[Region],
     roles: Set[Role],
     enemies: Set[Int],
-    queues: Set[Queue],
-    forceRefresh: Boolean
+    queues: Set[Queue]
   ): Future[Statistics] = {
     val space = MatchFilterSpaceHelpers.generate(
       champions, patches, tiers, regions, enemies, roles, queues)
@@ -123,24 +114,24 @@ class StatisticsDAO(
       // This is used to get Statistic objects.
       allStats <- allChampionStatisticsDAO.get(
         allChampions, tiers, patches, prevPatch,
-        regions, roles, queues, enemies, forceRefresh
+        regions, roles, queues, enemies
       )
 
       // TODO(igm): reuse prev call data
-      lastFiveFuts = lastFivePatches.toList.map { patch =>
+      patchNbhdFuts = patchNeighborhood.toList.map { patch =>
         allChampionStatisticsDAO.get(
           allChampions, tiers, Set(patch), None,
-          regions, roles, queues, enemies, forceRefresh
+          regions, roles, queues, enemies
         ).map((patch, _))
       }
 
       // This contains an element of the form Map[String, AllChampionStatistics]
       // where key is the patch and value is the stats.
-      lastFive <- lastFiveFuts.sequence.map(_.toMap)
+      patchNbhd <- patchNbhdFuts.sequence.map(_.toMap)
 
       // Finally, let's get the patch information.
       // We'll use a map with the key being the patch.
-      byPatchFilters = lastFivePatches
+      byPatchFilters = patchNeighborhood
         .map(p => (p, p)).toMap
         .mapValues { patch =>
           space.copy(versions = Seq(patch))
@@ -153,7 +144,7 @@ class StatisticsDAO(
     } yield StatisticsGenerator.makeStatistics(
       champions = champions,
       allStats = allStats,
-      lastFive = lastFive,
+      patchNbhd = patchNbhd,
       roles = roles,
       byRole = byRole,
       byPatch = byPatch,

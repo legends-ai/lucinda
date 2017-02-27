@@ -18,7 +18,7 @@ class SummonerStatisticsDAO(
   def get(
     id: SummonerId,
     allChampions: Set[Int],
-    lastFivePatches: Seq[String],
+    patchNeighborhood: Seq[String],
     prevPatch: Option[String],
 
     champions: Set[Int],
@@ -55,7 +55,7 @@ class SummonerStatisticsDAO(
       )
 
       // TODO(igm): reuse prev call data
-      lastFiveFuts = lastFivePatches.toList.map { patch =>
+      patchNbhdFuts = patchNeighborhood.toList.map { patch =>
         summonerChampionsDAO.get(
           id, allChampions, prevPatch,
           roles, Set(patch), queues, enemyIds
@@ -64,11 +64,11 @@ class SummonerStatisticsDAO(
 
       // This contains an element of the form Map[String, AllChampionStatistics]
       // where key is the patch and value is the stats.
-      lastFive <- lastFiveFuts.sequence.map(_.toMap)
+      patchNbhd <- patchNbhdFuts.sequence.map(_.toMap)
 
       // Finally, let's get the patch information.
       // We'll use a map with the key being the patch.
-      byPatchFilters = lastFivePatches
+      byPatchFilters = patchNeighborhood
         .map(p => (p, p)).toMap
         .mapValues { patch =>
           space.copy(versions = Seq(patch))
@@ -86,7 +86,7 @@ class SummonerStatisticsDAO(
     } yield StatisticsGenerator.makeStatistics(
       champions = champions,
       allStats = allStats,
-      lastFive = lastFive,
+      patchNbhd = patchNbhd,
       roles = roles,
       byRole = byRole.mapValues(_.matchSum.orEmpty),
       byPatch = byPatch.mapValues(_.matchSum.orEmpty),

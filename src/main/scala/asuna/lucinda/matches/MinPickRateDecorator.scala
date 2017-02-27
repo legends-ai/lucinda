@@ -6,24 +6,24 @@ import asuna.proto.league.lucinda.{ MatchQuotient, Statistics }
 /**
   * Applies min play rate to every element in each collection.
   */
-object MinPlayRateDecorator {
+object MinPickRateDecorator {
 
-  def decorate(minPlayRate: Double, stats: Statistics): Statistics = {
+  def decorate(minPickRate: Double, stats: Statistics): Statistics = {
     stats.copy(
       collections = stats.collections
-        .map(colls => decorateCollections(minPlayRate, colls))
+        .map(colls => decorateCollections(minPickRate, colls))
     )
   }
 
-  def meetsMinPlayRate(minPlayRate: Double)(ss: Option[MatchQuotient.Collections.Subscalars]): Boolean = {
-    ss.map(_.playRate >= minPlayRate).getOrElse(false)
+  def meetsMinPickRate(minPickRate: Double)(ss: Option[MatchQuotient.Collections.Subscalars]): Boolean = {
+    ss.map(_.playRate >= minPickRate).getOrElse(false)
   }
 
   /**
     * Applies min play rate to everything
     */
-  def decorateCollections(minPlayRate: Double, colls: MatchQuotient.Collections): MatchQuotient.Collections = {
-    val mpr = meetsMinPlayRate(minPlayRate) _
+  def decorateCollections(minPickRate: Double, colls: MatchQuotient.Collections): MatchQuotient.Collections = {
+    val mpr = meetsMinPickRate(minPickRate) _
     colls.copy(
       masteries = colls.masteries.filter(s => mpr(s.subscalars)),
       runes = colls.runes.filter(s => mpr(s.subscalars)),
