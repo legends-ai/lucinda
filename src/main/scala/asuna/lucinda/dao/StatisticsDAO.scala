@@ -72,7 +72,7 @@ class StatisticsDAO(
     }
 
     statsFut.map { stats =>
-      MinPickRateDecorator.decorate(minPickRate, stats)
+      MinPickRateDecorator.decorate(minPickRate, 10, stats)
     }
   }
 
