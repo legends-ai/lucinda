@@ -5,6 +5,7 @@ import asuna.proto.league.MatchFiltersSpace
 import asuna.proto.league.alexandria.StoredAllChampionStatistics
 import asuna.proto.league.alexandria.rpc.UpsertAllChampionStatisticsRequest
 import asuna.proto.league.lucinda.AllChampionStatisticsKey
+import com.timgroup.statsd.NonBlockingStatsDClient
 import scala.concurrent.{ExecutionContext, Future}
 
 import asuna.lucinda.LucindaConfig
@@ -19,7 +20,8 @@ import asuna.proto.league.vulgate.AggregationFactors
 import cats.implicits._
 
 class AllChampionStatisticsDAO(
-  config: LucindaConfig, alexandria: Alexandria)(implicit ec: ExecutionContext) {
+  config: LucindaConfig, alexandria: Alexandria, statsd: NonBlockingStatsDClient
+)(implicit ec: ExecutionContext) {
 
   /**
    * Fetches a AllChampionStatistics.Results object.
@@ -246,8 +248,12 @@ class AllChampionStatisticsDAO(
     // Finally, we'll map over the values of this map to generate a Statistics
     // object for each value. Thus we end up with a Future[AllChampionStatistics],
     // and we are done.
-    sumsMapFuts.sequence.map { sumsMap =>
+    val fut = sumsMapFuts.sequence.map { sumsMap =>
       StatisticsAggregator.makeStatistics(sumsMap)
+    }
+
+    fut.andThen { case _ =>
+      statsd.increment("generate_all_champion_statistics")
     }
   }
 

@@ -5,6 +5,7 @@ import asuna.lucinda.filters.MatchFilterSpaceHelpers
 import asuna.proto.league.alexandria.StoredStatistics
 import asuna.proto.league.alexandria.rpc.UpsertStatisticsRequest
 import asuna.proto.league.lucinda.StatisticsKey
+import com.timgroup.statsd.NonBlockingStatsDClient
 import scala.concurrent.{ ExecutionContext, Future }
 
 import asuna.lucinda.matches.MinPickRateDecorator
@@ -16,7 +17,8 @@ import asuna.proto.league.alexandria.rpc.GetSumRequest
 import cats.implicits._
 
 class StatisticsDAO(
-  config: LucindaConfig, alexandria: Alexandria, allChampionStatisticsDAO: AllChampionStatisticsDAO
+  config: LucindaConfig, alexandria: Alexandria, allChampionStatisticsDAO: AllChampionStatisticsDAO,
+  statsd: NonBlockingStatsDClient
 )(implicit ec: ExecutionContext) {
 
   def get(
@@ -191,15 +193,18 @@ class StatisticsDAO(
       byPatch <- byPatchFilters
         .mapValues(subspace => alexandria.getSum(GetSumRequest(space = subspace.some))).sequence
 
-    } yield StatisticsGenerator.makeStatistics(
-      champions = champions,
-      allStats = allStats,
-      patchNbhd = patchNbhd,
-      roles = roles,
-      byRole = byRole,
-      byPatch = byPatch,
-      patches = patches
-    )
+      stats = StatisticsGenerator.makeStatistics(
+        champions = champions,
+        allStats = allStats,
+        patchNbhd = patchNbhd,
+        roles = roles,
+        byRole = byRole,
+        byPatch = byPatch,
+        patches = patches
+      )
+
+      _ = statsd.increment("generate_statistics")
+    } yield stats
   }
 
   private def keyFromSets(
