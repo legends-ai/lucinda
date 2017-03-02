@@ -23,7 +23,7 @@ class LucindaServer(args: Seq[String])
   val vulgate = VulgateGrpc.stub(clientFor("vulgate"))
 
   lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria)
-  lazy val statisticsDAO = new StatisticsDAO(alexandria, allChampionStatisticsDAO)
+  lazy val statisticsDAO = new StatisticsDAO(config.service, alexandria, allChampionStatisticsDAO)
   lazy val matchupDAO = new MatchupDAO(allChampionStatisticsDAO)
 
   lazy val summonerChampionsDAO = new SummonerChampionsDAO(alexandria)

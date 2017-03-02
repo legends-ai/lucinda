@@ -1,5 +1,6 @@
 package asuna.lucinda.dao
 
+import asuna.lucinda.LucindaConfig
 import asuna.lucinda.filters.MatchFilterSpaceHelpers
 import asuna.proto.league.alexandria.StoredStatistics
 import asuna.proto.league.alexandria.rpc.UpsertStatisticsRequest
@@ -15,7 +16,7 @@ import asuna.proto.league.alexandria.rpc.GetSumRequest
 import cats.implicits._
 
 class StatisticsDAO(
-  alexandria: Alexandria, allChampionStatisticsDAO: AllChampionStatisticsDAO
+  config: LucindaConfig, alexandria: Alexandria, allChampionStatisticsDAO: AllChampionStatisticsDAO
 )(implicit ec: ExecutionContext) {
 
   def get(
@@ -45,35 +46,84 @@ class StatisticsDAO(
     val statsFut = alexandria.getStatistics(key) flatMap {
       // If the key is found, we shall parse it
       // TODO(igm): if TS time remaining is low enough, refetch
-      case StoredStatistics(Some(data), _) => Future.successful(data)
+      case StoredStatistics(Some(data), Some(ts)) => {
+        val ms = ts.seconds * 1000 + (ts.nanos / 1E6)
+        if (System.currentTimeMillis - ms > config.statisticsCacheExpiry.toMillis) {
+          // Run this cache update in the background.
+          // TODO(igm): convert to task and submit to task queue with known thread pool size
+          forceGetWithCacheUpdate(
+            key = key,
+            allChampions = allChampions,
+            patches = patches,
+            patchNeighborhood = patchNeighborhood,
+            prevPatch = prevPatch,
+            champions = champions,
+            tiers = tiers,
+            regions = regions,
+            roles = roles,
+            enemies = enemies,
+            queues = queues
+          )
+        }
+        Future.successful(data)
+      }
 
       // If the key is not found or we're using force refresh, recalculate it and write it
-      case _ => for {
-        stats <- forceGet(
-          allChampions = allChampions,
-          patches = patches,
-          patchNeighborhood = patchNeighborhood,
-          prevPatch = prevPatch,
-          champions = champions,
-          tiers = tiers,
-          regions = regions,
-          roles = roles,
-          enemies = enemies,
-          queues = queues
-        )
-
-        // Insert back to alexandria
-        req = UpsertStatisticsRequest(
-          key = key.some,
-          value = stats.some
-        )
-        _ <- alexandria.upsertStatistics(req)
-      } yield stats
+      case _ => forceGetWithCacheUpdate(
+        key = key,
+        allChampions = allChampions,
+        patches = patches,
+        patchNeighborhood = patchNeighborhood,
+        prevPatch = prevPatch,
+        champions = champions,
+        tiers = tiers,
+        regions = regions,
+        roles = roles,
+        enemies = enemies,
+        queues = queues
+      )
     }
 
     statsFut.map { stats =>
       MinPickRateDecorator.decorate(minPickRate, 10, stats)
     }
+  }
+
+  private def forceGetWithCacheUpdate(
+    key: StatisticsKey,
+    allChampions: Set[Int],
+    patches: Set[String],
+    patchNeighborhood: Seq[String],
+    prevPatch: Option[String],
+
+    champions: Set[Int],
+    tiers: Set[Tier],
+    regions: Set[Region],
+    roles: Set[Role],
+    enemies: Set[Int],
+    queues: Set[Queue]
+  ): Future[Statistics] = {
+    for {
+      stats <- forceGet(
+        allChampions = allChampions,
+        patches = patches,
+        patchNeighborhood = patchNeighborhood,
+        prevPatch = prevPatch,
+        champions = champions,
+        tiers = tiers,
+        regions = regions,
+        roles = roles,
+        enemies = enemies,
+        queues = queues
+      )
+
+      // Insert back to alexandria
+      req = UpsertStatisticsRequest(
+        key = key.some,
+        value = stats.some
+      )
+      _ <- alexandria.upsertStatistics(req)
+    } yield stats
   }
 
   /**

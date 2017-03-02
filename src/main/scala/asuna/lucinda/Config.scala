@@ -6,8 +6,8 @@ import buildinfo.BuildInfo
 import scala.concurrent.duration._
 
 case class LucindaConfig(
-  statisticsCacheExpiryMs: Duration = 15.minutes,
-  allChampionStatisticsCacheExpiryMs: Duration = 15.minutes
+  statisticsCacheExpiry: Duration = 15.minutes,
+  allChampionStatisticsCacheExpiry: Duration = 15.minutes
 ) {
   val defaultQueues = Set(
     Queue.RANKED_FLEX_SR, // S7 Flex
@@ -26,11 +26,11 @@ object LucindaConfigParser extends ConfigParser[LucindaConfig](
 ) {
 
   opt[Int]("statistics_cache_expiry_ms").valueName("<milliseconds>")
-    .action((x, c) => c.copy(service = c.service.copy(statisticsCacheExpiryMs = x.milliseconds)))
+    .action((x, c) => c.copy(service = c.service.copy(statisticsCacheExpiry = x.milliseconds)))
     .text("Milliseconds until the cache is expired for statistics")
 
   opt[Int]("all_champion_statistics_cache_expiry_ms").valueName("<milliseconds>")
-    .action((x, c) => c.copy(service = c.service.copy(allChampionStatisticsCacheExpiryMs = x.milliseconds)))
+    .action((x, c) => c.copy(service = c.service.copy(allChampionStatisticsCacheExpiry = x.milliseconds)))
     .text("Milliseconds until the cache is expired for all champion statistics statistics")
 
 }

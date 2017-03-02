@@ -126,35 +126,77 @@ class AllChampionStatisticsDAO(
     enemies: Set[Int],
     reverse: Boolean = false
   ): Future[AllChampionStatistics] = {
-    val key = keyFromSets(tiers, patches, regions, roles, enemies, queues)
+    val key = keyFromSets(tiers, patches, regions, roles, enemies, queues, reverse)
 
     // Fetch champ statistics from the cache
     alexandria.getAllChampionStatistics(key).map(_.some) flatMap {
       // If the key is found, we shall parse it
       // TODO(igm): if TS time remaining is low enough, refetch
-      case Some(StoredAllChampionStatistics(Some(data), _)) => Future.successful(data)
+      case Some(StoredAllChampionStatistics(Some(data), Some(ts))) => {
+        val ms = ts.seconds * 1000 + (ts.nanos / 1E6)
+        if (System.currentTimeMillis - ms > config.allChampionStatisticsCacheExpiry.toMillis) {
+          // Run this cache update in the background.
+          // TODO(igm): convert to task and submit to task queue with known thread pool size
+          forceGetWithCacheUpdate(
+            key,
+            allChampions,
+            tiers,
+            patches,
+            regions,
+            roles,
+            enemies,
+            queues,
+            reverse
+          )
+        }
+        Future.successful(data)
+      }
 
       // If the key is not found (or some other bs), recalculate it and write it
-      case _ => for {
-        stats <- forceGet(
-          allChampions,
-          tiers,
-          patches,
-          regions,
-          roles,
-          enemies,
-          queues,
-          reverse
-        )
-
-        // Insert back to alexandria
-        req = UpsertAllChampionStatisticsRequest(
-          key = key.some,
-          value = stats.some
-        )
-        _ <- alexandria.upsertAllChampionStatistics(req)
-      } yield stats
+      case _ => forceGetWithCacheUpdate(
+        key,
+        allChampions,
+        tiers,
+        patches,
+        regions,
+        roles,
+        enemies,
+        queues,
+        reverse
+      )
     }
+  }
+
+  private def forceGetWithCacheUpdate(
+    key: AllChampionStatisticsKey,
+    allChampions: Set[Int],
+    tiers: Set[Tier],
+    patches: Set[String],
+    regions: Set[Region],
+    roles: Set[Role],
+    enemies: Set[Int],
+    queues: Set[Queue],
+    reverse: Boolean
+  ): Future[AllChampionStatistics] = {
+    for {
+      stats <- forceGet(
+        allChampions,
+        tiers,
+        patches,
+        regions,
+        roles,
+        enemies,
+        queues,
+        reverse
+      )
+
+      // Insert back to alexandria
+      req = UpsertAllChampionStatisticsRequest(
+        key = key.some,
+        value = stats.some
+      )
+      _ <- alexandria.upsertAllChampionStatistics(req)
+    } yield stats
   }
 
   /**
@@ -219,14 +261,16 @@ class AllChampionStatisticsDAO(
     region: Set[Region],
     role: Set[Role],
     enemies: Set[Int],
-    queues: Set[Queue]
+    queues: Set[Queue],
+    reverse: Boolean
   ): AllChampionStatisticsKey = AllChampionStatisticsKey(
     tiers = tiers.toSeq,
     patches = patch.toSeq,
     regions = region.toSeq,
     roles = role.toSeq,
     enemyIds = enemies.toSeq,
-    queues = queues.toSeq
+    queues = queues.toSeq,
+    reverse = reverse
   )
 
 }
