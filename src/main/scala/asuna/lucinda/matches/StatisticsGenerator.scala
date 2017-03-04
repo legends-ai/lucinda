@@ -49,10 +49,11 @@ object StatisticsGenerator {
   private[this] def makeRoleStats(allStats: AllChampionStatistics, roles: Set[Role], roleSums: Map[Role, MatchSum]): Statistics.Roles = {
     // We get the total champions in role based on number of win rates in map.
     val totalChampionsInRole = allStats.results.flatMap(_.scalars)
-      .map(_.wins.keys.filter(_ > 0).size).getOrElse(0)
+      .map(_.wins.keys.filter(_ > 0).size).orEmpty
 
     // Number of games played by the champion for each role.
-    val gamesByRole = roleSums.mapValues(_.scalars.map(_.plays).getOrElse(0L)).toMap
+    val gamesByRole = roleSums.mapValues(
+      _.statistics.map(_.plays).orEmpty).toMap
 
     // Number of total games played by the champion.
     val totalGames = gamesByRole.values.sum
@@ -115,18 +116,19 @@ object StatisticsGenerator {
     // We calculate the pick rate stat out here, as we need it to find the gamesPlayed stat.
     val pickRateStat = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champions, _.picks)
 
-    // Number of games played by this champion in this role.
-    val gamesPlayed = roleStats.sums.flatMap(_.scalars)
-      .flatMap(map => champions.map(champion => map.plays.get(champion)).toList.combineAll)
-      .getOrElse(0L)
+    // Number of games played by all champions
+    val allGamesPlayed = roleStats.sums.flatMap(_.scalars).map(_.plays).orEmpty
+    val meanGamesPlayed = allGamesPlayed.values.toList.combineAll.toDouble / allGamesPlayed.size
+
+    // Number of games played by these champions in this role.
+    val gamesPlayed = allGamesPlayed.filterKeys(champions).values.toList.combineAll
 
     // We can derive the gamesPlayed stat from the pickRate stat as they are virtually identical.
     val gamesPlayedStat = pickRateStat.map { stat =>
       stat
       // First, let's set the correct value for games played.
-        .update(_.value := gamesPlayed.toDouble)
-      // The average can be derived by finding the multiplier of the value.
-        .update(_.average := ((stat.average / stat.value) * gamesPlayed.toDouble).floor)
+        .update(_.mean := gamesPlayed.toDouble)
+        .update(_.meanAcrossRole := meanGamesPlayed)
 
       // All other attributes of stat (rank, change, champ) are the same, so we are done.
     }
@@ -194,9 +196,9 @@ object StatisticsGenerator {
     Statistics.Graphs(
       // Win/pick/ban distribution across all champions.
       distribution = Some(Statistics.Graphs.Distribution(
-        winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.value)).orEmpty,
-        pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.value)).orEmpty,
-        banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.value)).orEmpty
+        winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.mean)).orEmpty,
+        pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.mean)).orEmpty,
+        banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.mean)).orEmpty
       )),
 
       // Per-patch statistics.
@@ -205,11 +207,11 @@ object StatisticsGenerator {
         Statistics.Graphs.ByPatch(
           patch = patch,
           winRate = patchResults.flatMap(_.scalars)
-            .flatMap(_.wins.mapValues(_.value).get(id)).orEmpty,
+            .flatMap(_.wins.mapValues(_.mean).get(id)).orEmpty,
           pickRate = patchResults.flatMap(_.derivatives)
-            .flatMap(_.picks.mapValues(_.value).get(id)).orEmpty,
+            .flatMap(_.picks.mapValues(_.mean).get(id)).orEmpty,
           banRate = patchResults.flatMap(_.derivatives)
-            .flatMap(_.bans.mapValues(_.value).get(id)).orEmpty
+            .flatMap(_.bans.mapValues(_.mean).get(id)).orEmpty
         )
       }.toSeq,
 
@@ -220,27 +222,27 @@ object StatisticsGenerator {
         )
       }.toSeq,
 
-      physicalDamage = results.flatMap(_.scalars).flatMap(_.physicalDamage.get(id)).map(_.value).orEmpty,
-      magicDamage = results.flatMap(_.scalars).flatMap(_.magicDamage.get(id)).map(_.value).orEmpty,
-      trueDamage = results.flatMap(_.scalars).flatMap(_.trueDamage.get(id)).map(_.value).orEmpty,
+      physicalDamage = results.flatMap(_.scalars).flatMap(_.physicalDamage.get(id)).map(_.mean).orEmpty,
+      magicDamage = results.flatMap(_.scalars).flatMap(_.magicDamage.get(id)).map(_.mean).orEmpty,
+      trueDamage = results.flatMap(_.scalars).flatMap(_.trueDamage.get(id)).map(_.mean).orEmpty,
 
       goldOverTime = {
-        val gpm = quot.deltas.flatMap(_.goldPerMin)
+        val gpm = quot.statistics.flatMap(_.deltas).flatMap(_.goldPerMin)
         List(
           GoldPerTime(
-            gold = gpm.map(_.zeroToTen).orEmpty,
+            gold = gpm.flatMap(_.zeroToTen).map(_.mean).orEmpty,
             time = Some(IntRange(min = 0, max = 10))
           ),
           GoldPerTime(
-            gold = gpm.map(_.tenToTwenty).orEmpty,
+            gold = gpm.flatMap(_.tenToTwenty).map(_.mean).orEmpty,
             time = Some(IntRange(min = 10, max = 20))
           ),
           GoldPerTime(
-            gold = gpm.map(_.twentyToThirty).orEmpty,
+            gold = gpm.flatMap(_.twentyToThirty).map(_.mean).orEmpty,
             time = Some(IntRange(min = 20, max = 30))
           ),
           GoldPerTime(
-            gold = gpm.map(_.thirtyToEnd).orEmpty,
+            gold = gpm.flatMap(_.thirtyToEnd).map(_.mean).orEmpty,
             time = Some(IntRange(min = 30, max = 40))
           )
         )

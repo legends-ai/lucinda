@@ -12,7 +12,7 @@ object ChangeMarker {
     def combine(stat: Statistic, prev: Statistic): Statistic = {
       stat.copy(
         changeInRank = stat.rank - prev.rank,
-        changeInValue = stat.value - prev.value
+        changeInValue = stat.mean - prev.mean
       )
     }
   }

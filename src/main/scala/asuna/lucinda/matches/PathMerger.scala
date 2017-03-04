@@ -36,7 +36,7 @@ trait PathMerger[T] {
     */
   def rebuild(path: T, ss: Option[Subscalars]): T
 
-  def merge(in: Seq[T])(implicit x: SubscalarExtractor[T]): Seq[T] = {
+  def merge(in: Seq[T])(implicit x: SubscalarsExtractor[T]): Seq[T] = {
     // TODO(igm): this is pretty inefficient -- n^s. We can use a trie for better runtime.
     // find all matching prefix
     val statsPaths = in.filter(isStatsIncluded)
@@ -134,7 +134,7 @@ object PathMerger {
   }
 
   implicit class PathMergeableSeq[T](seq: Seq[T]) {
-    def mergePaths(implicit merger: PathMerger[T], x: SubscalarExtractor[T]): Seq[T] = {
+    def mergePaths(implicit merger: PathMerger[T], x: SubscalarsExtractor[T]): Seq[T] = {
       merger.merge(seq)
     }
   }

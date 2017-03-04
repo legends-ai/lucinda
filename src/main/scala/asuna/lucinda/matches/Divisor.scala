@@ -8,6 +8,8 @@ import asuna.proto.league.lucinda.MatchQuotient
 import asuna.proto.league.MatchSum.{ Collections => SC }
 import asuna.proto.league.lucinda.MatchQuotient.{ Collections => QC }
 import asuna.common.legends.MatchSumHelpers._
+import asuna.common.legends.MomentsHelpers._
+import SubscalarsMapping._
 
 
 /**
@@ -29,46 +31,18 @@ trait CompositeDivisor[SumT, QuotT, SumT2, QuotT2] {
 /**
   * A divisor that operates on real numbers.
   */
-case class RealDivisor(divisor: Long) extends Divisor[Double, Double] {
+case class RealDivisor(divisor: Int) extends Divisor[Double, Double] {
 
   override def divide(dividend: Double): Double =
     if (divisor != 0) dividend / divisor.toDouble else 0
 
 }
 
-object RealDivisor {
+object Divisor {
 
   implicit def numericRealDivisor[T](div: Divisor[Double, Double])(implicit num: Numeric[T]): Divisor[T, Double] = {
     new Divisor[T, Double] {
       override def divide(dividend: T): Double = div.divide(num.toDouble(dividend))
-    }
-  }
-
-}
-
-case class DurationDistributionDivisor(dd: MatchSum.Deltas.DurationDistribution)
-    extends Divisor[MatchSum.Deltas.Delta, MatchQuotient.Deltas.Delta] {
-
-  override def divide(delta: MatchSum.Deltas.Delta): MatchQuotient.Deltas.Delta = {
-    // TODO(igm): profile. this is a lot of allocations for no good reason
-    MatchQuotient.Deltas.Delta(
-      zeroToTen = RealDivisor(dd.zeroToTen).divide(delta.zeroToTen),
-      tenToTwenty = RealDivisor(dd.tenToTwenty).divide(delta.tenToTwenty),
-      twentyToThirty = RealDivisor(dd.twentyToThirty).divide(delta.twentyToThirty),
-      thirtyToEnd = RealDivisor(dd.thirtyToEnd).divide(delta.thirtyToEnd)
-    )
-  }
-
-}
-
-
-object Divisor {
-
-  implicit def optionDivisor[SumT, QuotT](implicit div: Divisor[SumT, QuotT]): Divisor[Option[SumT], Option[QuotT]] = {
-    new Divisor[Option[SumT], Option[QuotT]] {
-      override def divide(sum: Option[SumT]): Option[QuotT] = {
-        sum.map(div.divide)
-      }
     }
   }
 
@@ -82,21 +56,35 @@ object Divisor {
     }
   }
 
-  implicit object SubscalarDivisor extends CompositeDivisor[SC.Subscalars, QC.Subscalars, Long, Double] {
-
-    def divide(sum: SC.Subscalars)(implicit countDivisor: Divisor[Long, Double]): QC.Subscalars = {
+  implicit object SubscalarDivisor extends CompositeDivisor[SC.Subscalars, QC.Subscalars, Int, Double] {
+    def divide(sum: SC.Subscalars)(implicit countDivisor: Divisor[Int, Double]): QC.Subscalars = {
       QC.Subscalars(
         playRate = sum.plays.quotient,
         winRate = RealDivisor(sum.plays).divide(sum.wins.toDouble),
         playCount = sum.plays.toInt
       )
     }
-
   }
 
-  implicit object ScalarsDivisor extends CompositeDivisor[MatchSum.Scalars, MatchQuotient.Scalars, Long, Double] {
-    def divide(sum: MatchSum.Scalars)(implicit count: Divisor[Long, Double]): MatchQuotient.Scalars = {
-      MatchQuotient.Scalars(
+  implicit def optionDivisor[SumT, QuotT](implicit div: Divisor[SumT, QuotT]): Divisor[Option[SumT], Option[QuotT]] = {
+    new Divisor[Option[SumT], Option[QuotT]] {
+      override def divide(sum: Option[SumT]): Option[QuotT] = {
+        sum.map(div.divide)
+      }
+    }
+  }
+
+  implicit object MomentsDivisor extends Divisor[MatchSum.Statistics.Moments, MatchQuotient.Statistics.Moments] {
+    def divide(sum: MatchSum.Statistics.Moments): MatchQuotient.Statistics.Moments = {
+      sum.toQuotient
+    }
+  }
+
+  implicit val momentsOptionDivisor = optionDivisor(MomentsDivisor)
+
+  implicit object ScalarsDivisor extends Divisor[MatchSum.Statistics.Scalars, MatchQuotient.Statistics.Scalars] {
+    def divide(sum: MatchSum.Statistics.Scalars): MatchQuotient.Statistics.Scalars = {
+      MatchQuotient.Statistics.Scalars(
         wins = sum.wins.quotient,
         goldEarned = sum.goldEarned.quotient,
         kills = sum.kills.quotient,
@@ -107,7 +95,6 @@ object Divisor {
         minionsKilled = sum.minionsKilled.quotient,
         teamJungleMinionsKilled = sum.teamJungleMinionsKilled.quotient,
         enemyJungleMinionsKilled = sum.enemyJungleMinionsKilled.quotient,
-        structureDamage = sum.structureDamage.quotient,
         killingSpree = sum.killingSpree.quotient,
         wardsBought = sum.wardsBought.quotient,
         wardsPlaced = sum.wardsPlaced.quotient,
@@ -126,11 +113,25 @@ object Divisor {
     }
   }
 
-  implicit object DeltasDivisor extends Divisor[MatchSum.Deltas, MatchQuotient.Deltas] {
-    def divide(sum: MatchSum.Deltas): MatchQuotient.Deltas = {
-      implicit val divisor = DurationDistributionDivisor(
-        sum.durationDistribution.getOrElse(MatchSum.Deltas.DurationDistribution()))
-      MatchQuotient.Deltas(
+  implicit val scalarsOptDivisor = optionDivisor(ScalarsDivisor)
+
+  implicit object DeltaDivisor
+      extends Divisor[MatchSum.Statistics.Deltas.Delta, MatchQuotient.Statistics.Deltas.Delta] {
+    def divide(sum: MatchSum.Statistics.Deltas.Delta): MatchQuotient.Statistics.Deltas.Delta = {
+      MatchQuotient.Statistics.Deltas.Delta(
+        zeroToTen = sum.zeroToTen.quotient,
+        tenToTwenty = sum.tenToTwenty.quotient,
+        twentyToThirty = sum.twentyToThirty.quotient,
+        thirtyToEnd = sum.thirtyToEnd.quotient
+      )
+    }
+  }
+
+  implicit val deltaOptDivisor = optionDivisor(DeltaDivisor)
+
+  implicit object DeltasDivisor extends Divisor[MatchSum.Statistics.Deltas, MatchQuotient.Statistics.Deltas] {
+    def divide(sum: MatchSum.Statistics.Deltas): MatchQuotient.Statistics.Deltas = {
+      MatchQuotient.Statistics.Deltas(
         csDiff = sum.csDiff.quotient,
         xpDiff = sum.xpDiff.quotient,
         damageTakenDiff = sum.damageTakenDiff.quotient,
@@ -143,33 +144,45 @@ object Divisor {
     }
   }
 
-  implicit def collectionDivisor[SumT, QuotT](implicit extractor: SubscalarMapping[SumT, QuotT]): CompositeDivisor[SumT, QuotT, Long, Double] = {
-    new CompositeDivisor[SumT, QuotT, Long, Double] {
-      override def divide(sum: SumT)(implicit count: Divisor[Long, Double]): QuotT = {
+  implicit val deltasOptDivisor = optionDivisor(DeltasDivisor)
+
+  implicit object StatisticsDivisor extends Divisor[MatchSum.Statistics, MatchQuotient.Statistics] {
+    def divide(sum: MatchSum.Statistics): MatchQuotient.Statistics = {
+      MatchQuotient.Statistics(
+        plays = sum.plays,
+        scalars = sum.scalars.quotient,
+        deltas = sum.deltas.quotient
+      )
+    }
+  }
+
+  implicit def subscalarsMapDivisor[T]: CompositeDivisor[Map[T, MatchSum.Collections.Subscalars], Map[T, MatchQuotient.Collections.Subscalars], Int, Double] = {
+    new CompositeDivisor[Map[T, MatchSum.Collections.Subscalars], Map[T, MatchQuotient.Collections.Subscalars], Int, Double] {
+      override def divide(sum: Map[T, MatchSum.Collections.Subscalars])(implicit ct: Divisor[Int, Double]): Map[T, MatchQuotient.Collections.Subscalars] = {
+        sum.mapValues(_.quotientC)
+      }
+    }
+  }
+
+  implicit def collectionDivisor[SumT, QuotT](implicit extractor: SubscalarsMapping[SumT, QuotT]): CompositeDivisor[SumT, QuotT, Int, Double] = {
+    new CompositeDivisor[SumT, QuotT, Int, Double] {
+      override def divide(sum: SumT)(implicit ct: Divisor[Int, Double]): QuotT = {
         val ss = extractor.extract(sum)
         extractor.build(sum, ss.map(_.quotientC))
       }
     }
   }
 
-  implicit def collectionSeqDivisor[SumT, QuotT](implicit extractor: SubscalarMapping[SumT, QuotT]): CompositeDivisor[Seq[SumT], Seq[QuotT], Long, Double] = {
-    new CompositeDivisor[Seq[SumT], Seq[QuotT], Long, Double] {
-      override def divide(sum: Seq[SumT])(implicit count: Divisor[Long, Double]): Seq[QuotT] = {
+  implicit def collectionSeqDivisor[SumT, QuotT](implicit extractor: SubscalarsMapping[SumT, QuotT]): CompositeDivisor[Seq[SumT], Seq[QuotT], Int, Double] = {
+    new CompositeDivisor[Seq[SumT], Seq[QuotT], Int, Double] {
+      override def divide(sum: Seq[SumT])(implicit ct: Divisor[Int, Double]): Seq[QuotT] = {
         sum.map(_.quotientC)
       }
     }
   }
 
-  implicit def subscalarMapDivisor[T]: CompositeDivisor[Map[T, SC.Subscalars], Map[T, QC.Subscalars], Long, Double] = {
-    new CompositeDivisor[Map[T, SC.Subscalars], Map[T, QC.Subscalars], Long, Double] {
-      override def divide(sum: Map[T, SC.Subscalars])(implicit count: Divisor[Long, Double]): Map[T, QC.Subscalars] = {
-        sum.mapValues(_.quotientC)
-      }
-    }
-  }
-
-  implicit object CollectionsDivisor extends CompositeDivisor[MatchSum.Collections, MatchQuotient.Collections, Long, Double] {
-    def divide(sum: MatchSum.Collections)(implicit count: Divisor[Long, Double]): MatchQuotient.Collections = {
+  implicit object CollectionsDivisor extends CompositeDivisor[MatchSum.Collections, MatchQuotient.Collections, Int, Double] {
+    def divide(sum: MatchSum.Collections)(implicit ct: Divisor[Int, Double]): MatchQuotient.Collections = {
       MatchQuotient.Collections(
         masteries = sum.masteries.quotientC,
         runes = sum.runes.quotientC,
@@ -188,12 +201,14 @@ object Divisor {
     }
   }
 
-  implicit object QuotientDivisor extends Divisor[MatchSum, MatchQuotient] {
+  implicit object MatchDivisor extends Divisor[MatchSum, MatchQuotient] {
     def divide(sum: MatchSum): MatchQuotient = {
-      implicit val divisor: Divisor[Long, Double] = RealDivisor(sum.scalars.map(_.plays).orEmpty)
+      implicit val ct = RealDivisor(sum.statistics.map(_.plays).orEmpty)
+      // im tilted af
+      // we should have an implicit def here but scala is dumb
+      implicit val ctInt = numericRealDivisor[Int](ct)
       MatchQuotient(
-        scalars = sum.scalars.quotientC,
-        deltas = sum.deltas.quotient,
+        statistics = sum.statistics.quotient,
         collections = sum.collections.quotientC
       )
     }
@@ -204,7 +219,7 @@ object Divisor {
     */
   implicit class Divisible[SumT](sum: SumT) {
     /**
-      * Uses a normal divisor.
+      * Applies a divisor.
       */
     def quotient[QuotT](implicit divisor: Divisor[SumT, QuotT]): QuotT = divisor.divide(sum)
 
@@ -215,6 +230,7 @@ object Divisor {
       implicit compositeDivisor: CompositeDivisor[SumT, QuotT, SumT2, QuotT2],
       divisor: Divisor[SumT2, QuotT2]
     ): QuotT = compositeDivisor.divide(sum)
+
   }
 
 }

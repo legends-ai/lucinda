@@ -12,7 +12,7 @@ object QuotientGenerator {
   def generate(sum: MatchSum): MatchQuotient = {
     import Divisor._
     import PathMerger._
-    import SubscalarMapping._
+    import SubscalarsMapping._
     sum
       .copy(collections = sum.collections.map { colls =>
         colls.copy(

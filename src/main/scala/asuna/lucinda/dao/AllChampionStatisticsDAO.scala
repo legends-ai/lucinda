@@ -55,7 +55,7 @@ class AllChampionStatisticsDAO(
 
       // Find the champions that satisfy the min play rate
       val pickRates = results.derivatives
-        .map(_.picks.mapValues(_.value)).orEmpty
+        .map(_.picks.mapValues(_.mean)).orEmpty
       val champs = pickRates.filter {
         case (champ, pickRate) => pickRate >= minPickRate
       }.keys

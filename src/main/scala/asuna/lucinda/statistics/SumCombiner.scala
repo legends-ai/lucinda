@@ -11,7 +11,7 @@ object SumCombiner {
 
   def combineSums(sums: Map[Int, MatchSum]): Sums = {
     val filtered = sums.filterNot { case (_, sum) =>
-      sum.scalars.map(_.plays).getOrElse(0L) == 0L
+      sum.statistics.map(_.plays).getOrElse(0L) == 0L
     }
     val aggsMap = filtered.map { case (champ, sums) =>
       sums.asAggregate(champ)

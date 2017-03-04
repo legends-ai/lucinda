@@ -1,61 +1,61 @@
 package asuna.lucinda.statistics
 
 import asuna.common.legends.MatchSumHelpers._
+import asuna.common.legends.MomentsHelpers._
 import asuna.proto.league.MatchSum
 import asuna.proto.league.lucinda.AllChampionStatistics.Sums
 import cats.implicits._
 
 object SumConversionHelpers {
 
-  implicit class ScalarsConversion(scalars: MatchSum.Scalars) {
+  implicit class ScalarsConversion(scalars: MatchSum.Statistics.Scalars) {
 
-    def asAggregate(champion: Int): Sums.Scalars = {
+    def asAggregate(champion: Int, plays: Int): Sums.Scalars = {
       Sums.Scalars(
-        plays = Map(champion -> scalars.plays),
-        wins = Map(champion -> scalars.wins),
-        goldEarned = Map(champion -> scalars.goldEarned),
-        kills = Map(champion -> scalars.kills),
-        deaths = Map(champion -> scalars.deaths),
-        assists = Map(champion -> scalars.assists),
-        damageDealt = Map(champion -> scalars.damageDealt),
-        damageTaken = Map(champion -> scalars.damageTaken),
-        minionsKilled = Map(champion -> scalars.minionsKilled),
-        teamJungleMinionsKilled = Map(champion -> scalars.teamJungleMinionsKilled),
-        enemyJungleMinionsKilled = Map(champion -> scalars.enemyJungleMinionsKilled),
-        structureDamage = Map(champion -> scalars.structureDamage),
-        killingSpree = Map(champion -> scalars.killingSpree),
-        wardsBought = Map(champion -> scalars.wardsBought),
-        wardsPlaced = Map(champion -> scalars.wardsPlaced),
-        wardsKilled = Map(champion -> scalars.wardsKilled),
-        crowdControl = Map(champion -> scalars.crowdControl),
-        firstBlood = Map(champion -> scalars.firstBlood),
-        firstBloodAssist = Map(champion -> scalars.firstBloodAssist),
-        doublekills = Map(champion -> scalars.doublekills),
-        triplekills = Map(champion -> scalars.triplekills),
-        quadrakills = Map(champion -> scalars.quadrakills),
-        pentakills = Map(champion -> scalars.pentakills),
-        physicalDamage = Map(champion -> scalars.physicalDamage),
-        magicDamage = Map(champion -> scalars.magicDamage),
-        trueDamage = Map(champion -> scalars.trueDamage)
+        plays = Map(champion -> plays),
+        wins = Map(champion -> scalars.wins.map(_.sum).orEmpty.toLong),
+        goldEarned = Map(champion -> scalars.goldEarned.map(_.sum).orEmpty.toLong),
+        kills = Map(champion -> scalars.kills.map(_.sum).orEmpty.toLong),
+        deaths = Map(champion -> scalars.deaths.map(_.sum).orEmpty.toLong),
+        assists = Map(champion -> scalars.assists.map(_.sum).orEmpty.toLong),
+        damageDealt = Map(champion -> scalars.damageDealt.map(_.sum).orEmpty.toLong),
+        damageTaken = Map(champion -> scalars.damageTaken.map(_.sum).orEmpty.toLong),
+        minionsKilled = Map(champion -> scalars.minionsKilled.map(_.sum).orEmpty.toLong),
+        teamJungleMinionsKilled = Map(champion -> scalars.teamJungleMinionsKilled.map(_.sum).orEmpty.toLong),
+        enemyJungleMinionsKilled = Map(champion -> scalars.enemyJungleMinionsKilled.map(_.sum).orEmpty.toLong),
+        killingSpree = Map(champion -> scalars.killingSpree.map(_.sum).orEmpty.toLong),
+        wardsBought = Map(champion -> scalars.wardsBought.map(_.sum).orEmpty.toLong),
+        wardsPlaced = Map(champion -> scalars.wardsPlaced.map(_.sum).orEmpty.toLong),
+        wardsKilled = Map(champion -> scalars.wardsKilled.map(_.sum).orEmpty.toLong),
+        crowdControl = Map(champion -> scalars.crowdControl.map(_.sum).orEmpty.toLong),
+        firstBlood = Map(champion -> scalars.firstBlood.map(_.sum).orEmpty.toLong),
+        firstBloodAssist = Map(champion -> scalars.firstBloodAssist.map(_.sum).orEmpty.toLong),
+        doublekills = Map(champion -> scalars.doublekills.map(_.sum).orEmpty.toLong),
+        triplekills = Map(champion -> scalars.triplekills.map(_.sum).orEmpty.toLong),
+        quadrakills = Map(champion -> scalars.quadrakills.map(_.sum).orEmpty.toLong),
+        pentakills = Map(champion -> scalars.pentakills.map(_.sum).orEmpty.toLong),
+        physicalDamage = Map(champion -> scalars.physicalDamage.map(_.sum).orEmpty.toLong),
+        magicDamage = Map(champion -> scalars.magicDamage.map(_.sum).orEmpty.toLong),
+        trueDamage = Map(champion -> scalars.trueDamage.map(_.sum).orEmpty.toLong)
       )
     }
 
   }
 
-  implicit class DeltaConversion(delta: MatchSum.Deltas.Delta) {
+  implicit class DeltaConversion(delta: MatchSum.Statistics.Deltas.Delta) {
 
     def asAggregate(champion: Int): Sums.Deltas.Delta = {
       Sums.Deltas.Delta(
-        zeroToTen = Map(champion -> delta.zeroToTen),
-        tenToTwenty = Map(champion -> delta.tenToTwenty),
-        twentyToThirty = Map(champion -> delta.twentyToThirty),
-        thirtyToEnd = Map(champion -> delta.thirtyToEnd)
+        zeroToTen = Map(champion -> delta.zeroToTen.map(_.sum).orEmpty.toLong),
+        tenToTwenty = Map(champion -> delta.tenToTwenty.map(_.sum).orEmpty.toLong),
+        twentyToThirty = Map(champion -> delta.twentyToThirty.map(_.sum).orEmpty.toLong),
+        thirtyToEnd = Map(champion -> delta.thirtyToEnd.map(_.sum).orEmpty.toLong)
       )
     }
 
   }
 
-  implicit class DeltasConversion(deltas: MatchSum.Deltas) {
+  implicit class DeltasConversion(deltas: MatchSum.Statistics.Deltas) {
 
     def asAggregate(champion: Int): Sums.Deltas = {
       Sums.Deltas(
@@ -72,7 +72,7 @@ object SumConversionHelpers {
 
   }
 
-  implicit class DurationDistributionsConversion(dd: MatchSum.Deltas.DurationDistribution) {
+  implicit class DurationDistributionsConversion(dd: MatchSum.Statistics.Deltas.DurationDistribution) {
 
     def asAggregate(champion: Int): Sums.DurationDistributions = {
       Sums.DurationDistributions(
@@ -102,11 +102,12 @@ object SumConversionHelpers {
 
     def asAggregate(champion: Int): Sums = {
       Sums(
-        scalars = Some(sum.scalars.orEmpty.asAggregate(champion)),
-        deltas = Some(sum.deltas.orEmpty.asAggregate(champion)),
-        durationDistributions = Some(
-          sum.deltas.flatMap(_.durationDistribution).orEmpty.asAggregate(champion)
-        ),
+        scalars = sum.statistics
+          .flatMap(_.scalars).map(_.asAggregate(champion, sum.statistics.map(_.plays).orEmpty)),
+        deltas = sum.statistics
+          .flatMap(_.deltas).map(_.asAggregate(champion)),
+        durationDistributions = sum.statistics.flatMap(_.deltas)
+          .flatMap(_.durationDistribution).map(_.asAggregate(champion)),
         subscalars = Some(asSubscalarsAggregate(champion))
       )
     }

@@ -55,7 +55,7 @@ class MatchupDAO(
         )
 
       // Check that we obey the minimum play rate
-      }.filter(_.pickRate.map(_.value).orEmpty >= minPickRate)
+      }.filter(_.pickRate.map(_.mean).orEmpty >= minPickRate)
     }
   }
 

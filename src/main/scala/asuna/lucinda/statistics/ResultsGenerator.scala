@@ -1,6 +1,7 @@
 package asuna.lucinda.statistics
 
 import asuna.proto.league.lucinda.Statistic
+import asuna.proto.league.lucinda.MatchQuotient.Statistics.Moments
 import asuna.proto.league.lucinda.AllChampionStatistics.{ Results, Sums, Quotients }
 import cats.implicits._
 
@@ -12,77 +13,81 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
   def generate(): Results = {
     Results(
       scalars = quotients.scalars.map(makeScalars),
-      deltas = quotients.deltas.map(makeDeltas),
+      deltas = quotients.deltas.map(d =>
+        makeDeltas(d, sums.durationDistributions.getOrElse(Sums.DurationDistributions()))),
       derivatives = Some(derivatives)
     )
   }
 
   def makeScalars(scalars: Quotients.Scalars): Results.Scalars = {
     Results.Scalars(
-      wins = makeStat(scalars.wins),
-      goldEarned = makeStat(scalars.goldEarned),
-      kills = makeStat(scalars.kills),
-      deaths = makeStat(scalars.deaths),
-      assists = makeStat(scalars.assists),
-      damageDealt = makeStat(scalars.damageDealt),
-      damageTaken = makeStat(scalars.damageTaken),
-      minionsKilled = makeStat(scalars.minionsKilled),
-      teamJungleMinionsKilled = makeStat(scalars.teamJungleMinionsKilled),
-      enemyJungleMinionsKilled = makeStat(scalars.enemyJungleMinionsKilled),
-      structureDamage = makeStat(scalars.structureDamage),
-      killingSpree = makeStat(scalars.killingSpree),
-      wardsBought = makeStat(scalars.wardsBought),
-      wardsPlaced = makeStat(scalars.wardsPlaced),
-      wardsKilled = makeStat(scalars.wardsKilled),
-      crowdControl = makeStat(scalars.crowdControl),
-      firstBlood = makeStat(scalars.firstBlood),
-      firstBloodAssist = makeStat(scalars.firstBloodAssist),
-      doublekills = makeStat(scalars.doublekills),
-      triplekills = makeStat(scalars.triplekills),
-      quadrakills = makeStat(scalars.quadrakills),
-      pentakills = makeStat(scalars.pentakills),
-      physicalDamage = makeStat(scalars.physicalDamage),
-      magicDamage = makeStat(scalars.magicDamage),
-      trueDamage = makeStat(scalars.trueDamage)
+      wins = makeStat(scalars.wins, scalars.plays),
+      goldEarned = makeStat(scalars.goldEarned, scalars.plays),
+      kills = makeStat(scalars.kills, scalars.plays),
+      deaths = makeStat(scalars.deaths, scalars.plays),
+      assists = makeStat(scalars.assists, scalars.plays),
+      damageDealt = makeStat(scalars.damageDealt, scalars.plays),
+      damageTaken = makeStat(scalars.damageTaken, scalars.plays),
+      minionsKilled = makeStat(scalars.minionsKilled, scalars.plays),
+      teamJungleMinionsKilled = makeStat(scalars.teamJungleMinionsKilled, scalars.plays),
+      enemyJungleMinionsKilled = makeStat(scalars.enemyJungleMinionsKilled, scalars.plays),
+      structureDamage = makeStat(scalars.structureDamage, scalars.plays),
+      killingSpree = makeStat(scalars.killingSpree, scalars.plays),
+      wardsBought = makeStat(scalars.wardsBought, scalars.plays),
+      wardsPlaced = makeStat(scalars.wardsPlaced, scalars.plays),
+      wardsKilled = makeStat(scalars.wardsKilled, scalars.plays),
+      crowdControl = makeStat(scalars.crowdControl, scalars.plays),
+      firstBlood = makeStat(scalars.firstBlood, scalars.plays),
+      firstBloodAssist = makeStat(scalars.firstBloodAssist, scalars.plays),
+      doublekills = makeStat(scalars.doublekills, scalars.plays),
+      triplekills = makeStat(scalars.triplekills, scalars.plays),
+      quadrakills = makeStat(scalars.quadrakills, scalars.plays),
+      pentakills = makeStat(scalars.pentakills, scalars.plays),
+
+      physicalDamage = makeStat(scalars.physicalDamage, scalars.plays),
+      magicDamage = makeStat(scalars.magicDamage, scalars.plays),
+      trueDamage = makeStat(scalars.trueDamage, scalars.plays)
     )
   }
 
-  def makeDeltas(deltas: Quotients.Deltas): Results.Deltas = {
+  def makeDeltas(deltas: Quotients.Deltas, dds: Sums.DurationDistributions): Results.Deltas = {
     Results.Deltas(
-      csDiff = makeDeltaOption(deltas.csDiff),
-      xpDiff = makeDeltaOption(deltas.xpDiff),
-      damageTakenDiff = makeDeltaOption(deltas.damageTakenDiff),
-      xpPerMin = makeDeltaOption(deltas.xpPerMin),
-      goldPerMin = makeDeltaOption(deltas.goldPerMin),
-      towersPerMin = makeDeltaOption(deltas.towersPerMin),
-      wardsPlaced = makeDeltaOption(deltas.wardsPlaced),
-      damageTaken = makeDeltaOption(deltas.damageTaken)
+      csDiff = makeDeltaOption(deltas.csDiff, dds),
+      xpDiff = makeDeltaOption(deltas.xpDiff, dds),
+      damageTakenDiff = makeDeltaOption(deltas.damageTakenDiff, dds),
+      xpPerMin = makeDeltaOption(deltas.xpPerMin, dds),
+      goldPerMin = makeDeltaOption(deltas.goldPerMin, dds),
+      towersPerMin = makeDeltaOption(deltas.towersPerMin, dds),
+      wardsPlaced = makeDeltaOption(deltas.wardsPlaced, dds),
+      damageTaken = makeDeltaOption(deltas.damageTaken, dds)
     )
   }
 
-  def makeDeltaOption(delta: Option[Quotients.Deltas.Delta]): Option[Results.Deltas.Delta] = {
-    delta match {
-      case Some(delt) => Some(makeDelta(delt))
-      case None => None
-    }
+  def makeDeltaOption(delta: Option[Quotients.Deltas.Delta], dds: Sums.DurationDistributions): Option[Results.Deltas.Delta] = {
+    delta.map(d => makeDelta(d, dds))
   }
 
-  def makeDelta(delta: Quotients.Deltas.Delta): Results.Deltas.Delta = {
+  def makeDelta(delta: Quotients.Deltas.Delta, dds: Sums.DurationDistributions): Results.Deltas.Delta = {
     Results.Deltas.Delta(
-      zeroToTen = makeStat(delta.zeroToTen),
-      tenToTwenty = makeStat(delta.tenToTwenty),
-      twentyToThirty = makeStat(delta.twentyToThirty),
-      thirtyToEnd = makeStat(delta.thirtyToEnd)
+      zeroToTen = makeStat(delta.zeroToTen, dds.zeroToTen),
+      tenToTwenty = makeStat(delta.tenToTwenty, dds.tenToTwenty),
+      twentyToThirty = makeStat(delta.twentyToThirty, dds.twentyToThirty),
+      thirtyToEnd = makeStat(delta.thirtyToEnd, dds.thirtyToEnd)
     )
   }
 
-  def makeStat(statsMap: Map[Int, Double]): Map[Int, Statistic] = {
+  def makeStat(statsMap: Map[Int, Double], sumsMap: Map[Int, Long]): Map[Int, Statistic] = {
     val sortedPairs = statsMap.toSeq.sortBy(_._2).reverse
+
+    // Map of champ to total of the stat. Used for computing mean across role.
+    val pairsMap = statsMap.transform { case (k, v) =>
+      v * sumsMap.get(k).orEmpty
+    }
 
     // average of the value
     val average =  statsMap.size match {
       case 0 => 0
-      case _ => statsMap.values.sum / statsMap.values.size
+      case _ => pairsMap.values.sum / pairsMap.values.size
     }
 
     val statsWithIndex = sortedPairs.zipWithIndex.map { case ((champ, value), index) =>
@@ -92,14 +97,16 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
     statsWithIndex.mapValues { case (value, index) =>
       Statistic(
         rank = index + 1,
-        value = value,
-        average = average,
+        mean = value,
+        meanAcrossRole = average,
+        // TODO(igm): is this what we mean by percentile?
         percentile = 1 - index.toDouble / statsMap.size
       )
     }
   }
 
   def derivatives: Results.Derivatives = {
+    val counts = sums.scalars.map(_.plays).orEmpty
     val pickRateMap = for {
       plays <- sums.scalars.map(_.plays)
     } yield {
@@ -115,8 +122,8 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
       bans.mapValues(_.toDouble / total)
     }
     Results.Derivatives(
-      picks = makeStat(pickRateMap.orEmpty),
-      bans = makeStat(banRateMap.orEmpty)
+      picks = makeStat(pickRateMap.orEmpty, counts),
+      bans = makeStat(banRateMap.orEmpty, counts)
     )
   }
 
