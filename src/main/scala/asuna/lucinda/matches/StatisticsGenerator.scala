@@ -3,6 +3,7 @@ package asuna.lucinda.matches
 import scala.util.{ Success, Try }
 
 import asuna.common.legends.MatchSumHelpers._
+import asuna.common.legends.MomentsHelpers._
 import asuna.lucinda.statistics.StatisticsCombiner._
 import asuna.proto.league.{ Ability, IntRange, MatchSum, Region, Role }
 import asuna.proto.league.lucinda.{ AllChampionStatistics, MatchQuotient, Statistic }
@@ -36,8 +37,12 @@ object StatisticsGenerator {
 
     Statistics(
       roles = roleStats.some,
-      scalars = makeScalars(champions, allStats).some,
-      deltas = makeDeltas(champions, allStats).some,
+      scalars = quot.statistics.flatMap(_.scalars).map { scalars =>
+        makeScalars(champions, allStats, scalars)
+      },
+      deltas = quot.statistics.flatMap(_.deltas).map { deltas =>
+        makeDeltas(champions, allStats, deltas)
+      },
       graphs = makeGraphs(allStats, patchNbhd, quot, champions).some,
       collections = quot.collections
     )
@@ -84,37 +89,70 @@ object StatisticsGenerator {
     )
   }
 
-  private def getStat[T](obj: Option[T], champions: Set[Int], accessor: T => Map[Int, Statistic]): Option[Statistic] = {
+  private def getStat[T](
+    obj: Option[T],
+    champions: Set[Int],
+    accessor: T => Map[Int, Statistic],
+    moments: Option[MatchQuotient.Statistics.Moments]
+  ): Option[Statistic] = {
     // TODO(igm): support multiple champs
     val champion = champions.toSeq.headOption.getOrElse(0)
-    obj
-      .flatMap(accessor(_).get(champion))
-      .getOrElse(Statistic()).some
+    obj.flatMap { statsMap =>
+      accessor(statsMap).get(champion)
+    }.map { baseStats =>
+      if (moments.isDefined) {
+        val moms = moments.get
+        baseStats.copy(
+          // in theory these should be the same, but in case they're not let's add it back
+          mean = moms.mean,
+          stdev = Math.sqrt(moms.variance),
+          skewness = moms.skewness,
+          kurtosis = moms.kurtosis
+        )
+      } else {
+        baseStats
+      }
+    }.getOrElse(Statistic()).some
   }
 
-  private def getDelta(deltas: Option[AllChampionStatistics.Results.Deltas], champions: Set[Int], accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]): Option[Statistics.Deltas.Delta] = {
+  private def getDelta(
+    deltas: Option[AllChampionStatistics.Results.Deltas],
+    champions: Set[Int],
+    accessor: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta],
+    quot: Option[MatchQuotient.Statistics.Deltas.Delta]
+  ): Option[Statistics.Deltas.Delta] = {
     val delta = deltas.flatMap(accessor)
-    val get = getStat(delta, champions, _: AllChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic])
+    val get = getStat(
+      delta, champions,
+      _: AllChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic],
+      _: Option[MatchQuotient.Statistics.Moments]
+    )
     if (!delta.isDefined) {
       return None
     }
-    Some(Statistics.Deltas.Delta(
-      zeroToTen = get(_.zeroToTen),
-      tenToTwenty = get(_.tenToTwenty),
-      twentyToThirty = get(_.twentyToThirty),
-      thirtyToEnd = get(_.thirtyToEnd)
-    ))
+    Statistics.Deltas.Delta(
+      zeroToTen = get(_.zeroToTen, quot.flatMap(_.zeroToTen)),
+      tenToTwenty = get(_.tenToTwenty, quot.flatMap(_.zeroToTen)),
+      twentyToThirty = get(_.twentyToThirty, quot.flatMap(_.zeroToTen)),
+      thirtyToEnd = get(_.thirtyToEnd, quot.flatMap(_.zeroToTen))
+    ).some
   }
 
-  def makeScalars(champions: Set[Int], roleStats: AllChampionStatistics): Statistics.Scalars = {
+  def makeScalars(
+    champions: Set[Int],
+    roleStats: AllChampionStatistics,
+    quot: MatchQuotient.Statistics.Scalars
+  ): Statistics.Scalars = {
     val getScalar = getStat(
       roleStats.results.flatMap(_.scalars),
-      champions, _: AllChampionStatistics.Results.Scalars => Map[Int, Statistic]
+      champions,
+      _: AllChampionStatistics.Results.Scalars => Map[Int, Statistic],
+      _: Option[MatchQuotient.Statistics.Moments]
     )
     val derivatives = roleStats.results.flatMap(_.derivatives)
 
     // We calculate the pick rate stat out here, as we need it to find the gamesPlayed stat.
-    val pickRateStat = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champions, _.picks)
+    val pickRateStat = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champions, _.picks, None)
 
     // Number of games played by all champions
     val allGamesPlayed = roleStats.sums.flatMap(_.scalars).map(_.plays).orEmpty
@@ -134,48 +172,53 @@ object StatisticsGenerator {
     }
 
     Statistics.Scalars(
-      winRate = getScalar(_.wins),
+      winRate = getScalar(_.wins, quot.wins),
       pickRate = pickRateStat,
-      banRate = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champions, _.bans),
+      banRate = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champions, _.bans, None),
       gamesPlayed = gamesPlayedStat,
-      goldEarned = getScalar(_.goldEarned),
-      kills = getScalar(_.kills),
-      deaths = getScalar(_.deaths),
-      assists = getScalar(_.assists),
-      damageDealt = getScalar(_.damageDealt),
-      damageTaken = getScalar(_.damageTaken),
-      minionsKilled = getScalar(_.minionsKilled),
-      teamJungleMinionsKilled = getScalar(_.teamJungleMinionsKilled),
-      enemyJungleMinionsKilled = getScalar(_.enemyJungleMinionsKilled),
-      structureDamage = getScalar(_.structureDamage),
-      killingSpree = getScalar(_.killingSpree),
-      wardsBought = getScalar(_.wardsBought),
-      wardsPlaced = getScalar(_.wardsPlaced),
-      wardsKilled = getScalar(_.wardsKilled),
-      crowdControl = getScalar(_.crowdControl),
-      firstBlood = getScalar(_.firstBlood),
-      firstBloodAssist = getScalar(_.firstBloodAssist),
-      doublekills = getScalar(_.doublekills),
-      triplekills = getScalar(_.triplekills),
-      quadrakills = getScalar(_.quadrakills),
-      pentakills = getScalar(_.pentakills)
+      goldEarned = getScalar(_.goldEarned, quot.goldEarned),
+      kills = getScalar(_.kills, quot.kills),
+      deaths = getScalar(_.deaths, quot.deaths),
+      assists = getScalar(_.assists, quot.assists),
+      damageDealt = getScalar(_.damageDealt, quot.damageDealt),
+      damageTaken = getScalar(_.damageTaken, quot.damageTaken),
+      minionsKilled = getScalar(_.minionsKilled, quot.minionsKilled),
+      teamJungleMinionsKilled = getScalar(_.teamJungleMinionsKilled, quot.teamJungleMinionsKilled),
+      enemyJungleMinionsKilled = getScalar(_.enemyJungleMinionsKilled, quot.enemyJungleMinionsKilled),
+      killingSpree = getScalar(_.killingSpree, quot.killingSpree),
+      wardsBought = getScalar(_.wardsBought, quot.wardsBought),
+      wardsPlaced = getScalar(_.wardsPlaced, quot.wardsPlaced),
+      wardsKilled = getScalar(_.wardsKilled, quot.wardsKilled),
+      crowdControl = getScalar(_.crowdControl, quot.crowdControl),
+      firstBlood = getScalar(_.firstBlood, quot.firstBlood),
+      firstBloodAssist = getScalar(_.firstBloodAssist, quot.firstBloodAssist),
+      doublekills = getScalar(_.doublekills, quot.doublekills),
+      triplekills = getScalar(_.triplekills, quot.triplekills),
+      quadrakills = getScalar(_.quadrakills, quot.quadrakills),
+      pentakills = getScalar(_.pentakills, quot.pentakills)
     )
   }
 
-  def makeDeltas(champions: Set[Int], roleStats: AllChampionStatistics): Statistics.Deltas = {
+  def makeDeltas(
+    champions: Set[Int],
+    roleStats: AllChampionStatistics,
+    quot: MatchQuotient.Statistics.Deltas
+  ): Statistics.Deltas = {
     val getDeltas = getDelta(
       roleStats.results.flatMap(_.deltas),
-      champions, _: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta]
+      champions,
+      _: AllChampionStatistics.Results.Deltas => Option[AllChampionStatistics.Results.Deltas.Delta],
+      _: Option[MatchQuotient.Statistics.Deltas.Delta]
     )
     Statistics.Deltas(
-      csDiff = getDeltas(_.csDiff),
-      xpDiff = getDeltas(_.xpDiff),
-      damageTakenDiff = getDeltas(_.damageTakenDiff),
-      xpPerMin = getDeltas(_.xpPerMin),
-      goldPerMin = getDeltas(_.goldPerMin),
-      towersPerMin = getDeltas(_.towersPerMin),
-      wardsPlaced = getDeltas(_.wardsPlaced),
-      damageTaken = getDeltas(_.damageTaken)
+      csDiff = getDeltas(_.csDiff, quot.csDiff),
+      xpDiff = getDeltas(_.xpDiff, quot.xpDiff),
+      damageTakenDiff = getDeltas(_.damageTakenDiff, quot.damageTakenDiff),
+      xpPerMin = getDeltas(_.xpPerMin, quot.xpPerMin),
+      goldPerMin = getDeltas(_.goldPerMin, quot.goldPerMin),
+      towersPerMin = getDeltas(_.towersPerMin, quot.towersPerMin),
+      wardsPlaced = getDeltas(_.wardsPlaced, quot.wardsPlaced),
+      damageTaken = getDeltas(_.damageTaken, quot.damageTaken)
     )
   }
 
