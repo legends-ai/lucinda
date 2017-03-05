@@ -105,9 +105,7 @@ object StatisticsGenerator {
         baseStats.copy(
           // in theory these should be the same, but in case they're not let's add it back
           mean = moms.mean,
-          stdev = Math.sqrt(moms.variance),
-          skewness = moms.skewness,
-          kurtosis = moms.kurtosis
+          stdev = Math.sqrt(moms.variance)
         )
       } else {
         baseStats
