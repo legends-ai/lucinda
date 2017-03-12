@@ -95,22 +95,26 @@ object StatisticsGenerator {
     accessor: T => Map[Int, Statistic],
     moments: Option[MatchQuotient.Statistics.Moments]
   ): Option[Statistic] = {
-    // TODO(igm): support multiple champs
-    val champion = champions.toSeq.headOption.getOrElse(0)
-    obj.flatMap { statsMap =>
-      accessor(statsMap).get(champion)
-    }.map { baseStats =>
-      if (moments.isDefined) {
-        val moms = moments.get
-        baseStats.copy(
-          // in theory these should be the same, but in case they're not let's add it back
-          mean = moms.mean,
-          stdev = Math.sqrt(moms.variance)
-        )
-      } else {
-        baseStats
+    if (champions.isEmpty) {
+      None
+    } else {
+      // TODO(igm): support multiple champs
+      val champion = champions.toSeq.headOption.orEmpty
+      obj.flatMap { statsMap =>
+        // get one of the statistics if exists
+        // TODO(igm): merge statistics together somehow? prob impossible without count.
+        accessor(statsMap).filterKeys(champions).values.headOption
+      }.map { baseStats =>
+        moments match {
+          case Some(moms) => baseStats.copy(
+            // in theory these should be the same, but in case they're not let's add it back
+            mean = moms.mean,
+            stdev = Math.sqrt(moms.variance)
+          )
+          case None => baseStats
+        }
       }
-    }.getOrElse(Statistic()).some
+    }
   }
 
   private def getDelta(
