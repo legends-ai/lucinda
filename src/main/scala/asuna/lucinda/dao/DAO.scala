@@ -9,6 +9,7 @@ import monix.reactive.OverflowStrategy.DropNew
 import monix.reactive.subjects.PublishToOneSubject
 import asuna.lucinda.DAOSettings
 import scala.concurrent.duration.Duration
+import com.timgroup.statsd.NonBlockingStatsDClient
 import cats.implicits._
 
 /**
@@ -87,7 +88,9 @@ trait PersistentDAO[I, S, O] extends EphemeralDAO[I, O] {
 /**
   * Allows refreshing of elements in the DAO, in memory.
   */
-abstract class RefreshableDAO[I, S, O](settings: DAOSettings) extends PersistentDAO[I, S, O] {
+abstract class RefreshableDAO[I, S, O](
+  settings: DAOSettings
+)(implicit statsd: NonBlockingStatsDClient) extends PersistentDAO[I, S, O] {
 
   val refreshes = PublishToOneSubject[I]
 
@@ -136,9 +139,22 @@ abstract class RefreshableDAO[I, S, O](settings: DAOSettings) extends Persistent
     initRefresher.runAsync(scheduler)
   }
 
+  override def refresh(in: I): Task[O] = {
+    val time = System.currentTimeMillis()
+    for {
+      result <- super.refresh(in)
+      _ = statsd.recordExecutionTime(
+        s"dao.refresh.${settings.name}",
+        System.currentTimeMillis() - time
+      )
+    } yield result
+  }
+
 }
 
-abstract class RefreshableProtoDAO[I, S, O](settings: DAOSettings) extends RefreshableDAO[I, S, O](settings) {
+abstract class RefreshableProtoDAO[I, S, O](
+  settings: DAOSettings
+)(implicit statsd: NonBlockingStatsDClient) extends RefreshableDAO[I, S, O](settings) {
 
   def creationTs(stored: S): Option[Timestamp]
 

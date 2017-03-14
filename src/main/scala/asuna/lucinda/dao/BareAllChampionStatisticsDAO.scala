@@ -65,7 +65,7 @@ class BareAllChampionStatisticsDAO(settings: DAOSettings, alexandria: Alexandria
   BareAllChampionStatisticsDAO.Key,
   StoredAllChampionStatistics,
   AllChampionStatistics
-](settings) {
+](settings)(statsd) {
   import BareAllChampionStatisticsDAO.Key
 
   override def creationTs(stored: StoredAllChampionStatistics): Option[Timestamp] =

@@ -73,7 +73,7 @@ class BareStatisticsDAO(settings: DAOSettings, alexandria: Alexandria, allChampi
   BareStatisticsDAO.Key,
   StoredStatistics,
   Statistics
-](settings) {
+](settings)(statsd) {
   import BareStatisticsDAO.Key
 
   override def creationTs(stored: StoredStatistics): Option[Timestamp] =
