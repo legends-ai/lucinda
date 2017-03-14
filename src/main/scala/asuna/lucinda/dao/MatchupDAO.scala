@@ -1,14 +1,11 @@
 package asuna.lucinda.dao
 
-import scala.concurrent.{ ExecutionContext, Future }
-
 import asuna.proto.league.{ Queue, Region, Role, Tier }
 import asuna.proto.league.lucinda.MatchupOverview
 import cats.implicits._
+import monix.eval.Task
 
-class MatchupDAO(
-  allChampionStatisticsDAO: AllChampionStatisticsDAO
-)(implicit ec: ExecutionContext) {
+class MatchupDAO(allChampionStatisticsDAO: AllChampionStatisticsDAO) {
 
   def getMatchupOverviews(
     allChampions: Set[Int],
@@ -21,7 +18,7 @@ class MatchupDAO(
     roles: Set[Role],
     queues: Set[Queue],
     minPickRate: Double
-  ): Future[Vector[MatchupOverview]] = {
+  ): Task[Vector[MatchupOverview]] = {
     for {
       // First, let's get our statistics against each enemy.
       championStatistics <- allChampionStatisticsDAO.get(

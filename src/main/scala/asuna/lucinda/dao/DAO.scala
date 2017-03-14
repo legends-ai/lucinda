@@ -1,9 +1,14 @@
 package asuna.lucinda.dao
 
+import com.google.protobuf.timestamp.Timestamp
 import monix.eval.Task
+import monix.execution.Scheduler
+import scala.concurrent.Future
 import monix.reactive.OverflowStrategy.DropNew
 import monix.reactive.subjects.PublishToOneSubject
+import asuna.lucinda.DAOSettings
 import scala.concurrent.duration.Duration
+import cats.implicits._
 
 /**
   * @tparam I the key.
@@ -81,9 +86,7 @@ trait PersistentDAO[I, S, O] extends EphemeralDAO[I, O] {
 /**
   * Allows refreshing of elements in the DAO, in memory.
   */
-abstract class RefreshableDAO[I, S, O](
-  bufferSize: Int, concurrency: Int, expiryTime: Duration
-) extends PersistentDAO[I, S, O] {
+abstract class RefreshableDAO[I, S, O](settings: DAOSettings) extends PersistentDAO[I, S, O] {
 
   /**
     * The creation time of the object.
@@ -91,7 +94,7 @@ abstract class RefreshableDAO[I, S, O](
   def creation(stored: S): Long
 
   override def isStale(stored: S): Boolean =
-    System.currentTimeMillis - creation(stored) > expiryTime.toMillis
+    System.currentTimeMillis - creation(stored) > settings.expiryTime.toMillis
 
   override def queueRefresh(in: I): Task[Unit] =
     Task.deferFuture(refreshes.onNext(in)).map(_ => ())
@@ -105,9 +108,25 @@ abstract class RefreshableDAO[I, S, O](
     refreshes
       // we drop refresh requests that cannot be processed.
       // TODO(igm): add logging for this behavior
-      .whileBusyBuffer(DropNew(bufferSize))
-      .mapAsync(concurrency)(refresh)
+      .whileBusyBuffer(DropNew(settings.bufferSize))
+      .mapAsync(settings.concurrency)(refresh)
       .foreachL(identity)
+  }
+
+  def startRefreshing: Future[Unit] = {
+    initRefresher.runAsync(Scheduler.io(name = settings.name))
+  }
+
+}
+
+abstract class RefreshableProtoDAO[I, S, O](settings: DAOSettings) extends RefreshableDAO[I, S, O](settings) {
+
+  def creationTs(stored: S): Option[Timestamp]
+
+  override def creation(stored: S): Long = {
+    creationTs(stored).map { ts =>
+      (ts.seconds * 1000 + (ts.nanos / 1E6)).toLong
+    }.orEmpty
   }
 
 }
