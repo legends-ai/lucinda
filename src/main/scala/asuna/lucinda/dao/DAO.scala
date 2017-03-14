@@ -1,5 +1,6 @@
 package asuna.lucinda.dao
 
+import java.util.concurrent.ConcurrentHashMap
 import com.google.protobuf.timestamp.Timestamp
 import monix.eval.Task
 import monix.execution.Scheduler
@@ -88,6 +89,15 @@ trait PersistentDAO[I, S, O] extends EphemeralDAO[I, O] {
   */
 abstract class RefreshableDAO[I, S, O](settings: DAOSettings) extends PersistentDAO[I, S, O] {
 
+  val refreshes = PublishToOneSubject[I]
+
+  val refreshing = new ConcurrentHashMap[I, Unit]
+
+  val scheduler = Scheduler.computation(
+    name = settings.name,
+    parallelism = settings.concurrency
+  )
+
   /**
     * The creation time of the object.
     */
@@ -96,10 +106,14 @@ abstract class RefreshableDAO[I, S, O](settings: DAOSettings) extends Persistent
   override def isStale(stored: S): Boolean =
     System.currentTimeMillis - creation(stored) > settings.expiryTime.toMillis
 
-  override def queueRefresh(in: I): Task[Unit] =
-    Task.deferFuture(refreshes.onNext(in)).map(_ => ())
-
-  val refreshes = PublishToOneSubject[I]
+  override def queueRefresh(in: I): Task[Unit] = {
+    if (refreshing.containsKey(in)) {
+      Task.unit
+    } else {
+      refreshing.put(in, ())
+      Task.deferFuture(refreshes.onNext(in)).map(_ => ())
+    }
+  }
 
   /**
     * Initializes the refresher of the DAO.
@@ -109,12 +123,17 @@ abstract class RefreshableDAO[I, S, O](settings: DAOSettings) extends Persistent
       // we drop refresh requests that cannot be processed.
       // TODO(igm): add logging for this behavior
       .whileBusyBuffer(DropNew(settings.bufferSize))
-      .mapAsync(settings.concurrency)(refresh)
+      .mapAsync(settings.concurrency) { el =>
+        refresh(el) map { out =>
+          refreshing.remove(el)
+          out
+        }
+      }
       .foreachL(identity)
   }
 
   def startRefreshing: Future[Unit] = {
-    initRefresher.runAsync(Scheduler.io(name = settings.name))
+    initRefresher.runAsync(scheduler)
   }
 
 }
