@@ -29,8 +29,8 @@ object LucindaConfigParser extends ConfigParser[LucindaConfig](
   name = BuildInfo.name,
   version = BuildInfo.version,
   dependencies = Set("alexandria", "vulgate"),
-  port = 45045,
-  metaPort = 45046,
+  port = 31310,
+  metaPort = 31311,
   initial = LucindaConfig()
 ) {
 
