@@ -101,61 +101,63 @@ class BareStatisticsDAO(settings: DAOSettings, alexandria: Alexandria, allChampi
     full.value.get
 
   def compute(in: Key): Task[Statistics] = {
-    for {
-      // Role information
-      byRole <- in.byRoleFilters.traverse { subspace =>
-        Task.deferFuture {
-          alexandria.getSum(GetSumRequest(space = subspace.some))
-        }
+    // Role information
+    val byRoleTask = in.byRoleFilters.traverse { subspace =>
+      Task.deferFuture {
+        alexandria.getSum(GetSumRequest(space = subspace.some))
       }
+    }
 
-      // Patch information
-      byPatch <- in.byPatchFilters.traverse { subspace =>
-        Task.deferFuture {
-          alexandria.getSum(GetSumRequest(space = subspace.some))
-        }
+    // Patch information
+    val byPatchTask = in.byPatchFilters.traverse { subspace =>
+      Task.deferFuture {
+        alexandria.getSum(GetSumRequest(space = subspace.some))
       }
+    }
 
-      // Stats (where Statistic objects come from)
-      allStats <- allChampionStatisticsDAO.get(
+    // Stats (where Statistic objects come from)
+    val allStatsTask = allChampionStatisticsDAO.get(
+      in.allChampions,
+      in.tiers,
+      in.patches,
+      in.prevPatch,
+      in.regions,
+      in.roles,
+      in.queues,
+      in.enemies
+    )
+
+    // TODO(igm): reuse prev call data
+    // This contains an element of the form Map[String, AllChampionStatistics]
+    // where key is the patch and value is the stats.
+    val patchNbhdTask = in.patchNbhdMap.traverse { patch =>
+      allChampionStatisticsDAO.get(
         in.allChampions,
         in.tiers,
-        in.patches,
-        in.prevPatch,
+        Set(patch),
+        None,
         in.regions,
         in.roles,
         in.queues,
         in.enemies
       )
+    }
 
-      // TODO(igm): reuse prev call data
-      // This contains an element of the form Map[String, AllChampionStatistics]
-      // where key is the patch and value is the stats.
-      patchNbhd <- in.patchNbhdMap.traverse { patch =>
-        allChampionStatisticsDAO.get(
-          in.allChampions,
-          in.tiers,
-          Set(patch),
-          None,
-          in.regions,
-          in.roles,
-          in.queues,
-          in.enemies
+    (byRoleTask |@| byPatchTask |@| allStatsTask |@| patchNbhdTask) map {
+      case (byRole, byPatch, allStats, patchNbhd) => {
+        val stats = StatisticsGenerator.makeStatistics(
+          champions = in.champions,
+          allStats = allStats,
+          patchNbhd = patchNbhd,
+          roles = in.roles,
+          byRole = byRole,
+          byPatch = byPatch,
+          patches = in.patches
         )
+        statsd.increment("generate_statistics")
+        stats
       }
-
-      stats = StatisticsGenerator.makeStatistics(
-        champions = in.champions,
-        allStats = allStats,
-        patchNbhd = patchNbhd,
-        roles = in.roles,
-        byRole = byRole,
-        byPatch = byPatch,
-        patches = in.patches
-      )
-
-      _ = statsd.increment("generate_statistics")
-    } yield stats
+    }
   }
 
 }
