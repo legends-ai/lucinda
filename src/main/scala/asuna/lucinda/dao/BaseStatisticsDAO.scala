@@ -7,6 +7,7 @@ import asuna.proto.league.lucinda.{ AllChampionStatistics, Statistics, Statistic
 import monix.eval.Task
 import cats.implicits._
 import monix.cats._
+import asuna.lucinda.util.TaskHelpers._
 
 object BaseStatisticsDAO {
 
@@ -62,12 +63,12 @@ trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDA
 
   def compute(in: K): Task[Statistics] = {
     // Role information
-    val byRoleTask = in.base.byRoleFilters.traverse { subspace =>
+    val byRoleTask = in.base.byRoleFilters.traverseG { subspace =>
       sumFetcher.fetchSums(in, subspace)
     }
 
     // Patch information
-    val byPatchTask = in.base.byPatchFilters.traverse { subspace =>
+    val byPatchTask = in.base.byPatchFilters.traverseG { subspace =>
       sumFetcher.fetchSums(in, subspace)
     }
 
@@ -77,19 +78,19 @@ trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDA
     // TODO(igm): reuse prev call data
     // This contains an element of the form Map[String, AllChampionStatistics]
     // where key is the patch and value is the stats.
-    val patchNbhdTask = in.base.patchNbhdMap.traverse { patch =>
+    val patchNbhdTask = in.base.patchNbhdMap.traverseG { patch =>
       fetchPatchACS(in, patch)
     }
 
-    (byRoleTask |@| byPatchTask |@| allStatsTask |@| patchNbhdTask) map {
-      case (byRole, byPatch, allStats, patchNbhd) => {
+    List(byRoleTask, byPatchTask, allStatsTask, patchNbhdTask).sequenceG.map {
+      case List(byRole, byPatch, allStats, patchNbhd) => {
         StatisticsGenerator.makeStatistics(
           champions = in.base.champions,
-          allStats = allStats,
-          patchNbhd = patchNbhd,
+          allStats = allStats.asInstanceOf[AllChampionStatistics],
+          patchNbhd = patchNbhd.asInstanceOf[Map[String, AllChampionStatistics]],
           roles = in.base.roles,
-          byRole = byRole,
-          byPatch = byPatch,
+          byRole = byRole.asInstanceOf[Map[Role, MatchSum]],
+          byPatch = byPatch.asInstanceOf[Map[String, MatchSum]],
           patches = in.base.patches
         )
       }

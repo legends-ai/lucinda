@@ -7,6 +7,7 @@ import asuna.proto.league.lucinda.AllChampionStatistics
 import monix.eval.Task
 import cats.implicits._
 import monix.cats._
+import asuna.lucinda.util.TaskHelpers._
 
 object BaseAllChampionStatisticsDAO {
 
@@ -55,7 +56,7 @@ trait BaseAllChampionStatisticsDAO[K <: BaseAllChampionStatisticsDAO.CompositeKe
       // pure, and we make a database call. (Note that since we're using futures,
       // no database call is made at the time of execution.) This returns a
       // Map[Int, Task[MatchSum]].
-      sumsMap <- in.base.filtersMap.traverse { space =>
+      sumsMap <- in.base.filtersMap.traverseG { space =>
         sumFetcher.fetchSums(in, space)
       }
 
