@@ -1,8 +1,12 @@
 package asuna.lucinda.dao
 
+import asuna.lucinda.matches.StatisticsGenerator
 import asuna.proto.league._
 import asuna.lucinda.filters.MatchFilterSpaceHelpers
-import asuna.proto.league.lucinda.StatisticsKey
+import asuna.proto.league.lucinda.{ AllChampionStatistics, Statistics, StatisticsKey }
+import monix.eval.Task
+import cats.implicits._
+import monix.cats._
 
 object BaseStatisticsDAO {
 
@@ -23,16 +27,6 @@ object BaseStatisticsDAO {
     queues: Set[Queue]
   ) {
 
-    lazy val alexandriaKey: StatisticsKey = StatisticsKey(
-      championIds = champions.toSeq,
-      patches = patches.toSeq,
-      tiers = tiers.toSeq,
-      regions = regions.toSeq,
-      roles = roles.toSeq,
-      enemyIds = enemies.toSeq,
-      queues = queues.toSeq
-    )
-
     lazy val space = MatchFilterSpaceHelpers.generate(
       champions, patches, tiers, regions, enemies, roles, queues)
 
@@ -52,8 +46,54 @@ object BaseStatisticsDAO {
       patchNeighborhood.map(p => (p, p)).toMap
   }
 
+  trait CompositeKey {
+    def base: Key
+  }
+
 }
 
-trait BaseStatisticsDAO {
+trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDAO[K, Statistics] {
+
+  val sumFetcher: SumFetcher[K]
+
+  def fetchACS(in: K): Task[AllChampionStatistics]
+
+  def fetchPatchACS(in: K, patch: String): Task[AllChampionStatistics]
+
+  def compute(in: K): Task[Statistics] = {
+    // Role information
+    val byRoleTask = in.base.byRoleFilters.traverse { subspace =>
+      sumFetcher.fetchSums(in, subspace)
+    }
+
+    // Patch information
+    val byPatchTask = in.base.byPatchFilters.traverse { subspace =>
+      sumFetcher.fetchSums(in, subspace)
+    }
+
+    // Stats (where Statistic objects come from)
+    val allStatsTask = fetchACS(in)
+
+    // TODO(igm): reuse prev call data
+    // This contains an element of the form Map[String, AllChampionStatistics]
+    // where key is the patch and value is the stats.
+    val patchNbhdTask = in.base.patchNbhdMap.traverse { patch =>
+      fetchPatchACS(in, patch)
+    }
+
+    (byRoleTask |@| byPatchTask |@| allStatsTask |@| patchNbhdTask) map {
+      case (byRole, byPatch, allStats, patchNbhd) => {
+        StatisticsGenerator.makeStatistics(
+          champions = in.base.champions,
+          allStats = allStats,
+          patchNbhd = patchNbhd,
+          roles = in.base.roles,
+          byRole = byRole,
+          byPatch = byPatch,
+          patches = in.base.patches
+        )
+      }
+    }
+  }
 
 }

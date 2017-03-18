@@ -5,12 +5,12 @@ import asuna.lucinda.DAOSettings
 import asuna.lucinda.filters.MatchFilterSpaceHelpers
 import asuna.proto.league._
 import asuna.proto.league.alexandria.StoredStatistics
-import asuna.proto.league.lucinda.{ Statistics, StatisticsKey }
+import asuna.proto.league.lucinda.{ AllChampionStatistics, Statistics, StatisticsKey }
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc._
 import com.google.protobuf.timestamp.Timestamp
 import cats.implicits._
-import com.timgroup.statsd.NonBlockingStatsDClient
+import com.timgroup.statsd.StatsDClient
 import monix.cats._
 import monix.eval.Task
 
@@ -20,47 +20,18 @@ object BareStatisticsDAO {
   /**
     * @param patchNeighborhood Surrounding patches to display stats about.
     */
-  case class Key(
-    allChampions: Set[Int],
-    patches: Set[String],
-    patchNeighborhood: Seq[String],
-    prevPatch: Option[String],
-
-    champions: Set[Int],
-    tiers: Set[Tier],
-    regions: Set[Region],
-    roles: Set[Role],
-    enemies: Set[Int],
-    queues: Set[Queue]
-  ) {
+  case class Key(base: BaseStatisticsDAO.Key)
+      extends AllKey with BaseStatisticsDAO.CompositeKey {
 
     lazy val alexandriaKey: StatisticsKey = StatisticsKey(
-      championIds = champions.toSeq,
-      patches = patches.toSeq,
-      tiers = tiers.toSeq,
-      regions = regions.toSeq,
-      roles = roles.toSeq,
-      enemyIds = enemies.toSeq,
-      queues = queues.toSeq
+      championIds = base.champions.toSeq,
+      patches = base.patches.toSeq,
+      tiers = base.tiers.toSeq,
+      regions = base.regions.toSeq,
+      roles = base.roles.toSeq,
+      enemyIds = base.enemies.toSeq,
+      queues = base.queues.toSeq
     )
-
-    lazy val space = MatchFilterSpaceHelpers.generate(
-      champions, patches, tiers, regions, enemies, roles, queues)
-
-    lazy val byRoleFilters: Map[Role, MatchFiltersSpace] = (Role.values.toSet - Role.UNDEFINED_ROLE)
-      .map(r => (r, r)).toMap
-      .mapValues { someRole =>
-        space.copy(roles = Seq(someRole))
-      }
-
-    lazy val byPatchFilters: Map[String, MatchFiltersSpace] = patchNeighborhood
-      .map(p => (p, p)).toMap
-      .mapValues { patch =>
-        space.copy(versions = Seq(patch))
-      }.toMap
-
-    lazy val patchNbhdMap: Map[String, String] =
-      patchNeighborhood.map(p => (p, p)).toMap
   }
 
 }
@@ -68,12 +39,20 @@ object BareStatisticsDAO {
 /**
   * Fetcher for the bare statistics.
   */
-class BareStatisticsDAO(settings: DAOSettings, alexandria: Alexandria, allChampionStatisticsDAO: AllChampionStatisticsDAO, statsd: NonBlockingStatsDClient) extends RefreshableProtoDAO[
+class BareStatisticsDAO(
+  settings: DAOSettings,
+  alexandria: Alexandria,
+  statsd: StatsDClient,
+  allChampionStatisticsDAO: AllChampionStatisticsDAO,
+  sf: SumFetcher[BareStatisticsDAO.Key]
+) extends RefreshableProtoDAO[
   BareStatisticsDAO.Key,
   StoredStatistics,
   Statistics
-](settings)(statsd) {
+](settings)(statsd) with BaseStatisticsDAO[BareStatisticsDAO.Key] {
   import BareStatisticsDAO.Key
+
+  val sumFetcher = sf
 
   override def creationTs(stored: StoredStatistics): Option[Timestamp] =
     stored.timestamp
@@ -99,64 +78,32 @@ class BareStatisticsDAO(settings: DAOSettings, alexandria: Alexandria, allChampi
   def project(full: StoredStatistics): Statistics =
     full.value.get
 
-  def compute(in: Key): Task[Statistics] = {
-    // Role information
-    val byRoleTask = in.byRoleFilters.traverse { subspace =>
-      Task.deferFuture {
-        alexandria.getSum(GetSumRequest(space = subspace.some))
-      }
-    }
-
-    // Patch information
-    val byPatchTask = in.byPatchFilters.traverse { subspace =>
-      Task.deferFuture {
-        alexandria.getSum(GetSumRequest(space = subspace.some))
-      }
-    }
-
-    // Stats (where Statistic objects come from)
-    val allStatsTask = allChampionStatisticsDAO.get(
-      in.allChampions,
-      in.tiers,
-      in.patches,
-      in.prevPatch,
-      in.regions,
-      in.roles,
-      in.queues,
-      in.enemies
+  def fetchACS(in: BareStatisticsDAO.Key): Task[AllChampionStatistics] = {
+    val base = in.base
+    allChampionStatisticsDAO.get(
+      base.allChampions,
+      base.tiers,
+      base.patches,
+      base.prevPatch,
+      base.regions,
+      base.roles,
+      base.queues,
+      base.enemies
     )
+  }
 
-    // TODO(igm): reuse prev call data
-    // This contains an element of the form Map[String, AllChampionStatistics]
-    // where key is the patch and value is the stats.
-    val patchNbhdTask = in.patchNbhdMap.traverse { patch =>
-      allChampionStatisticsDAO.get(
-        in.allChampions,
-        in.tiers,
-        Set(patch),
-        None,
-        in.regions,
-        in.roles,
-        in.queues,
-        in.enemies
-      )
-    }
-
-    (byRoleTask |@| byPatchTask |@| allStatsTask |@| patchNbhdTask) map {
-      case (byRole, byPatch, allStats, patchNbhd) => {
-        val stats = StatisticsGenerator.makeStatistics(
-          champions = in.champions,
-          allStats = allStats,
-          patchNbhd = patchNbhd,
-          roles = in.roles,
-          byRole = byRole,
-          byPatch = byPatch,
-          patches = in.patches
-        )
-        statsd.increment("generate_statistics")
-        stats
-      }
-    }
+  def fetchPatchACS(in: BareStatisticsDAO.Key, patch: String): Task[AllChampionStatistics] = {
+    val base = in.base
+    allChampionStatisticsDAO.get(
+      base.allChampions,
+      base.tiers,
+      Set(patch),
+      None,
+      base.regions,
+      base.roles,
+      base.queues,
+      base.enemies
+    )
   }
 
 }

@@ -10,89 +10,72 @@ import asuna.proto.league.{ Queue, Region, Role, Tier }
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.lucinda.Statistics
 import scala.concurrent.{ ExecutionContext, Future }
+import monix.eval.Task
+import asuna.proto.league.lucinda.AllChampionStatistics
 
-/**
-  * TODO(igm): merge with BareStatisticsDAO
-  */
-class SummonerStatisticsDAO(
-  alexandria: Alexandria, summonerChampionsDAO: SummonerChampionsDAO
-)(implicit ec: ExecutionContext) {
-
-  def get(
+object SummonerStatisticsDAO {
+  case class Key(
     id: SummonerId,
     allChampions: Set[Int],
+    patches: Set[String],
     patchNeighborhood: Seq[String],
     prevPatch: Option[String],
 
     champions: Set[Int],
     roles: Set[Role],
-    patches: Set[String],
-    queues: Set[Queue],
-    enemyIds: Set[Int]
-  ): Future[Statistics] = {
-    val space = MatchFilterSpaceHelpers.generate(
-      champions, patches, Set(Tier.UNRANKED), Set(id.region), enemyIds, roles, queues)
+    enemies: Set[Int],
+    queues: Set[Queue]
+  ) extends SummonerKey with BaseStatisticsDAO.CompositeKey {
+    val base = BaseStatisticsDAO.Key(
+      allChampions = allChampions,
+      patches = patches,
+      patchNeighborhood = patchNeighborhood,
+      prevPatch = prevPatch,
 
-    // First, let's get per-role sums.
-    val byRoleFilters = (Role.values.toSet - Role.UNDEFINED_ROLE)
-      .map(r => (r, r)).toMap
-      .mapValues { someRole =>
-        space.copy(roles = Seq(someRole))
-      }
-
-    for {
-      byRole <- byRoleFilters.traverse { subspace =>
-        val req = GetSummonerMatchSumRequest(
-          summoner = id.some,
-          space = subspace.some
-        )
-        alexandria.getSummonerMatchSum(req)
-      }
-
-      // Next, let's retrieve all stats for this combination.
-      // This is used to get Statistic objects.
-      allStats <- summonerChampionsDAO.get(
-        id, allChampions, prevPatch,
-        roles, patches, queues, enemyIds
-      )
-
-      // TODO(igm): reuse prev call data
-      patchNbhdFuts = patchNeighborhood.toList.map { patch =>
-        summonerChampionsDAO.get(
-          id, allChampions, prevPatch,
-          roles, Set(patch), queues, enemyIds
-        ).map((patch, _))
-      }
-
-      // This contains an element of the form Map[String, AllChampionStatistics]
-      // where key is the patch and value is the stats.
-      patchNbhd <- patchNbhdFuts.sequence.map(_.toMap)
-
-      // Finally, let's get the patch information.
-      // We'll use a map with the key being the patch.
-      byPatchFilters = patchNeighborhood
-        .map(p => (p, p)).toMap
-        .mapValues { patch =>
-          space.copy(versions = Seq(patch))
-        }.toMap
-
-      // We will then sequence them.
-      byPatch <- byPatchFilters.traverse { subspace =>
-        val req = GetSummonerMatchSumRequest(
-          summoner = id.some,
-          space = subspace.some
-        )
-        alexandria.getSummonerMatchSum(req)
-      }
-
-    } yield StatisticsGenerator.makeStatistics(
       champions = champions,
-      allStats = allStats,
-      patchNbhd = patchNbhd,
+      tiers = Set(Tier.UNRANKED),
+      regions = Set(id.region),
       roles = roles,
-      byRole = byRole.mapValues(_.matchSum.orEmpty),
-      byPatch = byPatch.mapValues(_.matchSum.orEmpty),
-      patches = patches
+      enemies = enemies,
+      queues = queues
+    )
+  }
+}
+
+/**
+  * TODO(igm): merge with BareStatisticsDAO
+  */
+class SummonerStatisticsDAO(
+  alexandria: Alexandria,
+  summonerChampionsDAO: SummonerChampionsDAO,
+  sf: SumFetcher[SummonerStatisticsDAO.Key]
+) extends BaseStatisticsDAO[SummonerStatisticsDAO.Key] {
+
+  val sumFetcher = sf
+
+  def fetchACS(in: SummonerStatisticsDAO.Key): Task[AllChampionStatistics] = {
+    val base = in.base
+    summonerChampionsDAO.get(
+      in.id,
+      base.allChampions,
+      base.prevPatch,
+      base.roles,
+      base.patches,
+      base.queues,
+      base.enemies
+    )
+  }
+
+  def fetchPatchACS(in: SummonerStatisticsDAO.Key, patch: String): Task[AllChampionStatistics] = {
+    val base = in.base
+    summonerChampionsDAO.get(
+      in.id,
+      base.allChampions,
+      None,
+      base.roles,
+      Set(patch),
+      base.queues,
+      base.enemies
     )
   }
 
