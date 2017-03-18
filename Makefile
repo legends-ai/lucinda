@@ -1,10 +1,10 @@
 alexandriatunnel:
 	lsof -twni tcp:22045 | xargs kill -9
-	ssh -fNL 22045:alexandria.marathon.mesos:22045 -p 2200 kirito@asunadev-master.southcentralus.cloudapp.azure.com
+	ssh -fNL 22045:alexandria.marathon.mesos:22045 -p 2200 kirito@asunad-master.southcentralus.cloudapp.azure.com
 
 vulgatetunnel:
 	lsof -twni tcp:6205 | xargs kill -9
-	ssh -fNL 6205:vulgate.marathon.mesos:6205 -p 2200 kirito@asunadev-master.southcentralus.cloudapp.azure.com
+	ssh -fNL 6205:vulgate.marathon.mesos:6205 -p 2200 kirito@asunad-master.southcentralus.cloudapp.azure.com
 
 # TODO(igm): find a cleaner way of doing this
 tunnel: alexandriatunnel vulgatetunnel

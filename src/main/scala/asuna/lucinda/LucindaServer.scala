@@ -2,8 +2,8 @@ package asuna.lucinda
 
 import asuna.common.AsunaError
 import scala.concurrent.{ ExecutionContext, Future }
-import monix.execution.Scheduler.Implicits.global
 
+import monix.execution.Scheduler
 import asuna.common.BaseGrpcService
 import asuna.proto.league.{ Queue, MatchSum }
 import asuna.proto.league.alexandria.AlexandriaGrpc
@@ -15,7 +15,7 @@ import asuna.proto.league.vulgate.rpc.GetAggregationFactorsRequest
 import asuna.lucinda.dao._
 import cats.implicits._
 
-class LucindaServer(args: Seq[String])
+class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
     extends BaseGrpcService(args, LucindaConfigParser, LucindaGrpc.bindService)
     with LucindaGrpc.Lucinda {
 
