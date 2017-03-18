@@ -12,6 +12,8 @@ libraryDependencies ++= Seq(
   "asuna" %% "common" % "2.6.12",
   "ch.qos.logback" % "logback-classic" % "1.1.9",
   "net.logstash.logback" % "logstash-logback-encoder" % "4.8",
+  "io.monix" %% "monix" % "2.2.2",
+  "io.monix" %% "monix-cats" % "2.2.2",
   "org.scalacheck" %% "scalacheck" % "1.13.3" % "test",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )

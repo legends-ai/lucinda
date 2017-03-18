@@ -7,7 +7,9 @@ import scala.concurrent.duration._
 
 case class LucindaConfig(
   statisticsCacheExpiry: Duration = 15.minutes,
-  allChampionStatisticsCacheExpiry: Duration = 15.minutes
+  allChampionStatisticsCacheExpiry: Duration = 15.minutes,
+  allChampionStatisticsDAOSettings: DAOSettings = DAOSettings("all-champion-statistics"),
+  statisticsDAOSettings: DAOSettings = DAOSettings("statistics")
 ) {
   val defaultQueues = Set(
     Queue.RANKED_FLEX_SR, // S7 Flex
@@ -16,12 +18,19 @@ case class LucindaConfig(
   )
 }
 
+case class DAOSettings(
+  name: String,
+  bufferSize: Int = 200,
+  concurrency: Int = 10,
+  expiryTime: Duration = 15.minutes
+)
+
 object LucindaConfigParser extends ConfigParser[LucindaConfig](
   name = BuildInfo.name,
   version = BuildInfo.version,
   dependencies = Set("alexandria", "vulgate"),
-  port = 45045,
-  metaPort = 45046,
+  port = 31310,
+  metaPort = 31311,
   initial = LucindaConfig()
 ) {
 

@@ -2,7 +2,7 @@ package asuna.lucinda
 
 import asuna.common.AsunaError
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.ExecutionContext.Implicits.global
+import monix.execution.Scheduler.Implicits.global
 
 import asuna.common.BaseGrpcService
 import asuna.proto.league.{ Queue, MatchSum }
@@ -22,8 +22,16 @@ class LucindaServer(args: Seq[String])
   val alexandria = AlexandriaGrpc.stub(clientFor("alexandria"))
   val vulgate = VulgateGrpc.stub(clientFor("vulgate"))
 
-  lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(config.service, alexandria, statsd)
-  lazy val statisticsDAO = new StatisticsDAO(config.service, alexandria, allChampionStatisticsDAO, statsd)
+  lazy val bareAllChampionStatisticsDAO = new BareAllChampionStatisticsDAO(
+    config.service.allChampionStatisticsDAOSettings, alexandria, statsd)
+  lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(bareAllChampionStatisticsDAO)
+  bareAllChampionStatisticsDAO.startRefreshing
+
+  lazy val bareStatisticsDAO = new BareStatisticsDAO(
+    config.service.statisticsDAOSettings, alexandria, allChampionStatisticsDAO, statsd)
+  lazy val statisticsDAO = new StatisticsDAO(bareStatisticsDAO)
+  bareStatisticsDAO.startRefreshing
+
   lazy val matchupDAO = new MatchupDAO(allChampionStatisticsDAO)
 
   lazy val summonerChampionsDAO = new SummonerChampionsDAO(alexandria)
@@ -53,7 +61,7 @@ class LucindaServer(args: Seq[String])
         enemies = key.enemyIds.toSet,
 
         minPickRate = req.constraints.map(_.minPickRate).orEmpty
-      )
+      ).runAsync
     } yield results
   }
 
@@ -83,7 +91,7 @@ class LucindaServer(args: Seq[String])
         enemies = key.enemyIds.toSet,
 
         minPickRate = req.constraints.map(_.minPickRate).orEmpty
-      )
+      ).runAsync
     } yield statistics
   }
 
@@ -108,7 +116,7 @@ class LucindaServer(args: Seq[String])
         roles = req.roles.toSet,
         queues = defaultQueuesIfEmpty(req.queues),
         minPickRate = req.constraints.map(_.minPickRate).orEmpty
-      )
+      ).runAsync
     } yield GetAllMatchupsResponse(matchups = matchups)
   }
 
