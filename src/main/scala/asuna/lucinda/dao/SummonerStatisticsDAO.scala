@@ -11,6 +11,9 @@ import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.lucinda.Statistics
 import scala.concurrent.{ ExecutionContext, Future }
 
+/**
+  * TODO(igm): merge with BareStatisticsDAO
+  */
 class SummonerStatisticsDAO(
   alexandria: Alexandria, summonerChampionsDAO: SummonerChampionsDAO
 )(implicit ec: ExecutionContext) {
@@ -36,16 +39,15 @@ class SummonerStatisticsDAO(
       .mapValues { someRole =>
         space.copy(roles = Seq(someRole))
       }
-    val byRoleFuts = byRoleFilters.mapValues { subspace =>
-      val req = GetSummonerMatchSumRequest(
-        summoner = id.some,
-        space = subspace.some
-      )
-      alexandria.getSummonerMatchSum(req)
-    }
 
     for {
-      byRole <- byRoleFuts.sequence
+      byRole <- byRoleFilters.traverse { subspace =>
+        val req = GetSummonerMatchSumRequest(
+          summoner = id.some,
+          space = subspace.some
+        )
+        alexandria.getSummonerMatchSum(req)
+      }
 
       // Next, let's retrieve all stats for this combination.
       // This is used to get Statistic objects.
@@ -75,13 +77,13 @@ class SummonerStatisticsDAO(
         }.toMap
 
       // We will then sequence them.
-      byPatch <- byPatchFilters.mapValues { subspace =>
+      byPatch <- byPatchFilters.traverse { subspace =>
         val req = GetSummonerMatchSumRequest(
           summoner = id.some,
           space = subspace.some
         )
         alexandria.getSummonerMatchSum(req)
-      }.sequence
+      }
 
     } yield StatisticsGenerator.makeStatistics(
       champions = champions,

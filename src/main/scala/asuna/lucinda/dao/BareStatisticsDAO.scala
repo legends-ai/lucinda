@@ -3,7 +3,6 @@ package asuna.lucinda.dao
 import asuna.lucinda.matches.StatisticsGenerator
 import asuna.lucinda.DAOSettings
 import asuna.lucinda.filters.MatchFilterSpaceHelpers
-import asuna.lucinda.statistics.StatisticsAggregator
 import asuna.proto.league._
 import asuna.proto.league.alexandria.StoredStatistics
 import asuna.proto.league.lucinda.{ Statistics, StatisticsKey }
