@@ -23,17 +23,19 @@ class StatisticsDAO(bareDAO: BareStatisticsDAO) {
   ): Task[Statistics] = {
     bareDAO.get(
       BareStatisticsDAO.Key(
-        allChampions = allChampions,
-        patches = patches,
-        patchNeighborhood = patchNeighborhood,
-        prevPatch = prevPatch,
+        base = BaseStatisticsDAO.Key(
+          allChampions = allChampions,
+          patches = patches,
+          patchNeighborhood = patchNeighborhood,
+          prevPatch = prevPatch,
 
-        champions = champions,
-        tiers = tiers,
-        regions = regions,
-        roles = roles,
-        enemies = enemies,
-        queues = queues
+          champions = champions,
+          tiers = tiers,
+          regions = regions,
+          roles = roles,
+          enemies = enemies,
+          queues = queues
+        )
       )
     ) map { stats =>
       MinPickRateDecorator.decorate(minPickRate, 10, stats)

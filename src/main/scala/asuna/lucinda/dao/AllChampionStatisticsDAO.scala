@@ -70,26 +70,30 @@ class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO) {
       case Some(patch) => {
         val prevFut = bareDAO.get(
           BareAllChampionStatisticsDAO.Key(
-            allChampions,
-            tiers,
-            Set(patch),
-            regions,
-            roles,
-            queues,
-            enemies,
-            reverse
+            BaseAllChampionStatisticsDAO.Key(
+              allChampions,
+              tiers,
+              Set(patch),
+              regions,
+              roles,
+              queues,
+              enemies,
+              reverse
+            )
           )
         )
         val curFut = bareDAO.get(
           BareAllChampionStatisticsDAO.Key(
-            allChampions,
-            tiers,
-            patches,
-            regions,
-            roles,
-            queues,
-            enemies,
-            reverse
+            BaseAllChampionStatisticsDAO.Key(
+              allChampions,
+              tiers,
+              patches,
+              regions,
+              roles,
+              queues,
+              enemies,
+              reverse
+            )
           )
         )
         (prevFut |@| curFut).map { (prev, cur) =>
@@ -99,12 +103,21 @@ class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO) {
       case None => {
         bareDAO.get(
           BareAllChampionStatisticsDAO.Key(
-            allChampions, tiers, patches, regions,
-            roles, queues, enemies, reverse
+            BaseAllChampionStatisticsDAO.Key(
+              allChampions,
+              tiers,
+              patches,
+              regions,
+              roles,
+              queues,
+              enemies,
+              reverse
+            )
           )
         )
       }
     }
   }
+
 
 }

@@ -1,5 +1,6 @@
 package asuna.lucinda.dao
 
+import com.timgroup.statsd.StatsDClient
 import java.util.concurrent.ConcurrentHashMap
 import com.google.protobuf.timestamp.Timestamp
 import monix.eval.Task
@@ -9,7 +10,6 @@ import monix.reactive.OverflowStrategy.DropNew
 import monix.reactive.subjects.PublishToOneSubject
 import asuna.lucinda.DAOSettings
 import scala.concurrent.duration.Duration
-import com.timgroup.statsd.NonBlockingStatsDClient
 import cats.implicits._
 
 /**
@@ -90,7 +90,7 @@ trait PersistentDAO[I, S, O] extends EphemeralDAO[I, O] {
   */
 abstract class RefreshableDAO[I, S, O](
   settings: DAOSettings
-)(implicit statsd: NonBlockingStatsDClient) extends PersistentDAO[I, S, O] {
+)(implicit statsd: StatsDClient) extends PersistentDAO[I, S, O] {
 
   val refreshes = PublishToOneSubject[I]
 
@@ -154,7 +154,7 @@ abstract class RefreshableDAO[I, S, O](
 
 abstract class RefreshableProtoDAO[I, S, O](
   settings: DAOSettings
-)(implicit statsd: NonBlockingStatsDClient) extends RefreshableDAO[I, S, O](settings) {
+)(implicit statsd: StatsDClient) extends RefreshableDAO[I, S, O](settings) {
 
   def creationTs(stored: S): Option[Timestamp]
 

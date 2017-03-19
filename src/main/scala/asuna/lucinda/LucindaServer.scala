@@ -2,8 +2,8 @@ package asuna.lucinda
 
 import asuna.common.AsunaError
 import scala.concurrent.{ ExecutionContext, Future }
-import monix.execution.Scheduler.Implicits.global
 
+import monix.execution.Scheduler
 import asuna.common.BaseGrpcService
 import asuna.proto.league.{ Queue, MatchSum }
 import asuna.proto.league.alexandria.AlexandriaGrpc
@@ -15,27 +15,36 @@ import asuna.proto.league.vulgate.rpc.GetAggregationFactorsRequest
 import asuna.lucinda.dao._
 import cats.implicits._
 
-class LucindaServer(args: Seq[String])
+class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
     extends BaseGrpcService(args, LucindaConfigParser, LucindaGrpc.bindService)
     with LucindaGrpc.Lucinda {
 
   val alexandria = AlexandriaGrpc.stub(clientFor("alexandria"))
   val vulgate = VulgateGrpc.stub(clientFor("vulgate"))
 
+  val summonerSumFetcher = new SummonerSumFetcher(alexandria)
+  val allSumFetcher = new AllSumFetcher(alexandria)
+
   lazy val bareAllChampionStatisticsDAO = new BareAllChampionStatisticsDAO(
-    config.service.allChampionStatisticsDAOSettings, alexandria, statsd)
+    config.service.allChampionStatisticsDAOSettings,
+    alexandria,
+    statsd,
+    allSumFetcher
+  )
   lazy val allChampionStatisticsDAO = new AllChampionStatisticsDAO(bareAllChampionStatisticsDAO)
   bareAllChampionStatisticsDAO.startRefreshing
 
   lazy val bareStatisticsDAO = new BareStatisticsDAO(
-    config.service.statisticsDAOSettings, alexandria, allChampionStatisticsDAO, statsd)
+    config.service.statisticsDAOSettings, alexandria,
+    statsd, allChampionStatisticsDAO, allSumFetcher
+  )
   lazy val statisticsDAO = new StatisticsDAO(bareStatisticsDAO)
   bareStatisticsDAO.startRefreshing
 
   lazy val matchupDAO = new MatchupDAO(allChampionStatisticsDAO)
 
-  lazy val summonerChampionsDAO = new SummonerChampionsDAO(alexandria)
-  lazy val summonerStatisticsDAO = new SummonerStatisticsDAO(alexandria, summonerChampionsDAO)
+  lazy val summonerChampionsDAO = new SummonerChampionsDAO(alexandria, summonerSumFetcher)
+  lazy val summonerStatisticsDAO = new SummonerStatisticsDAO(alexandria, summonerChampionsDAO, summonerSumFetcher)
 
   override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
     if (!req.query.isDefined) {
@@ -144,7 +153,7 @@ class LucindaServer(args: Seq[String])
         patches = req.patches.toSet,
         queues = req.queues.toSet,
         enemyIds = req.enemyIds.toSet
-      )
+      ).runAsync
     } yield results
   }
 
@@ -161,18 +170,20 @@ class LucindaServer(args: Seq[String])
           patches = req.patches
         )
       )
-      results <- summonerStatisticsDAO.get(
-        id = req.summonerId.get,
-        allChampions = factors.champions.toSet,
-        patchNeighborhood = factors.patchNeighborhood,
-        prevPatch = factors.prevPatches.get(factors.earliestPatch),
+      results <- summonerStatisticsDAO.compute(
+        SummonerStatisticsDAO.Key(
+          id = req.summonerId.get,
+          allChampions = factors.champions.toSet,
+          patches = req.patches.toSet,
+          patchNeighborhood = factors.patchNeighborhood,
+          prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
-        champions = req.championIds.toSet,
-        roles = req.roles.toSet,
-        patches = req.patches.toSet,
-        queues = req.queues.toSet,
-        enemyIds = req.enemyChampionIds.toSet
-      )
+          champions = req.championIds.toSet,
+          roles = req.roles.toSet,
+          queues = req.queues.toSet,
+          enemies = req.enemyChampionIds.toSet
+        )
+      ).runAsync
     } yield results
   }
 
