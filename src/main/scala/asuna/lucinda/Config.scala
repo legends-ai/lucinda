@@ -23,6 +23,8 @@ case class DAOSettings(
   expiryTime: Duration = 15.minutes
 )
 
+// TODO(igm): add flags for dao settings
+
 object LucindaConfigParser extends ConfigParser[LucindaConfig](
   name = BuildInfo.name,
   version = BuildInfo.version,
