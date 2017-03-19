@@ -134,9 +134,9 @@ object StatisticsGenerator {
     }
     Statistics.Deltas.Delta(
       zeroToTen = get(_.zeroToTen, quot.flatMap(_.zeroToTen)),
-      tenToTwenty = get(_.tenToTwenty, quot.flatMap(_.zeroToTen)),
-      twentyToThirty = get(_.twentyToThirty, quot.flatMap(_.zeroToTen)),
-      thirtyToEnd = get(_.thirtyToEnd, quot.flatMap(_.zeroToTen))
+      tenToTwenty = get(_.tenToTwenty, quot.flatMap(_.tenToTwenty)),
+      twentyToThirty = get(_.twentyToThirty, quot.flatMap(_.twentyToThirty)),
+      thirtyToEnd = get(_.thirtyToEnd, quot.flatMap(_.thirtyToEnd))
     ).some
   }
 
