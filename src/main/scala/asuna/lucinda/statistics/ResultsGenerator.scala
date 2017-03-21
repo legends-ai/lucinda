@@ -110,8 +110,12 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
     val pickRateMap = for {
       plays <- sums.scalars.map(_.plays)
     } yield {
+      // total number of plays across all champions
       val total = plays.values.sum
-      plays.mapValues(_.toDouble / total)
+      // total number of games. 10 since 10 champs per game.
+      // TODO(igm): tweak based off game mode. twisted treeline?
+      val totalGames = total / 10
+      plays.mapValues(_.toDouble / totalGames)
     }
     val banRateMap = for {
       banCount <- sums.subscalars.map(_.bans.mapValues(_.plays))
