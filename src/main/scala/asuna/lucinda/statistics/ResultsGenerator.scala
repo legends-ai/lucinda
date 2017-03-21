@@ -84,8 +84,8 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
       v * sumsMap.get(k).orEmpty
     }
 
-    // average of the value
-    val average =  statsMap.size match {
+    // (weighted) average of the value across entire pairs map
+    val average =  pairsMap.size match {
       case 0 => 0
       case _ => pairsMap.values.sum / pairsMap.values.size
     }
@@ -106,17 +106,14 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
   }
 
   def derivatives: Results.Derivatives = {
-    val counts = sums.scalars.map(_.plays).orEmpty
-    val pickRateMap = for {
-      plays <- sums.scalars.map(_.plays)
-    } yield {
-      // total number of plays across all champions
-      val total = plays.values.sum
-      // total number of games. 10 since 10 champs per game.
-      // TODO(igm): tweak based off game mode. twisted treeline?
-      val totalGames = total / 10
-      plays.mapValues(_.toDouble / totalGames)
-    }
+    // map of total games played per champion
+    val plays = sums.scalars.map(_.plays).orEmpty
+
+    // total number of games. div by 10 since 10 champs per game.
+    // TODO(igm): tweak based off game mode. twisted treeline?
+    val totalGames = plays.values.sum / 10
+    val pickRateMap = plays.mapValues(_.toDouble / totalGames)
+
     val banRateMap = for {
       banCount <- sums.subscalars.map(_.bans.mapValues(_.plays))
     } yield {
@@ -126,8 +123,8 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
       bans.mapValues(_.toDouble / total)
     }
     Results.Derivatives(
-      picks = makeStat(pickRateMap.orEmpty, counts),
-      bans = makeStat(banRateMap.orEmpty, counts)
+      picks = makeStat(pickRateMap, plays),
+      bans = makeStat(banRateMap.orEmpty, plays)
     )
   }
 
