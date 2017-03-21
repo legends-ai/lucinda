@@ -31,7 +31,7 @@ object BaseStatisticsDAO {
     lazy val space = MatchFilterSpaceHelpers.generate(
       champions, patches, tiers, regions, enemies, roles, queues)
 
-    lazy val byRoleFilters: Map[Role, MatchFiltersSpace] = (Role.values.toSet - Role.UNDEFINED_ROLE)
+    lazy val byRoleFilters: Map[Role, MatchFiltersSpace] = Role.values
       .map(r => (r, r)).toMap
       .mapValues { someRole =>
         space.copy(roles = Seq(someRole))
