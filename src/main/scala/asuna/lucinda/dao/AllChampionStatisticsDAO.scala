@@ -1,6 +1,7 @@
 package asuna.lucinda.dao
 
 import asuna.lucinda.statistics.ChangeMarker
+import asuna.proto.league.lucinda.rpc.Constraints
 import monix.eval.Task
 import asuna.lucinda.statistics.FilterChampionsHelpers._
 import asuna.proto.league._
@@ -8,35 +9,55 @@ import asuna.proto.league.lucinda.AllChampionStatistics
 import cats.implicits._
 import monix.cats._
 
-class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO) {
+object AllChampionStatisticsDAO {
 
-  /**
-   * Fetches a AllChampionStatistics.Results object.
-   */
-  def getResults(
+  case class Key(
     allChampions: Set[Int],
+    tiers: Set[Tier],
     prevPatch: Option[String],
     patches: Set[String],
-    tiers: Set[Tier],
     regions: Set[Region],
     roles: Set[Role],
     queues: Set[Queue],
     enemies: Set[Int],
-    minPickRate: Double = 0
-  ): Task[AllChampionStatistics.Results] = {
-    for {
-      statistics <- get(
-        allChampions = allChampions,
-        patches = patches,
-        prevPatch = prevPatch,
-        tiers = tiers,
-        regions = regions,
-        roles = roles,
-        queues = queues,
-        enemies = enemies,
-        reverse = false
+    reverse: Boolean = false,
+
+    constraints: Constraints = Constraints()
+  ) {
+
+    lazy val bareKey: BareAllChampionStatisticsDAO.Key = {
+      BareAllChampionStatisticsDAO.Key(
+        BaseAllChampionStatisticsDAO.Key(
+          allChampions,
+          tiers,
+          patches,
+          regions,
+          roles,
+          queues,
+          enemies,
+          reverse
+        )
       )
-    } yield {
+    }
+
+    def patchBareKey(patch: String): BareAllChampionStatisticsDAO.Key = {
+      bareKey.copy(bareKey.base.copy(patches = Set(patch)))
+    }
+
+  }
+
+}
+
+class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO)
+  extends EphemeralDAO[AllChampionStatisticsDAO.Key, AllChampionStatistics] {
+
+  import AllChampionStatisticsDAO.Key
+
+  /**
+   * Fetches a AllChampionStatistics.Results object.
+   */
+  def getResults(key: Key): Task[AllChampionStatistics.Results] = {
+    compute(key).map { statistics =>
       // Get the results object
       val results = statistics.results.getOrElse(AllChampionStatistics.Results())
 
@@ -44,7 +65,7 @@ class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO) {
       val pickRates = results.derivatives
         .map(_.picks.mapValues(_.mean)).orEmpty
       val champs = pickRates.filter {
-        case (champ, pickRate) => pickRate >= minPickRate
+        case (champ, pickRate) => pickRate >= key.constraints.minPickRate
       }.keys
 
       // Filter maps for keys that contain the champion
@@ -55,67 +76,22 @@ class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO) {
   /**
     * Gets a AllChampionStatistics object with caching.
     */
-  def get(
-    allChampions: Set[Int],
-    tiers: Set[Tier],
-    patches: Set[String],
-    prevPatch: Option[String],
-    regions: Set[Region],
-    roles: Set[Role],
-    queues: Set[Queue],
-    enemies: Set[Int],
-    reverse: Boolean = false
-  ): Task[AllChampionStatistics] = {
-    prevPatch match {
+  def compute(key: Key): Task[AllChampionStatistics] = {
+    val curTask = bareDAO.get(
+      key.bareKey,
+      forceRefresh = key.constraints.forceRefresh
+    )
+    key.prevPatch match {
       case Some(patch) => {
-        val prevFut = bareDAO.get(
-          BareAllChampionStatisticsDAO.Key(
-            BaseAllChampionStatisticsDAO.Key(
-              allChampions,
-              tiers,
-              Set(patch),
-              regions,
-              roles,
-              queues,
-              enemies,
-              reverse
-            )
-          )
+        val prevTask = bareDAO.get(
+          key.patchBareKey(patch),
+          forceRefresh = key.constraints.forceRefresh
         )
-        val curFut = bareDAO.get(
-          BareAllChampionStatisticsDAO.Key(
-            BaseAllChampionStatisticsDAO.Key(
-              allChampions,
-              tiers,
-              patches,
-              regions,
-              roles,
-              queues,
-              enemies,
-              reverse
-            )
-          )
-        )
-        (prevFut |@| curFut).map { (prev, cur) =>
+        (prevTask |@| curTask).map { (prev, cur) =>
           ChangeMarker.mark(cur, prev)
         }
       }
-      case None => {
-        bareDAO.get(
-          BareAllChampionStatisticsDAO.Key(
-            BaseAllChampionStatisticsDAO.Key(
-              allChampions,
-              tiers,
-              patches,
-              regions,
-              roles,
-              queues,
-              enemies,
-              reverse
-            )
-          )
-        )
-      }
+      case None => curTask
     }
   }
 

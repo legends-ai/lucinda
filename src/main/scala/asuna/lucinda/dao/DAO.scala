@@ -58,10 +58,11 @@ trait PersistentDAO[I, S, O] extends EphemeralDAO[I, O] {
 
   /**
     * Gets data (possibly from cache), persisting it to a cache.
+    * @param forceRefresh Forces refreshing of data.
     */
-  def get(in: I): Task[O] = {
+  def get(in: I, forceRefresh: Boolean = false): Task[O] = {
     fetch(in) flatMap {
-      case Some(data) => {
+      case Some(data) if !forceRefresh => {
         val update = if (isStale(data)) {
           queueRefresh(in)
         } else {
@@ -69,7 +70,7 @@ trait PersistentDAO[I, S, O] extends EphemeralDAO[I, O] {
         }
         update.map(_ => project(data))
       }
-      case None => refresh(in)
+      case _ => refresh(in)
     }
   }
 
@@ -96,10 +97,8 @@ abstract class RefreshableDAO[I, S, O](
 
   val refreshing = new ConcurrentHashMap[I, Unit]
 
-  val scheduler = Scheduler.computation(
-    name = settings.name,
-    parallelism = settings.concurrency
-  )
+  // use io scheduler to refresh since this makes lots of DB calls.
+  val scheduler = Scheduler.io(name = settings.name)
 
   /**
     * The creation time of the object.
@@ -133,7 +132,7 @@ abstract class RefreshableDAO[I, S, O](
         }
       }
       .foreachL(identity)
-  }
+ }
 
   def startRefreshing: Future[Unit] = {
     initRefresher.runAsync(scheduler)

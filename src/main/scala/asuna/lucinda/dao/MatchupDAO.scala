@@ -21,16 +21,18 @@ class MatchupDAO(allChampionStatisticsDAO: AllChampionStatisticsDAO) {
   ): Task[Vector[MatchupOverview]] = {
     for {
       // First, let's get our statistics against each enemy.
-      championStatistics <- allChampionStatisticsDAO.get(
-        allChampions = allChampions,
-        prevPatch = prevPatch,
-        tiers = tiers,
-        patches = patches,
-        regions = regions,
-        roles = roles,
-        queues = queues,
-        enemies = Set(champion),
-        reverse = true
+      championStatistics <- allChampionStatisticsDAO.compute(
+        AllChampionStatisticsDAO.Key(
+          allChampions = allChampions,
+          prevPatch = prevPatch,
+          tiers = tiers,
+          patches = patches,
+          regions = regions,
+          roles = roles,
+          queues = queues,
+          enemies = Set(champion),
+          reverse = true
+        )
       )
     } yield {
       // First, let's extract all of our maps of interest.

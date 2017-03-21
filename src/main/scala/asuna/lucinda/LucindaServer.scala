@@ -1,6 +1,7 @@
 package asuna.lucinda
 
 import asuna.common.AsunaError
+import asuna.proto.league.lucinda.rpc.Constraints
 import scala.concurrent.{ ExecutionContext, Future }
 
 import monix.execution.Scheduler
@@ -59,17 +60,18 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
         )
       )
       results <- allChampionStatisticsDAO.getResults(
-        allChampions = factors.champions.toSet,
-        prevPatch = factors.prevPatches.get(factors.earliestPatch),
-
-        patches = key.patches.toSet,
-        tiers = key.tiers.toSet,
-        regions = key.regions.toSet,
-        roles = key.roles.toSet,
-        queues = defaultQueuesIfEmpty(key.queues),
-        enemies = key.enemyIds.toSet,
-
-        minPickRate = req.constraints.map(_.minPickRate).orEmpty
+        AllChampionStatisticsDAO.Key(
+          allChampions = factors.champions.toSet,
+          prevPatch = factors.prevPatches.get(factors.earliestPatch),
+          patches = key.patches.toSet,
+          tiers = key.tiers.toSet,
+          regions = key.regions.toSet,
+          roles = key.roles.toSet,
+          queues = defaultQueuesIfEmpty(key.queues),
+          enemies = key.enemyIds.toSet,
+          reverse = false,
+          constraints = req.constraints.getOrElse(Constraints())
+        )
       ).runAsync
     } yield results
   }
@@ -86,20 +88,22 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
           patches = key.patches
         )
       )
-      statistics <- statisticsDAO.get(
-        allChampions = factors.champions.toSet,
-        patchNeighborhood = factors.patchNeighborhood,
-        prevPatch = factors.prevPatches.get(factors.earliestPatch),
+      statistics <- statisticsDAO.compute(
+        StatisticsDAO.Key(
+          allChampions = factors.champions.toSet,
+          patchNeighborhood = factors.patchNeighborhood,
+          prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
-        patches = key.patches.toSet,
-        champions = key.championIds.toSet,
-        tiers = key.tiers.toSet,
-        regions = key.regions.toSet,
-        roles = key.roles.toSet,
-        queues = defaultQueuesIfEmpty(key.queues),
-        enemies = key.enemyIds.toSet,
+          patches = key.patches.toSet,
+          champions = key.championIds.toSet,
+          tiers = key.tiers.toSet,
+          regions = key.regions.toSet,
+          roles = key.roles.toSet,
+          queues = defaultQueuesIfEmpty(key.queues),
+          enemies = key.enemyIds.toSet,
 
-        minPickRate = req.constraints.map(_.minPickRate).orEmpty
+          constraints = req.constraints.get
+        )
       ).runAsync
     } yield statistics
   }

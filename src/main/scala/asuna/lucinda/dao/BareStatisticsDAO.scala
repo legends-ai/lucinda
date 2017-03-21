@@ -80,29 +80,33 @@ class BareStatisticsDAO(
 
   def fetchACS(in: BareStatisticsDAO.Key): Task[AllChampionStatistics] = {
     val base = in.base
-    allChampionStatisticsDAO.get(
-      base.allChampions,
-      base.tiers,
-      base.patches,
-      base.prevPatch,
-      base.regions,
-      base.roles,
-      base.queues,
-      base.enemies
+    allChampionStatisticsDAO.compute(
+      AllChampionStatisticsDAO.Key(
+        allChampions = base.allChampions,
+        tiers = base.tiers,
+        patches = base.patches,
+        prevPatch = base.prevPatch,
+        regions = base.regions,
+        roles = base.roles,
+        queues = base.queues,
+        enemies = base.enemies
+      )
     )
   }
 
   def fetchPatchACS(in: BareStatisticsDAO.Key, patch: String): Task[AllChampionStatistics] = {
     val base = in.base
-    allChampionStatisticsDAO.get(
-      base.allChampions,
-      base.tiers,
-      Set(patch),
-      None,
-      base.regions,
-      base.roles,
-      base.queues,
-      base.enemies
+    allChampionStatisticsDAO.compute(
+      AllChampionStatisticsDAO.Key(
+        allChampions = base.allChampions,
+        tiers = base.tiers,
+        patches = Set(patch),
+        prevPatch = None,
+        regions = base.regions,
+        roles = base.roles,
+        queues = base.queues,
+        enemies = base.enemies
+      )
     )
   }
 
