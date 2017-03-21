@@ -8,6 +8,7 @@ object FilterChampionsHelpers {
 
     def filterChampions(champs: Set[Int]): Results.Scalars = {
       scalars.copy(
+        plays = scalars.plays.filterKeys(champs),
         wins = scalars.wins.filterKeys(champs),
         goldEarned = scalars.goldEarned.filterKeys(champs),
         kills = scalars.kills.filterKeys(champs),

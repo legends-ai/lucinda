@@ -46,6 +46,7 @@ object ChangeMarker {
       scalars: AllChampionStatistics.Results.Scalars, prev: AllChampionStatistics.Results.Scalars
     ) = {
       AllChampionStatistics.Results.Scalars(
+        plays = scalars.plays |++| prev.plays,
         wins = scalars.wins |++| prev.wins,
         goldEarned = scalars.goldEarned |++| prev.goldEarned,
         kills = scalars.kills |++| prev.kills,
