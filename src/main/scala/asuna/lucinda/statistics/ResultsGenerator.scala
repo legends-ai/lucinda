@@ -21,6 +21,7 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
 
   def makeScalars(scalars: Quotients.Scalars): Results.Scalars = {
     Results.Scalars(
+      plays = playStat,
       wins = makeStat(scalars.wins, scalars.plays),
       goldEarned = makeStat(scalars.goldEarned, scalars.plays),
       kills = makeStat(scalars.kills, scalars.plays),
@@ -101,6 +102,15 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
         meanAcrossRole = average,
         // TODO(igm): is this what we mean by percentile?
         percentile = 1 - index.toDouble / statsMap.size
+      )
+    }
+  }
+
+  def playStat: Map[Int, Statistic] = {
+    val plays = sums.scalars.map(_.plays).orEmpty
+    plays.mapValues { ct =>
+      Statistic(
+        mean = ct.toDouble
       )
     }
   }
