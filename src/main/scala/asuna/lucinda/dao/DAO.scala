@@ -158,7 +158,7 @@ abstract class RefreshableDAO[I, S, O](
     * The batcher batches processing of equal inputs.
     */
   val batcher = new TaskBatcher[I, O](settings.batchConcurrency) {
-    override def process(in: I): Task[O] = get(in)
+    override def process(in: I): Task[O] = refresh(in)
   }
 
   /**
