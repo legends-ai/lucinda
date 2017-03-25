@@ -77,13 +77,13 @@ class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO)
     * Gets a AllChampionStatistics object with caching.
     */
   def compute(key: Key): Task[AllChampionStatistics] = {
-    val curTask = bareDAO.get(
+    val curTask = bareDAO.batchedGet(
       key.bareKey,
       forceRefresh = key.constraints.forceRefresh
     )
     key.prevPatch match {
       case Some(patch) => {
-        val prevTask = bareDAO.get(
+        val prevTask = bareDAO.batchedGet(
           key.patchBareKey(patch),
           forceRefresh = key.constraints.forceRefresh
         )

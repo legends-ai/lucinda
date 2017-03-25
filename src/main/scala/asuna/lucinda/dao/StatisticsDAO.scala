@@ -54,7 +54,7 @@ object StatisticsDAO {
 class StatisticsDAO(bareDAO: BareStatisticsDAO) {
 
   def compute(key: StatisticsDAO.Key): Task[Statistics] = {
-    bareDAO.get(key.baseKey, forceRefresh = key.constraints.forceRefresh).map { stats =>
+    bareDAO.batchedGet(key.baseKey, forceRefresh = key.constraints.forceRefresh).map { stats =>
       MinPickRateDecorator.decorate(key.constraints.minPickRate, 10, stats)
     }
   }

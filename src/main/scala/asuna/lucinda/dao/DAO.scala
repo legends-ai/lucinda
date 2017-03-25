@@ -1,5 +1,6 @@
 package asuna.lucinda.dao
 
+import asuna.lucinda.TaskBatcher
 import com.timgroup.statsd.StatsDClient
 import java.util.concurrent.ConcurrentHashMap
 import com.google.protobuf.timestamp.Timestamp
@@ -125,7 +126,7 @@ abstract class RefreshableDAO[I, S, O](
       // we drop refresh requests that cannot be processed.
       // TODO(igm): add logging for this behavior
       .whileBusyBuffer(DropNew(settings.bufferSize))
-      .mapAsync(settings.concurrency) { el =>
+      .mapAsync(settings.refreshConcurrency) { el =>
         refresh(el) map { out =>
           refreshing.remove(el)
           out
@@ -147,6 +148,22 @@ abstract class RefreshableDAO[I, S, O](
         System.currentTimeMillis() - time
       )
     } yield result
+  }
+
+  /**
+    * The batcher batches processing of equal inputs.
+    */
+  val batcher = new TaskBatcher[I, O](settings.batchConcurrency) {
+    override def process(in: I): Task[O] = get(in)
+  }
+
+  def batchedGet(in: I, forceRefresh: Boolean = false): Task[O] = {
+    if (forceRefresh) {
+      // TODO(igm): allow batching force refreshes
+      get(in, forceRefresh = true)
+    } else {
+      batcher.enqueue(in)
+    }
   }
 
 }

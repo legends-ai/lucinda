@@ -19,7 +19,8 @@ case class LucindaConfig(
 case class DAOSettings(
   name: String,
   bufferSize: Int = 200,
-  concurrency: Int = 10,
+  refreshConcurrency: Int = 5,
+  batchConcurrency: Int = 10,
   expiryTime: Duration = 15.minutes
 )
 
