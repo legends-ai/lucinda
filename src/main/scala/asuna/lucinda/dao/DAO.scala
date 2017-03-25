@@ -137,7 +137,10 @@ abstract class RefreshableDAO[I, S, O](
  }
 
   def startRefreshing: Future[Unit] = {
-    initRefresher.runAsync(scheduler)
+    Task
+      .gatherUnordered(List(initRefresher, batcher.start))
+      .map(_ => ())
+      .runAsync(scheduler)
   }
 
   override def refresh(in: I): Task[O] = {

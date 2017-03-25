@@ -44,7 +44,7 @@ abstract class TaskBatcher[I, O](concurrency: Int) {
   /**
     * Starts processing elements.
     */
-  final def start(implicit s: Scheduler): Task[Unit] = {
+  final def start: Task[Unit] = {
     queue
       .mapAsync(concurrency) { el =>
         val task = for {
