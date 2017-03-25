@@ -7,7 +7,7 @@ import asuna.proto.league.lucinda.AllChampionStatistics
 import monix.eval.Task
 import cats.implicits._
 import monix.cats._
-import asuna.lucinda.util.TaskHelpers._
+import asuna.common.monix.TaskHelpers._
 
 object BaseAllChampionStatisticsDAO {
 
