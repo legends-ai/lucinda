@@ -9,6 +9,7 @@ import scala.util.{ Failure, Success }
 
 /**
   * Bidirectional task batcher.
+  * TODO(igm): allow specifying throughput
   */
 abstract class TaskBatcher[I, O](concurrency: Int) {
   import TaskBatcher.Element

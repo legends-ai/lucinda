@@ -26,6 +26,7 @@ trait EphemeralDAO[I, O] {
 
 /**
   * Persistent data object. Supports TTLs on data.
+  * TODO(igm): rethink this class hierarchy
   *
   * @tparam I the key.
   * @tparam S the stored value.
@@ -157,12 +158,21 @@ abstract class RefreshableDAO[I, S, O](
     override def process(in: I): Task[O] = get(in)
   }
 
-  def batchedGet(in: I, forceRefresh: Boolean = false): Task[O] = {
-    if (forceRefresh) {
-      // TODO(igm): allow batching force refreshes
-      get(in, forceRefresh = true)
-    } else {
-      batcher.enqueue(in)
+  /**
+    * Gets data (possibly from cache), persisting it to a cache.
+    * @param forceRefresh Forces refreshing of data.
+    */
+  override def get(in: I, forceRefresh: Boolean = false): Task[O] = {
+    fetch(in) flatMap {
+      case Some(data) if !forceRefresh => {
+        val update = if (isStale(data)) {
+          batcher.enqueue(in)
+        } else {
+          Task.unit
+        }
+        update.map(_ => project(data))
+      }
+      case _ => refresh(in)
     }
   }
 
