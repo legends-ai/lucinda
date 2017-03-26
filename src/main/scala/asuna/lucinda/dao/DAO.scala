@@ -169,13 +169,13 @@ abstract class RefreshableDAO[I, S, O](
     fetch(in) flatMap {
       case Some(data) if !forceRefresh => {
         val update = if (isStale(data)) {
-          batcher.enqueue(in)
+          queueRefresh(in)
         } else {
           Task.unit
         }
         update.map(_ => project(data))
       }
-      case _ => refresh(in)
+      case _ => batcher.enqueue(in)
     }
   }
 
