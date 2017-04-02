@@ -167,6 +167,7 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
     if (!req.summonerId.isDefined) {
       Future.failed(new AsunaError("summoner id unspecified"))
     }
+
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(

@@ -58,7 +58,7 @@ class SummonerOverviewDAO(summonerChampions: SummonerChampionsDAO)
                 firstBlood = results.firstBlood.get(champ)
               )
               // top 10 champions. TODO(igm): configurable? in request?
-            }.sortBy(_.plays.map(_.mean).orEmpty).take(10)
+            }.sortBy(_.plays.map(_.mean).orEmpty).reverse.take(10)
           )
       }.getOrElse(SummonerOverview())
     }
