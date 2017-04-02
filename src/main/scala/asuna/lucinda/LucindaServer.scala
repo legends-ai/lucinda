@@ -47,6 +47,8 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
   lazy val summonerChampionsDAO = new SummonerChampionsDAO(alexandria, summonerSumFetcher)
   lazy val summonerStatisticsDAO = new SummonerStatisticsDAO(alexandria, summonerChampionsDAO, summonerSumFetcher)
 
+  lazy val summonerOverviewDAO = new SummonerOverviewDAO(summonerChampionsDAO)
+
   override def getAllChampions(req: GetAllChampionsRequest): Future[AllChampionStatistics.Results] = {
     if (!req.query.isDefined) {
       Future.failed(new AsunaError("query unspecified"))
@@ -161,7 +163,31 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
     } yield results
   }
 
-  def getSummonerOverview(req: GetSummonerRequest): Future[SummonerOverview] = ???
+  def getSummonerOverview(req: GetSummonerRequest): Future[SummonerOverview] = {
+    if (!req.summonerId.isDefined) {
+      Future.failed(new AsunaError("summoner id unspecified"))
+    }
+    for {
+      factors <- vulgate.getAggregationFactors(
+        GetAggregationFactorsRequest(
+          context = VulgateHelpers.makeVulgateContext(req.patches, req.summonerId.get.region).some,
+          patches = req.patches
+        )
+      )
+      results <- summonerOverviewDAO.compute(
+        SummonerOverviewDAO.Key(
+          id = req.summonerId.get,
+          allChampions = factors.champions.toSet,
+          prevPatch = factors.prevPatches.get(factors.earliestPatch),
+
+          roles = req.roles.toSet,
+          patches = req.patches.toSet,
+          queues = req.queues.toSet,
+          enemyChampionIds = req.enemyChampionIds.toSet
+        )
+      ).runAsync
+    } yield results
+  }
 
   def getSummonerStatistics(req: GetSummonerRequest): Future[Statistics] = {
     if (!req.summonerId.isDefined) {
