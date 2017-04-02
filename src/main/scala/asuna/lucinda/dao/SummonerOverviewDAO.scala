@@ -46,19 +46,22 @@ class SummonerOverviewDAO(summonerChampions: SummonerChampionsDAO)
             assists = sums.assists.values.sum,
 
             // champion data
-            championOverviews = key.allChampions.toList.map { champ =>
-              SummonerOverview.ChampionOverview(
-                id = champ,
-                plays = results.plays.get(champ),
-                wins = results.wins.get(champ),
-                kills = results.kills.get(champ),
-                deaths = results.deaths.get(champ),
-                assists = results.assists.get(champ),
-                minionsKilled = results.minionsKilled.get(champ),
-                firstBlood = results.firstBlood.get(champ)
-              )
+            championOverviews = key.allChampions.toList
+              .map(c => c -> results.plays.get(c).map(_.mean).orEmpty)
               // top 10 champions. TODO(igm): configurable? in request?
-            }.sortBy(_.plays.map(_.mean).orEmpty).reverse.take(10)
+              .filter(_._2 > 0).sortBy(_._2).reverse.take(10)
+              .map { case (champ, _) =>
+                SummonerOverview.ChampionOverview(
+                  id = champ,
+                  plays = results.plays.get(champ),
+                  wins = results.wins.get(champ),
+                  kills = results.kills.get(champ),
+                  deaths = results.deaths.get(champ),
+                  assists = results.assists.get(champ),
+                  minionsKilled = results.minionsKilled.get(champ),
+                  firstBlood = results.firstBlood.get(champ)
+                )
+              }
           )
       }.getOrElse(SummonerOverview())
     }
