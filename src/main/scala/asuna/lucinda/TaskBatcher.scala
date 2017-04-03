@@ -47,12 +47,16 @@ abstract class TaskBatcher[I, O](concurrency: Int) {
   final def start: Task[Unit] = {
     queue
       .mapAsync(concurrency) { el =>
+        println(s"process ${el.in} ${processing.size}")
         val task = for {
           result <- process(el.in).materialize
           _ = processing.remove(el)
         } yield result
         task.map {
-          case Success(x) => el.promise.success(x)
+          case Success(x) => {
+            el.promise.success(x)
+            println(s"done ${el.in}")
+          }
           case Failure(err) => el.promise.failure(err)
         }
       }

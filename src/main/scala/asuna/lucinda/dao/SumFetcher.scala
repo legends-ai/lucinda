@@ -28,7 +28,11 @@ class SummonerSumFetcher(alexandria: Alexandria) extends SumFetcher[SummonerKey]
 class AllSumFetcher(alexandria: Alexandria) extends SumFetcher[AllKey] {
   def fetchSums(ctx: AllKey, space: MatchFiltersSpace): Task[MatchSum] = {
     Task.deferFuture {
+      println(s"gimme some space")
       alexandria.getSum(GetSumRequest(space = space.some))
+    }.map { x =>
+      println("done")
+      x
     }
   }
 }
