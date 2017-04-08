@@ -46,7 +46,7 @@ trait PathMerger[T] {
       val lists = statsPaths.filter { path2 =>
         order.tryCompare(path, path2) match {
           // We will make sure path contains all of path 2.
-          case Some(res) => res >= 0
+          case Some(res) => res > 0
           // If incomparable, not useful.
           case None => false
         }
@@ -66,7 +66,7 @@ object PathMerger {
     * Kind of like subset but cares about position and order.
     * @param E -- path element
     */
-  implicit def sequencePartialOrder[E]: PartialOrder[Seq[E]] = PartialOrder.from { (a, b) =>
+  def sequencePartialOrder[E]: PartialOrder[Seq[E]] = PartialOrder.from { (a, b) =>
     val alen = a.size
     val blen = b.size
     if (alen == blen) {
@@ -94,18 +94,18 @@ object PathMerger {
 
   implicit object skillOrderMerger extends PathMerger[SkillOrder] {
 
+    val evolutions = Set(Ability.Q_EV, Ability.W_EV, Ability.E_EV, Ability.R_EV)
+
     override def isPathIncluded(in: SkillOrder, others: Seq[SkillOrder]): Boolean = {
-      if (in.skillOrder.exists(x => x == Ability.Q_EV
-                                 || x == Ability.W_EV
-                                 || x == Ability.E_EV
-                                 || x == Ability.R_EV)) {
+      if (in.skillOrder.exists(evolutions)) {
         in.skillOrder.size == 21
       } else {
         in.skillOrder.size == 18
       }
     }
 
-    override val order: PartialOrder[SkillOrder] = PartialOrder.by(_.skillOrder)
+    override val order: PartialOrder[SkillOrder] =
+      sequencePartialOrder[Ability].on[SkillOrder](_.skillOrder)
 
     def isStatsIncluded(in: SkillOrder): Boolean = true
 
@@ -117,7 +117,8 @@ object PathMerger {
 
   implicit object itemListMerger extends PathMerger[ItemList] {
 
-    override val order: PartialOrder[ItemList] = PartialOrder.by(_.items)
+    override val order: PartialOrder[ItemList] =
+      sequencePartialOrder[Int].on[ItemList](_.items)
 
     def isStatsIncluded(in: ItemList): Boolean = {
       if (in.items.contains(sightstone)) {
