@@ -6,6 +6,7 @@ import asuna.proto.league.lucinda.MatchQuotient
 import MatchQuotient._
 import MatchQuotient.Collections._
 import cats.implicits._
+import asuna.proto.league.MatchSum.Collections.Trinket
 
 object QuotientGenerator {
 
@@ -16,11 +17,25 @@ object QuotientGenerator {
     sum
       .copy(collections = sum.collections.map { colls =>
         colls.copy(
+          startingTrinkets = removeZeroTrinket(colls.startingTrinkets),
           skillOrders = colls.skillOrders.mergePaths,
           coreBuilds = colls.coreBuilds.mergePaths
         )
       })
       .quotient
+  }
+
+  val defaultTrinket = 3340
+
+  private def removeZeroTrinket(trinkets: Seq[Trinket]): Seq[Trinket] =  {
+    val (zero, nonzero) = trinkets.toList.partition(_.trinket === 0)
+    nonzero.map { trinket =>
+      if (trinket.trinket === defaultTrinket) {
+        trinket.copy(subscalars = trinket.subscalars |+| zero.map(_.subscalars).combineAll)
+      } else {
+        trinket
+      }
+    }
   }
 
 }
