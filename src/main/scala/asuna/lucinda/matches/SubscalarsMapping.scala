@@ -94,4 +94,22 @@ object SubscalarsMapping {
 
   }
 
+  implicit object ExperienceDistributionMapping extends SubscalarsMapping[SC.ExperienceDistribution, QC.ExperienceDistribution] {
+
+    def build(sum: SC.ExperienceDistribution, quotSub: Option[QSubscalars]) =
+      QC.ExperienceDistribution(experience = sum.experience, subscalars = quotSub)
+
+    def extract(sum: SC.ExperienceDistribution) = sum.subscalars
+
+  }
+
+  implicit object TeamMapping extends SubscalarsMapping[SC.Team, QC.Team] {
+
+    def build(sum: SC.Team, quotSub: Option[QSubscalars]) =
+      QC.Team(teamId = sum.teamId, subscalars = quotSub)
+
+    def extract(sum: SC.Team) = sum.subscalars
+
+  }
+
 }

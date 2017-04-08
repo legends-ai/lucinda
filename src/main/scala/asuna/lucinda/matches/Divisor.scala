@@ -80,6 +80,13 @@ object Divisor {
     }
   }
 
+  implicit object DragonStatDivisor extends Divisor[MatchSum.Statistics.Scalars.DragonStat, MatchQuotient.Statistics.Scalars.DragonStat] {
+    def divide(sum: MatchSum.Statistics.Scalars.DragonStat) = MatchQuotient.Statistics.Scalars.DragonStat(
+      dragon = sum.dragon,
+      value = sum.value.quotient
+    )
+  }
+
   implicit val momentsOptionDivisor = optionDivisor(MomentsDivisor)
 
   implicit object ScalarsDivisor extends Divisor[MatchSum.Statistics.Scalars, MatchQuotient.Statistics.Scalars] {
@@ -108,7 +115,11 @@ object Divisor {
         pentakills = sum.pentakills.quotient,
         physicalDamage = sum.physicalDamage.quotient,
         magicDamage = sum.magicDamage.quotient,
-        trueDamage = sum.trueDamage.quotient
+        trueDamage = sum.trueDamage.quotient,
+        baronsEncountered = sum.baronsEncountered.quotient,
+        baronsKilled = sum.baronsKilled.quotient,
+        dragonsEncountered = sum.dragonsEncountered.map(_.quotient),
+        dragonsKilled = sum.dragonsKilled.map(_.quotient)
       )
     }
   }
@@ -196,7 +207,9 @@ object Divisor {
         allies = sum.allies.quotientC,
         enemies = sum.enemies.quotientC,
         starterItems = sum.starterItems.quotientC,
-        coreBuilds = sum.coreBuilds.quotientC
+        coreBuilds = sum.coreBuilds.quotientC,
+        experienceDistribution = sum.experienceDistribution.quotientC,
+        teams = sum.teams.quotientC
       )
     }
   }
