@@ -3,7 +3,8 @@ package asuna.lucinda.statistics
 import scala.collection.immutable.Map
 
 import asuna.proto.league.lucinda.{ AllChampionStatistics, Statistic }
-import cats.implicits._
+import cats.syntax.semigroup._
+import cats.instances.option._
 import cats.Semigroup
 
 object ChangeMarker {
@@ -17,8 +18,8 @@ object ChangeMarker {
     }
   }
 
-  implicit class CombineStatisticMaps(stat: Map[Int, Statistic]) {
-    def |++|(prev: Map[Int, Statistic]) = {
+  implicit object MarkMapSemigroup extends Semigroup[Map[Int, Statistic]] {
+    def combine(stat: Map[Int, Statistic], prev: Map[Int, Statistic]): Map[Int, Statistic] = {
       stat.transform { (key, value) =>
         prev.get(key) match {
           case Some(v) => value |+| v
@@ -33,10 +34,10 @@ object ChangeMarker {
       delta: AllChampionStatistics.Results.Deltas.Delta, prev: AllChampionStatistics.Results.Deltas.Delta
     ) = {
       AllChampionStatistics.Results.Deltas.Delta(
-        zeroToTen = delta.zeroToTen |++| prev.zeroToTen,
-        tenToTwenty = delta.tenToTwenty |++| prev.tenToTwenty,
-        twentyToThirty = delta.twentyToThirty |++| prev.twentyToThirty,
-        thirtyToEnd = delta.thirtyToEnd |++| prev.thirtyToEnd
+        zeroToTen = delta.zeroToTen |+| prev.zeroToTen,
+        tenToTwenty = delta.tenToTwenty |+| prev.tenToTwenty,
+        twentyToThirty = delta.twentyToThirty |+| prev.twentyToThirty,
+        thirtyToEnd = delta.thirtyToEnd |+| prev.thirtyToEnd
       )
     }
   }
@@ -46,32 +47,32 @@ object ChangeMarker {
       scalars: AllChampionStatistics.Results.Scalars, prev: AllChampionStatistics.Results.Scalars
     ) = {
       AllChampionStatistics.Results.Scalars(
-        plays = scalars.plays |++| prev.plays,
-        wins = scalars.wins |++| prev.wins,
-        goldEarned = scalars.goldEarned |++| prev.goldEarned,
-        kills = scalars.kills |++| prev.kills,
-        deaths = scalars.deaths |++| prev.deaths,
-        assists = scalars.assists |++| prev.assists,
-        damageDealt = scalars.damageDealt |++| prev.damageDealt,
-        damageTaken = scalars.damageTaken |++| prev.damageTaken,
-        minionsKilled = scalars.minionsKilled |++| prev.minionsKilled,
-        teamJungleMinionsKilled = scalars.teamJungleMinionsKilled |++| prev.teamJungleMinionsKilled,
-        enemyJungleMinionsKilled = scalars.enemyJungleMinionsKilled |++| prev.enemyJungleMinionsKilled,
-        structureDamage = scalars.structureDamage |++| prev.structureDamage,
-        killingSpree = scalars.killingSpree |++| prev.killingSpree,
-        wardsBought = scalars.wardsBought |++| prev.wardsBought,
-        wardsPlaced = scalars.wardsPlaced |++| prev.wardsPlaced,
-        wardsKilled = scalars.wardsKilled |++| prev.wardsKilled,
-        crowdControl = scalars.crowdControl |++| prev.crowdControl,
-        firstBlood = scalars.firstBlood |++| prev.firstBlood,
-        firstBloodAssist = scalars.firstBloodAssist |++| prev.firstBloodAssist,
-        doublekills = scalars.doublekills |++| prev.doublekills,
-        triplekills = scalars.triplekills |++| prev.triplekills,
-        quadrakills = scalars.quadrakills |++| prev.quadrakills,
-        pentakills = scalars.pentakills |++| prev.pentakills,
-        physicalDamage = scalars.physicalDamage |++| prev.physicalDamage,
-        magicDamage = scalars.magicDamage |++| prev.magicDamage,
-        trueDamage = scalars.trueDamage |++| prev.trueDamage
+        plays = scalars.plays |+| prev.plays,
+        wins = scalars.wins |+| prev.wins,
+        goldEarned = scalars.goldEarned |+| prev.goldEarned,
+        kills = scalars.kills |+| prev.kills,
+        deaths = scalars.deaths |+| prev.deaths,
+        assists = scalars.assists |+| prev.assists,
+        damageDealt = scalars.damageDealt |+| prev.damageDealt,
+        damageTaken = scalars.damageTaken |+| prev.damageTaken,
+        minionsKilled = scalars.minionsKilled |+| prev.minionsKilled,
+        teamJungleMinionsKilled = scalars.teamJungleMinionsKilled |+| prev.teamJungleMinionsKilled,
+        enemyJungleMinionsKilled = scalars.enemyJungleMinionsKilled |+| prev.enemyJungleMinionsKilled,
+        structureDamage = scalars.structureDamage |+| prev.structureDamage,
+        killingSpree = scalars.killingSpree |+| prev.killingSpree,
+        wardsBought = scalars.wardsBought |+| prev.wardsBought,
+        wardsPlaced = scalars.wardsPlaced |+| prev.wardsPlaced,
+        wardsKilled = scalars.wardsKilled |+| prev.wardsKilled,
+        crowdControl = scalars.crowdControl |+| prev.crowdControl,
+        firstBlood = scalars.firstBlood |+| prev.firstBlood,
+        firstBloodAssist = scalars.firstBloodAssist |+| prev.firstBloodAssist,
+        doublekills = scalars.doublekills |+| prev.doublekills,
+        triplekills = scalars.triplekills |+| prev.triplekills,
+        quadrakills = scalars.quadrakills |+| prev.quadrakills,
+        pentakills = scalars.pentakills |+| prev.pentakills,
+        physicalDamage = scalars.physicalDamage |+| prev.physicalDamage,
+        magicDamage = scalars.magicDamage |+| prev.magicDamage,
+        trueDamage = scalars.trueDamage |+| prev.trueDamage
       )
     }
   }
