@@ -53,26 +53,26 @@ class SummonerStatisticsDAO(
 
   val sumFetcher = sf
 
-  def fetchACS(in: SummonerStatisticsDAO.Key): Task[AllChampionStatistics] = {
+  def fetchACS(in: SummonerStatisticsDAO.Key, role: Role): Task[AllChampionStatistics] = {
     val base = in.base
     summonerChampionsDAO.get(
       in.id,
       base.allChampions,
       base.prevPatch,
-      base.roles,
+      Set(role),
       base.patches,
       base.queues,
       base.enemies
     )
   }
 
-  def fetchPatchACS(in: SummonerStatisticsDAO.Key, patch: String): Task[AllChampionStatistics] = {
+  def fetchPatchACS(in: SummonerStatisticsDAO.Key, role: Role, patch: String): Task[AllChampionStatistics] = {
     val base = in.base
     summonerChampionsDAO.get(
       in.id,
       base.allChampions,
       None,
-      base.roles,
+      Set(role),
       Set(patch),
       base.queues,
       base.enemies

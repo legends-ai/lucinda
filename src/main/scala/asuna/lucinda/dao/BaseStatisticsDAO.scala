@@ -57,44 +57,47 @@ trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDA
 
   val sumFetcher: SumFetcher[K]
 
-  def fetchACS(in: K): Task[AllChampionStatistics]
+  def fetchACS(in: K, role: Role): Task[AllChampionStatistics]
 
-  def fetchPatchACS(in: K, patch: String): Task[AllChampionStatistics]
+  def fetchPatchACS(in: K, role: Role, patch: String): Task[AllChampionStatistics]
 
   def compute(in: K): Task[Statistics] = {
-    // Role information
-    val byRoleTask = in.base.byRoleFilters.traverseG { subspace =>
-      sumFetcher.fetchSums(in, subspace)
-    }
-
-    // Patch information
-    val byPatchTask = in.base.byPatchFilters.traverseG { subspace =>
-      sumFetcher.fetchSums(in, subspace)
-    }
-
-    // Stats (where Statistic objects come from)
-    val allStatsTask = fetchACS(in)
-
-    // TODO(igm): reuse prev call data
-    // This contains an element of the form Map[String, AllChampionStatistics]
-    // where key is the patch and value is the stats.
-    val patchNbhdTask = in.base.patchNbhdMap.traverseG { patch =>
-      fetchPatchACS(in, patch)
-    }
-
-    List(byRoleTask, byPatchTask, allStatsTask, patchNbhdTask).sequenceG.map {
-      case List(byRole, byPatch, allStats, patchNbhd) => {
-        StatisticsGenerator.makeStatistics(
-          champions = in.base.champions,
-          allStats = allStats.asInstanceOf[AllChampionStatistics],
-          patchNbhd = patchNbhd.asInstanceOf[Map[String, AllChampionStatistics]],
-          roles = in.base.roles,
-          byRole = byRole.asInstanceOf[Map[Role, MatchSum]],
-          byPatch = byPatch.asInstanceOf[Map[String, MatchSum]],
-          patches = in.base.patches
-        )
+    for {
+      byRole <- in.base.byRoleFilters.traverseG { subspace =>
+        sumFetcher.fetchSums(in, subspace)
       }
-    }
+
+      // The role with the most plays.
+      maxRole = byRole.toSeq
+        .sortBy(_._2.statistics.map(_.plays).orEmpty)
+        .lastOption
+        .map(_._1)
+        .getOrElse(Role.UNDEFINED_ROLE)
+
+      // Map from patch ot matchsum
+      byPatch <- in.base.byPatchFilters.traverseG { subspace =>
+        sumFetcher.fetchSums(in, subspace)
+      }
+
+      // STats (where statistic objects come from)
+      allStats <- fetchACS(in, maxRole)
+
+      // TODO(igm): reuse prev call data
+      // Map of patch to all champion statistics for a role
+      patchNbhd <- in.base.patchNbhdMap.traverseG { patch =>
+        fetchPatchACS(in, maxRole, patch)
+      }
+
+      // TODO(igm): parallelize
+    } yield StatisticsGenerator.makeStatistics(
+      champions = in.base.champions,
+      allStats = allStats,
+      patchNbhd = patchNbhd,
+      roles = in.base.roles,
+      byRole = byRole,
+      byPatch = byPatch,
+      patches = in.base.patches
+    )
   }
 
 }

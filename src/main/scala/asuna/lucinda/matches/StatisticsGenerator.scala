@@ -72,14 +72,11 @@ object StatisticsGenerator {
       numMatches = numMatches.toInt
     )
 
-    // Gets the most picked role out of all roles passed in.
-    def maxRole: Role = {
-      val roleSpace = if (roles.size == 0) (Role.values.toSet - Role.UNDEFINED_ROLE) else roles
-      roleStats
-        .filter(stats => roleSpace(stats.role)).toSeq
-        .sortBy(_.pickRate).map(_.role)
-        .lastOption.getOrElse(Role.UNDEFINED_ROLE)
-    }
+    val roleSpace = if (roles.size == 0) (Role.values.toSet - Role.UNDEFINED_ROLE) else roles
+    val maxRole = roleStats
+      .filter(stats => roleSpace(stats.role)).toSeq
+      .sortBy(_.pickRate).map(_.role)
+      .lastOption.getOrElse(Role.UNDEFINED_ROLE)
 
     Statistics.Roles(
       // TODO(igm): return correct role
