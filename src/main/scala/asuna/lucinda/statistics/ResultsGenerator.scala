@@ -47,8 +47,23 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
 
       physicalDamage = makeStat(scalars.physicalDamage, scalars.plays),
       magicDamage = makeStat(scalars.magicDamage, scalars.plays),
-      trueDamage = makeStat(scalars.trueDamage, scalars.plays)
+      trueDamage = makeStat(scalars.trueDamage, scalars.plays),
+
+      baronsEncountered = makeStat(scalars.baronsEncountered, scalars.plays),
+      baronsKilled = makeStat(scalars.baronsKilled, scalars.plays),
+
+      dragonsEncountered = makeDragonStat(scalars.dragonsEncountered, scalars.plays),
+      dragonsKilled = makeDragonStat(scalars.dragonsKilled, scalars.plays)
     )
+  }
+
+  def makeDragonStat(sum: Seq[Quotients.Scalars.DragonStat], sumsMap: Map[Int, Long]): Seq[Results.Scalars.DragonStat] = {
+    sum.map { stat =>
+      Results.Scalars.DragonStat(
+        dragon = stat.dragon,
+        value = makeStat(stat.value, sumsMap)
+      )
+    }
   }
 
   def makeDeltas(deltas: Quotients.Deltas, dds: Sums.DurationDistributions): Results.Deltas = {
