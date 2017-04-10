@@ -47,8 +47,21 @@ object QuotientsGenerator {
       pentakills = divide(scalars.pentakills),
       physicalDamage = divide(scalars.physicalDamage),
       magicDamage = divide(scalars.magicDamage),
-      trueDamage = divide(scalars.trueDamage)
+      trueDamage = divide(scalars.trueDamage),
+      baronsEncountered = divide(scalars.baronsEncountered),
+      baronsKilled = divide(scalars.baronsKilled),
+      dragonsEncountered = divideDragons(scalars.dragonsEncountered, divide),
+      dragonsKilled = divideDragons(scalars.dragonsKilled, divide)
     )
+  }
+
+  def divideDragons(sum: Seq[Sums.Scalars.DragonStat], divide: Map[Int, Long] => Map[Int, Double]): Seq[Quotients.Scalars.DragonStat] = {
+    sum.map { stat =>
+      Quotients.Scalars.DragonStat(
+        dragon = stat.dragon,
+        value = divide(stat.value)
+      )
+    }
   }
 
   def generateDeltasQuotients(durationDistributions: Sums.DurationDistributions, deltas: Sums.Deltas): Quotients.Deltas = {
