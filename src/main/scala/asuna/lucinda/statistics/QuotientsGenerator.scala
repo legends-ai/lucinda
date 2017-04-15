@@ -2,10 +2,13 @@ package asuna.lucinda.statistics
 
 import scala.math.Numeric
 import scala.math.Numeric.Implicits._
+import asuna.proto.league.MatchSum.Statistics.{ Moments => SMoments }
+import asuna.proto.league.lucinda.MatchQuotient.Statistics.{ Moments => QMoments }
 
 import asuna.proto.league.lucinda.AllChampionStatistics.{ Quotients, Sums }
 
 object QuotientsGenerator {
+  import asuna.common.legends.MomentsHelpers._
 
   def generateQuotients(sums: Sums): Quotients = {
     Quotients(
@@ -14,14 +17,17 @@ object QuotientsGenerator {
         case None => Some(Quotients.Scalars())
       },
       deltas = sums.deltas match {
-        case Some(de) => Some(generateDeltasQuotients(sums.durationDistributions.getOrElse(Sums.DurationDistributions()), de))
+        case Some(de) => Some(generateDeltasQuotients(de))
         case None => Some(Quotients.Deltas())
       }
     )
   }
 
+  def divide(map: Map[Int, SMoments]): Map[Int, QMoments] = {
+    map.mapValues(_.toQuotient)
+  }
+
   def generateScalarsQuotients(scalars: Sums.Scalars): Quotients.Scalars = {
-    val divide = divideScalars(scalars.plays, _: Map[Int, Long])
     Quotients.Scalars(
       wins = divide(scalars.wins),
       goldEarned = divide(scalars.goldEarned),
@@ -33,7 +39,6 @@ object QuotientsGenerator {
       minionsKilled = divide(scalars.minionsKilled),
       teamJungleMinionsKilled = divide(scalars.teamJungleMinionsKilled),
       enemyJungleMinionsKilled = divide(scalars.enemyJungleMinionsKilled),
-      structureDamage = divide(scalars.structureDamage),
       killingSpree = divide(scalars.killingSpree),
       wardsBought = divide(scalars.wardsBought),
       wardsPlaced = divide(scalars.wardsPlaced),
@@ -50,12 +55,12 @@ object QuotientsGenerator {
       trueDamage = divide(scalars.trueDamage),
       baronsEncountered = divide(scalars.baronsEncountered),
       baronsKilled = divide(scalars.baronsKilled),
-      dragonsEncountered = divideDragons(scalars.dragonsEncountered, divide),
-      dragonsKilled = divideDragons(scalars.dragonsKilled, divide)
+      dragonsEncountered = divideDragons(scalars.dragonsEncountered),
+      dragonsKilled = divideDragons(scalars.dragonsKilled)
     )
   }
 
-  def divideDragons(sum: Seq[Sums.Scalars.DragonStat], divide: Map[Int, Long] => Map[Int, Double]): Seq[Quotients.Scalars.DragonStat] = {
+  def divideDragons(sum: Seq[Sums.Scalars.DragonStat]): Seq[Quotients.Scalars.DragonStat] = {
     sum.map { stat =>
       Quotients.Scalars.DragonStat(
         dragon = stat.dragon,
@@ -64,25 +69,22 @@ object QuotientsGenerator {
     }
   }
 
-  def generateDeltasQuotients(durationDistributions: Sums.DurationDistributions, deltas: Sums.Deltas): Quotients.Deltas = {
-    val divide = divideDeltasOption(durationDistributions, _: Option[Sums.Deltas.Delta])
+  def generateDeltasQuotients(deltas: Sums.Deltas): Quotients.Deltas = {
     Quotients.Deltas(
-      csDiff = divide(deltas.csDiff),
-      xpDiff = divide(deltas.xpDiff),
-      damageTakenDiff = divide(deltas.damageTakenDiff),
-      xpPerMin = divide(deltas.xpPerMin),
-      goldPerMin = divide(deltas.goldPerMin),
-      towersPerMin = divide(deltas.towersPerMin),
-      wardsPlaced = divide(deltas.wardsPlaced),
-      damageTaken = divide(deltas.damageTaken)
+      csDiff = divideDeltasOption(deltas.csDiff),
+      xpDiff = divideDeltasOption(deltas.xpDiff),
+      damageTakenDiff = divideDeltasOption(deltas.damageTakenDiff),
+      xpPerMin = divideDeltasOption(deltas.xpPerMin),
+      goldPerMin = divideDeltasOption(deltas.goldPerMin),
+      towersPerMin = divideDeltasOption(deltas.towersPerMin),
+      wardsPlaced = divideDeltasOption(deltas.wardsPlaced),
+      damageTaken = divideDeltasOption(deltas.damageTaken)
     )
   }
 
-  def divideDeltasOption(
-    durationDistributions: Sums.DurationDistributions, delta: Option[Sums.Deltas.Delta]
-  ): Option[Quotients.Deltas.Delta] = {
+  def divideDeltasOption(delta: Option[Sums.Deltas.Delta]): Option[Quotients.Deltas.Delta] = {
     delta match {
-      case Some(d) => Some(divideDeltas(durationDistributions, d))
+      case Some(d) => Some(divideDeltas(d))
       case None => None
     }
   }
@@ -90,12 +92,12 @@ object QuotientsGenerator {
   /**
     * Generates the quotient from the delta sums and duration distributions.
     */
-  def divideDeltas(durationDistributions: Sums.DurationDistributions, delta: Sums.Deltas.Delta): Quotients.Deltas.Delta = {
+  def divideDeltas(delta: Sums.Deltas.Delta): Quotients.Deltas.Delta = {
     Quotients.Deltas.Delta(
-      zeroToTen = divideScalars(durationDistributions.zeroToTen, delta.zeroToTen),
-      tenToTwenty = divideScalars(durationDistributions.tenToTwenty, delta.tenToTwenty),
-      twentyToThirty = divideScalars(durationDistributions.twentyToThirty, delta.twentyToThirty),
-      thirtyToEnd = divideScalars(durationDistributions.thirtyToEnd, delta.thirtyToEnd)
+      zeroToTen = divide(delta.zeroToTen),
+      tenToTwenty = divide(delta.tenToTwenty),
+      twentyToThirty = divide(delta.twentyToThirty),
+      thirtyToEnd = divide(delta.thirtyToEnd)
     )
   }
 

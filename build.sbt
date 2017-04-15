@@ -1,3 +1,5 @@
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
 name := "lucinda"
 scalaVersion := "2.12.1"
 
@@ -9,11 +11,9 @@ enablePlugins(
 )
 
 libraryDependencies ++= Seq(
-  "asuna" %% "common" % "2.8.8",
+  "asuna" %% "common" % "3.0.12",
   "ch.qos.logback" % "logback-classic" % "1.1.9",
   "net.logstash.logback" % "logstash-logback-encoder" % "4.8",
-  "com.chuusai" %% "shapeless" % "2.3.2",
-  "org.typelevel" %% "kittens" % "1.0.0-M9",
 
   "org.scalacheck" %% "scalacheck" % "1.13.3" % "test",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"

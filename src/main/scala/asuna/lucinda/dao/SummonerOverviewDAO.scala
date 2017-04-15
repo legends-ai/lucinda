@@ -34,26 +34,26 @@ class SummonerOverviewDAO(summonerChampions: SummonerChampionsDAO)
       queues = key.queues,
       enemyIds = key.enemyChampionIds
     ).map { scs =>
-      (scs.results.flatMap(_.scalars) |@| scs.sums.flatMap(_.scalars)).map {
-        (results, sums) =>
+      (scs.results.flatMap(_.scalars) |@| scs.sums.flatMap(_.scalars) |@| scs.sums.map(_.plays)).map {
+        (results, sums, plays) =>
           SummonerOverview(
-            plays = sums.plays.values.sum,
-            wins = sums.wins.values.sum,
+            plays = plays.values.sum,
+            wins = sums.wins.values.map(_.count).sum,
 
             // kda
-            kills = sums.kills.values.sum,
-            deaths = sums.deaths.values.sum,
-            assists = sums.assists.values.sum,
+            kills = sums.kills.values.map(_.count).sum,
+            deaths = sums.deaths.values.map(_.count).sum,
+            assists = sums.assists.values.map(_.count).sum,
 
             // champion data
             championOverviews = key.allChampions.toList
-              .map(c => c -> results.plays.get(c).map(_.mean).orEmpty)
+              .map(c => c -> plays.get(c).orEmpty)
               // top 10 champions. TODO(igm): configurable? in request?
               .filter(_._2 > 0).sortBy(_._2).reverse.take(10)
               .map { case (champ, _) =>
                 SummonerOverview.ChampionOverview(
                   id = champ,
-                  plays = results.plays.get(champ),
+                  plays = plays.get(champ).orEmpty,
                   wins = results.wins.get(champ),
                   kills = results.kills.get(champ),
                   deaths = results.deaths.get(champ),

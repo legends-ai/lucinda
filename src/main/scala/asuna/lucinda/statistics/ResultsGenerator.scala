@@ -1,110 +1,31 @@
 package asuna.lucinda.statistics
 
+import scala.language.implicitConversions
 import asuna.proto.league.lucinda.Statistic
-import asuna.proto.league.lucinda.MatchQuotient.Statistics.Moments
+import asuna.proto.league.MatchSum
+import asuna.proto.league.MatchSum.Statistics.{ Moments => SMoments }
+import asuna.proto.league.lucinda.MatchQuotient.Statistics.{ Moments => QMoments }
 import asuna.proto.league.lucinda.AllChampionStatistics.{ Results, Sums, Quotients }
 import cats.implicits._
+import shapeless._
 
-/**
-  * Generats the Results part of the statistics.
-  */
-case class ResultsGenerator(sums: Sums, quotients: Quotients) {
+trait ResultsDeriver[S, Q, R] {
+  def derive(sums: S, quotients: Q): R
+}
 
-  def generate(): Results = {
-    Results(
-      scalars = quotients.scalars.map(makeScalars),
-      deltas = quotients.deltas.map(d =>
-        makeDeltas(d, sums.durationDistributions.getOrElse(Sums.DurationDistributions()))),
-      derivatives = Some(derivatives)
-    )
+object ResultsDeriver {
+
+  def from[S, Q, R](f: (S, Q) => R): ResultsDeriver[S, Q, R] = new ResultsDeriver[S, Q, R] {
+    def derive(sums: S, quotients: Q): R = f(sums, quotients)
   }
 
-  def makeScalars(scalars: Quotients.Scalars): Results.Scalars = {
-    Results.Scalars(
-      plays = playStat,
-      wins = makeStat(scalars.wins, scalars.plays),
-      goldEarned = makeStat(scalars.goldEarned, scalars.plays),
-      kills = makeStat(scalars.kills, scalars.plays),
-      deaths = makeStat(scalars.deaths, scalars.plays),
-      assists = makeStat(scalars.assists, scalars.plays),
-      damageDealt = makeStat(scalars.damageDealt, scalars.plays),
-      damageTaken = makeStat(scalars.damageTaken, scalars.plays),
-      minionsKilled = makeStat(scalars.minionsKilled, scalars.plays),
-      teamJungleMinionsKilled = makeStat(scalars.teamJungleMinionsKilled, scalars.plays),
-      enemyJungleMinionsKilled = makeStat(scalars.enemyJungleMinionsKilled, scalars.plays),
-      structureDamage = makeStat(scalars.structureDamage, scalars.plays),
-      killingSpree = makeStat(scalars.killingSpree, scalars.plays),
-      wardsBought = makeStat(scalars.wardsBought, scalars.plays),
-      wardsPlaced = makeStat(scalars.wardsPlaced, scalars.plays),
-      wardsKilled = makeStat(scalars.wardsKilled, scalars.plays),
-      crowdControl = makeStat(scalars.crowdControl, scalars.plays),
-      firstBlood = makeStat(scalars.firstBlood, scalars.plays),
-      firstBloodAssist = makeStat(scalars.firstBloodAssist, scalars.plays),
-      doublekills = makeStat(scalars.doublekills, scalars.plays),
-      triplekills = makeStat(scalars.triplekills, scalars.plays),
-      quadrakills = makeStat(scalars.quadrakills, scalars.plays),
-      pentakills = makeStat(scalars.pentakills, scalars.plays),
-
-      physicalDamage = makeStat(scalars.physicalDamage, scalars.plays),
-      magicDamage = makeStat(scalars.magicDamage, scalars.plays),
-      trueDamage = makeStat(scalars.trueDamage, scalars.plays),
-
-      baronsEncountered = makeStat(scalars.baronsEncountered, scalars.plays),
-      baronsKilled = makeStat(scalars.baronsKilled, scalars.plays),
-
-      dragonsEncountered = makeDragonStat(scalars.dragonsEncountered, scalars.plays),
-      dragonsKilled = makeDragonStat(scalars.dragonsKilled, scalars.plays)
-    )
-  }
-
-  def makeDragonStat(sum: Seq[Quotients.Scalars.DragonStat], sumsMap: Map[Int, Long]): Seq[Results.Scalars.DragonStat] = {
-    sum.map { stat =>
-      Results.Scalars.DragonStat(
-        dragon = stat.dragon,
-        value = makeStat(stat.value, sumsMap)
-      )
-    }
-  }
-
-  def makeDeltas(deltas: Quotients.Deltas, dds: Sums.DurationDistributions): Results.Deltas = {
-    Results.Deltas(
-      csDiff = makeDeltaOption(deltas.csDiff, dds),
-      xpDiff = makeDeltaOption(deltas.xpDiff, dds),
-      damageTakenDiff = makeDeltaOption(deltas.damageTakenDiff, dds),
-      xpPerMin = makeDeltaOption(deltas.xpPerMin, dds),
-      goldPerMin = makeDeltaOption(deltas.goldPerMin, dds),
-      towersPerMin = makeDeltaOption(deltas.towersPerMin, dds),
-      wardsPlaced = makeDeltaOption(deltas.wardsPlaced, dds),
-      damageTaken = makeDeltaOption(deltas.damageTaken, dds)
-    )
-  }
-
-  def makeDeltaOption(delta: Option[Quotients.Deltas.Delta], dds: Sums.DurationDistributions): Option[Results.Deltas.Delta] = {
-    delta.map(d => makeDelta(d, dds))
-  }
-
-  def makeDelta(delta: Quotients.Deltas.Delta, dds: Sums.DurationDistributions): Results.Deltas.Delta = {
-    Results.Deltas.Delta(
-      zeroToTen = makeStat(delta.zeroToTen, dds.zeroToTen),
-      tenToTwenty = makeStat(delta.tenToTwenty, dds.tenToTwenty),
-      twentyToThirty = makeStat(delta.twentyToThirty, dds.twentyToThirty),
-      thirtyToEnd = makeStat(delta.thirtyToEnd, dds.thirtyToEnd)
-    )
-  }
-
-  def makeStat(statsMap: Map[Int, Double], sumsMap: Map[Int, Long]): Map[Int, Statistic] = {
-    val sortedPairs = statsMap.toSeq.sortBy(_._2).reverse
-
-    // Map of champ to total of the stat. Used for computing mean across role.
-    val pairsMap = statsMap.transform { case (k, v) =>
-      v * sumsMap.get(k).orEmpty
-    }
+  implicit val momentsDeriver = ResultsDeriver.from[
+    Map[Int, SMoments], Map[Int, QMoments], Map[Int, Statistic]
+  ] { (sum, quot) =>
+    val sortedPairs = quot.toSeq.sortBy(_._2.mean).reverse
 
     // (weighted) average of the value across entire pairs map
-    val average =  pairsMap.size match {
-      case 0 => 0
-      case _ => pairsMap.values.sum / pairsMap.values.size
-    }
+    val meanAcrossRole = sum.values.toList.map(_.sum).combineAll / sum.size
 
     val statsWithIndex = sortedPairs.zipWithIndex.map { case ((champ, value), index) =>
       (champ, (value, index))
@@ -113,44 +34,109 @@ case class ResultsGenerator(sums: Sums, quotients: Quotients) {
     statsWithIndex.mapValues { case (value, index) =>
       Statistic(
         rank = index + 1,
-        mean = value,
-        meanAcrossRole = average,
+        mean = value.mean,
+        meanAcrossRole = meanAcrossRole,
+        stdev = Math.sqrt(value.variance),
         // TODO(igm): is this what we mean by percentile?
-        percentile = 1 - index.toDouble / statsMap.size
+        percentile = 1 - index.toDouble / quot.size
       )
     }
   }
 
-  def playStat: Map[Int, Statistic] = {
-    val plays = sums.scalars.map(_.plays).orEmpty
-    plays.mapValues { ct =>
-      Statistic(
-        mean = ct.toDouble
+  implicit def optionsDeriver[S, Q, R](
+    implicit deriver: ResultsDeriver[S, Q, R]
+  ): ResultsDeriver[Option[S], Option[Q], Option[R]] =
+    ResultsDeriver.from[Option[S], Option[Q], Option[R]] { (sumsOpt, quotientsOpt) =>
+      (sumsOpt |@| quotientsOpt).map { (sums, quotients) =>
+        deriver.derive(sums, quotients)
+      }
+    }
+
+  implicit val dragonStatSeqDeriver = ResultsDeriver.from[
+    Seq[Sums.Scalars.DragonStat], Seq[Quotients.Scalars.DragonStat], Seq[Results.Scalars.DragonStat]
+  ] { (sums, quots) =>
+    val sumsMap = sums.groupBy(_.dragon)
+    val quotsMap = quots.groupBy(_.dragon)
+    (sumsMap.keySet ++ quotsMap.keySet).toSeq.map { dragon =>
+      (sumsMap.get(dragon).flatMap(_.headOption) |@| quotsMap.get(dragon).flatMap(_.headOption)) map { (sum, quot) =>
+        Results.Scalars.DragonStat(
+          dragon = sum.dragon,
+          value = momentsDeriver.derive(sum.value, quot.value)
+        )
+      }
+    }.flatten
+  }
+
+
+  implicit val hnilDeriver = ResultsDeriver.from[HNil, HNil, HNil] { (_, _) => HNil }
+
+  implicit def hlistDeriver[A, B <: HList, C, D <: HList, U, V <: HList](
+    implicit hd: ResultsDeriver[A, C, U],
+    td: ResultsDeriver[B, D, V]
+  ): ResultsDeriver[A :: B, C :: D, U :: V] = ResultsDeriver.from { (sums, quotients) =>
+    hd.derive(sums.head, quotients.head) :: td.derive(sums.tail, quotients.tail)
+  }
+
+  implicit def hlistableDeriver[A, AT <: HList, C, CT <: HList, U, UT <: HList](
+    implicit gena: Generic.Aux[A, AT],
+    genc: Generic.Aux[C, CT],
+    genu: Generic.Aux[U, UT],
+    deriver: ResultsDeriver[AT, CT, UT]
+  ): ResultsDeriver[A, C, U] = ResultsDeriver.from { (sums, quotients) =>
+    genu.from(deriver.derive(gena.to(sums), genc.to(quotients)))
+  }
+
+  implicit object finalDeriver extends ResultsDeriver[Sums, Quotients, Results] {
+    // need this for a compiler hint,
+    // TODO(igm): remove
+    implicit val deltaDeriver = implicitly[
+      ResultsDeriver[Option[Sums.Deltas.Delta], Option[Quotients.Deltas.Delta], Option[Results.Deltas.Delta]]]
+
+    val scalarsDeriver = implicitly[
+      ResultsDeriver[Option[Sums.Scalars], Option[Quotients.Scalars], Option[Results.Scalars]]]
+    val deltasDeriver = implicitly[
+      ResultsDeriver[Option[Sums.Deltas], Option[Quotients.Deltas], Option[Results.Deltas]]]
+
+    def derive(sums: Sums, quotients: Quotients): Results = {
+      Results(
+        scalars = scalarsDeriver.derive(sums.scalars, quotients.scalars),
+        deltas = deltasDeriver.derive(sums.deltas, quotients.deltas),
+        derivatives = derivatives(sums).some
       )
     }
-  }
 
-  def derivatives: Results.Derivatives = {
-    // map of total games played per champion
-    val plays = sums.scalars.map(_.plays).orEmpty
+    def derivatives(sums: Sums): Results.Derivatives = {
+      // map of total games played per champion
+      val plays = sums.plays
 
-    // total number of games. div by 10 since 10 champs per game.
-    // TODO(igm): tweak based off game mode. twisted treeline?
-    val totalGames = plays.values.sum / 10
-    val pickRateMap = plays.mapValues(_.toDouble / totalGames)
+      // total number of games. div by 10 since 10 champs per game.
+      // TODO(igm): tweak based off game mode. twisted treeline?
+      val totalGames = plays.values.sum / 10
+      val pickRateMap = plays.mapValues(_.toDouble / totalGames)
 
-    val banRateMap = for {
-      banCount <- sums.subscalars.map(_.bans.mapValues(_.plays))
-    } yield {
-      val bans = banCount.mapValues(_.values.toList.combineAll)
-      // 6 bans per match. This finds us the total number of matches.
-      val total = bans.values.sum.toDouble / 6
-      bans.mapValues(_.toDouble / total)
+      val banRateMap = for {
+        banCount <- sums.subscalars.map(_.bans.mapValues(_.plays))
+      } yield {
+        val bans = banCount.mapValues(_.values.toList.combineAll)
+        // 6 bans per match. This finds us the total number of matches.
+        val total = bans.values.sum.toDouble / 6
+        bans.mapValues(_.toDouble / total)
+      }
+      Results.Derivatives(
+        // picks = makeStat(pickRateMap, plays),
+        // bans = makeStat(banRateMap.orEmpty, plays)
+      )
     }
-    Results.Derivatives(
-      picks = makeStat(pickRateMap, plays),
-      bans = makeStat(banRateMap.orEmpty, plays)
-    )
+
   }
+
+}
+
+/**
+  * Generats the Results part of the statistics.
+  */
+case class ResultsGenerator(sums: Sums, quotients: Quotients) {
+
+  def generate(): Results = implicitly[ResultsDeriver[Sums, Quotients, Results]].derive(sums, quotients)
 
 }

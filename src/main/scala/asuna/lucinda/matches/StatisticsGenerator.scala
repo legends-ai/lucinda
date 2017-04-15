@@ -154,7 +154,7 @@ object StatisticsGenerator {
     val pickRateStat = getStat[AllChampionStatistics.Results.Derivatives](derivatives, champions, _.picks, None)
 
     // Number of games played by all champions
-    val allGamesPlayed = roleStats.sums.flatMap(_.scalars).map(_.plays).orEmpty
+    val allGamesPlayed = roleStats.sums.map(_.plays).orEmpty
     val meanGamesPlayed = allGamesPlayed.values.toList.combineAll.toDouble / allGamesPlayed.size
 
     // Number of games played by these champions in this role.

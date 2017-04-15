@@ -8,7 +8,6 @@ object FilterChampionsHelpers {
 
     def filterChampions(champs: Set[Int]): Results.Scalars = {
       scalars.copy(
-        plays = scalars.plays.filterKeys(champs),
         wins = scalars.wins.filterKeys(champs),
         goldEarned = scalars.goldEarned.filterKeys(champs),
         kills = scalars.kills.filterKeys(champs),
@@ -19,7 +18,6 @@ object FilterChampionsHelpers {
         minionsKilled = scalars.minionsKilled.filterKeys(champs),
         teamJungleMinionsKilled = scalars.teamJungleMinionsKilled.filterKeys(champs),
         enemyJungleMinionsKilled = scalars.enemyJungleMinionsKilled.filterKeys(champs),
-        structureDamage = scalars.structureDamage.filterKeys(champs),
         killingSpree = scalars.killingSpree.filterKeys(champs),
         wardsBought = scalars.wardsBought.filterKeys(champs),
         wardsPlaced = scalars.wardsPlaced.filterKeys(champs),

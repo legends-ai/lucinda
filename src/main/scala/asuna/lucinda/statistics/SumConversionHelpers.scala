@@ -3,97 +3,121 @@ package asuna.lucinda.statistics
 import asuna.common.legends.MatchSumHelpers._
 import asuna.common.legends.MomentsHelpers._
 import asuna.proto.league.MatchSum
+import MatchSum.Statistics.Moments
 import asuna.proto.league.lucinda.AllChampionStatistics.Sums
+import cats.Monoid
 import cats.implicits._
+import shapeless._
+
+trait SumConverter[In, Out] {
+  def convert(in: In, champion: Int): Out
+}
+
+object SumConverter {
+
+  def fromConvert[In, Out](f: (In, Int) => Out): SumConverter[In, Out] = new SumConverter[In, Out] {
+    def convert(in: In, champion: Int): Out = f(in, champion)
+  }
+
+}
 
 object SumConversionHelpers {
 
-  implicit class ScalarsConversion(scalars: MatchSum.Statistics.Scalars) {
+  implicit def mapConverter[T] = SumConverter.fromConvert[T, Map[Int, T]] {
+    (in, champion) => Map(champion -> in)
+  }
 
-    def asAggregate(champion: Int, plays: Int): Sums.Scalars = {
-      Sums.Scalars(
-        plays = Map(champion -> plays),
-        wins = Map(champion -> scalars.wins.map(_.sum).orEmpty.toLong),
-        goldEarned = Map(champion -> scalars.goldEarned.map(_.sum).orEmpty.toLong),
-        kills = Map(champion -> scalars.kills.map(_.sum).orEmpty.toLong),
-        deaths = Map(champion -> scalars.deaths.map(_.sum).orEmpty.toLong),
-        assists = Map(champion -> scalars.assists.map(_.sum).orEmpty.toLong),
-        damageDealt = Map(champion -> scalars.damageDealt.map(_.sum).orEmpty.toLong),
-        damageTaken = Map(champion -> scalars.damageTaken.map(_.sum).orEmpty.toLong),
-        minionsKilled = Map(champion -> scalars.minionsKilled.map(_.sum).orEmpty.toLong),
-        teamJungleMinionsKilled = Map(champion -> scalars.teamJungleMinionsKilled.map(_.sum).orEmpty.toLong),
-        enemyJungleMinionsKilled = Map(champion -> scalars.enemyJungleMinionsKilled.map(_.sum).orEmpty.toLong),
-        killingSpree = Map(champion -> scalars.killingSpree.map(_.sum).orEmpty.toLong),
-        wardsBought = Map(champion -> scalars.wardsBought.map(_.sum).orEmpty.toLong),
-        wardsPlaced = Map(champion -> scalars.wardsPlaced.map(_.sum).orEmpty.toLong),
-        wardsKilled = Map(champion -> scalars.wardsKilled.map(_.sum).orEmpty.toLong),
-        crowdControl = Map(champion -> scalars.crowdControl.map(_.sum).orEmpty.toLong),
-        firstBlood = Map(champion -> scalars.firstBlood.map(_.sum).orEmpty.toLong),
-        firstBloodAssist = Map(champion -> scalars.firstBloodAssist.map(_.sum).orEmpty.toLong),
-        doublekills = Map(champion -> scalars.doublekills.map(_.sum).orEmpty.toLong),
-        triplekills = Map(champion -> scalars.triplekills.map(_.sum).orEmpty.toLong),
-        quadrakills = Map(champion -> scalars.quadrakills.map(_.sum).orEmpty.toLong),
-        pentakills = Map(champion -> scalars.pentakills.map(_.sum).orEmpty.toLong),
-        physicalDamage = Map(champion -> scalars.physicalDamage.map(_.sum).orEmpty.toLong),
-        magicDamage = Map(champion -> scalars.magicDamage.map(_.sum).orEmpty.toLong),
-        trueDamage = Map(champion -> scalars.trueDamage.map(_.sum).orEmpty.toLong)
-      )
+  implicit val momentsConverter = mapConverter[Moments]
+
+  implicit def optionMonoidConverter[T, U](
+    implicit monoid: Monoid[T],
+    conv: SumConverter[T, U]
+  ): SumConverter[Option[T], U] = new SumConverter[Option[T], U] {
+
+    override def convert(in: Option[T], champion: Int): U = {
+      conv.convert(in.orEmpty, champion)
     }
 
   }
 
-  implicit class DeltaConversion(delta: MatchSum.Statistics.Deltas.Delta) {
+  implicit def optionConverter[T, U](
+    implicit conv: SumConverter[T, U]
+  ): SumConverter[Option[T], Option[U]] = new SumConverter[Option[T], Option[U]] {
 
-    def asAggregate(champion: Int): Sums.Deltas.Delta = {
-      Sums.Deltas.Delta(
-        zeroToTen = Map(champion -> delta.zeroToTen.map(_.sum).orEmpty.toLong),
-        tenToTwenty = Map(champion -> delta.tenToTwenty.map(_.sum).orEmpty.toLong),
-        twentyToThirty = Map(champion -> delta.twentyToThirty.map(_.sum).orEmpty.toLong),
-        thirtyToEnd = Map(champion -> delta.thirtyToEnd.map(_.sum).orEmpty.toLong)
-      )
+    override def convert(in: Option[T], champion: Int): Option[U] = {
+      in.map(v => conv.convert(v, champion))
     }
 
   }
 
-  implicit class DeltasConversion(deltas: MatchSum.Statistics.Deltas) {
+  implicit val momentsOptConverter = implicitly[SumConverter[Option[Moments], Map[Int, Moments]]]
 
-    def asAggregate(champion: Int): Sums.Deltas = {
-      Sums.Deltas(
-        csDiff = Some(deltas.csDiff.orEmpty.asAggregate(champion)),
-        xpDiff = Some(deltas.xpDiff.orEmpty.asAggregate(champion)),
-        damageTakenDiff = Some(deltas.damageTakenDiff.orEmpty.asAggregate(champion)),
-        xpPerMin = Some(deltas.xpPerMin.orEmpty.asAggregate(champion)),
-        goldPerMin = Some(deltas.goldPerMin.orEmpty.asAggregate(champion)),
-        towersPerMin = Some(deltas.towersPerMin.orEmpty.asAggregate(champion)),
-        wardsPlaced = Some(deltas.wardsPlaced.orEmpty.asAggregate(champion)),
-        damageTaken = Some(deltas.damageTaken.orEmpty.asAggregate(champion))
+  implicit val dragonStatSeqConverter = SumConverter.fromConvert[
+    Seq[MatchSum.Statistics.Scalars.DragonStat], Seq[Sums.Scalars.DragonStat]
+  ] { (sums, champ) =>
+    sums.map { sum =>
+      Sums.Scalars.DragonStat(
+        dragon = sum.dragon,
+        value = momentsOptConverter.convert(sum.value, champ)
       )
     }
-
   }
 
-  implicit class DurationDistributionsConversion(dd: MatchSum.Statistics.Deltas.DurationDistribution) {
-
-    def asAggregate(champion: Int): Sums.DurationDistributions = {
-      Sums.DurationDistributions(
-        zeroToTen = Map(champion -> dd.zeroToTen),
-        tenToTwenty = Map(champion -> dd.tenToTwenty),
-        twentyToThirty = Map(champion -> dd.twentyToThirty),
-        thirtyToEnd = Map(champion -> dd.thirtyToEnd)
+  implicit val subscalarMapConverter = SumConverter.fromConvert[
+    Map[Int, MatchSum.Collections.Subscalars], Map[Int, Sums.Subscalars.Subscalar]
+  ] { (sum, champ) =>
+    Map(
+      champ -> Sums.Subscalars.Subscalar(
+        plays = sum.mapValues(_.plays),
+        wins = sum.mapValues(_.wins)
       )
-    }
-
+    )
   }
 
-  implicit class SubscalarsMapConversion(ss: Map[Int, MatchSum.Collections.Subscalars]) {
+  implicit val hnilConverter = SumConverter.fromConvert[HNil, HNil] { (_, _) => HNil }
 
-    def asAggregate(champion: Int): Map[Int, Sums.Subscalars.Subscalar] = {
-      ss.mapValues { indiv =>
-        Sums.Subscalars.Subscalar(
-          plays = Map(champion -> indiv.plays),
-          wins = Map(champion -> indiv.wins)
-        )
-      }
+  implicit def hlistConverter[H, T <: HList, J, U <: HList](
+    implicit hconv: SumConverter[H, J],
+    tconv: SumConverter[T, U]
+  ): SumConverter[H :: T, J :: U] = new SumConverter[H :: T, J :: U] {
+    override def convert(in: H :: T, champion: Int): J :: U = {
+      hconv.convert(in.head, champion) :: tconv.convert(in.tail, champion)
+    }
+  }
+
+  implicit def hlistableConverter[T, U, TR <: HList, UR <: HList](
+    implicit gent: Generic.Aux[T, TR],
+    genu: Generic.Aux[U, UR],
+    convt: SumConverter[TR, UR]
+  ): SumConverter[T, U] = SumConverter.fromConvert { (in, champ) =>
+    genu.from(convt.convert(gent.to(in), champ))
+  }
+
+  implicit val scalarsConv = implicitly[SumConverter[MatchSum.Statistics.Scalars, Sums.Scalars]]
+  implicit val deltaConv = implicitly[SumConverter[MatchSum.Statistics.Deltas.Delta, Sums.Deltas.Delta]]
+  implicit val deltasConv = implicitly[SumConverter[MatchSum.Statistics.Deltas, Sums.Deltas]]
+  implicit val ssConv = implicitly[SumConverter[MatchSum.Collections.Subscalars, Sums.Subscalars.Subscalar]]
+
+
+  implicit object matchSumConverter extends SumConverter[MatchSum, Sums] {
+
+    def convert(in: MatchSum, champion: Int): Sums = {
+      Sums(
+        plays = mapConverter[Int]
+          .convert(in.statistics.map(_.plays).orEmpty, champion),
+        scalars = in.statistics.flatMap(_.scalars).map { scalars =>
+          scalarsConv.convert(scalars, champion)
+        },
+        deltas = in.statistics.flatMap(_.deltas).map { deltas =>
+          deltasConv.convert(deltas, champion)
+        },
+        subscalars = in.collections.map { colls =>
+          Sums.Subscalars(
+            bans = subscalarMapConverter.convert(colls.bans, champion),
+            allies = subscalarMapConverter.convert(colls.allies, champion)
+          )
+        }
+      )
     }
 
   }
@@ -101,24 +125,7 @@ object SumConversionHelpers {
   implicit class MatchSumConversion(sum: MatchSum) {
 
     def asAggregate(champion: Int): Sums = {
-      Sums(
-        scalars = sum.statistics
-          .flatMap(_.scalars).map(_.asAggregate(champion, sum.statistics.map(_.plays).orEmpty)),
-        deltas = sum.statistics
-          .flatMap(_.deltas).map(_.asAggregate(champion)),
-        durationDistributions = sum.statistics.flatMap(_.deltas)
-          .flatMap(_.durationDistribution).map(_.asAggregate(champion)),
-        subscalars = Some(asSubscalarsAggregate(champion))
-      )
-    }
-
-    def asSubscalarsAggregate(champion: Int): Sums.Subscalars = {
-      Sums.Subscalars(
-        bans = sum.collections.map(_.bans)
-          .getOrElse(Map()).asAggregate(champion),
-        allies = sum.collections.map(_.allies)
-          .getOrElse(Map()).asAggregate(champion)
-      )
+      matchSumConverter.convert(sum, champion)
     }
 
   }

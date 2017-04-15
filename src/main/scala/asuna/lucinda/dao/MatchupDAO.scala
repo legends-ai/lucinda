@@ -38,7 +38,7 @@ class MatchupDAO(allChampionStatisticsDAO: AllChampionStatisticsDAO) {
       // First, let's extract all of our maps of interest.
       val wins = championStatistics.results.flatMap(_.scalars).map(_.wins).getOrElse(Map())
       val picks = championStatistics.results.flatMap(_.derivatives).map(_.picks).getOrElse(Map())
-      val plays = championStatistics.sums.flatMap(_.scalars).map(_.plays).getOrElse(Map())
+      val plays = championStatistics.sums.map(_.plays).getOrElse(Map())
 
       // Let's get all champs that have values for all three
       val commonChamps = wins.keys.toSet intersect picks.keys.toSet intersect plays.keys.toSet
