@@ -26,8 +26,8 @@ object QuotientsDeriver {
     pure[Map[Int, SMoments], Map[Int, QMoments]](_.mapValues(_.toQuotient))
 
   implicit val dragonsDeriver =
-    pure[Seq[Sums.Scalars.DragonStat], Seq[Quotients.Scalars.DragonStat]] { sums =>
-      sums map { stat =>
+    pure[Seq[Sums.Scalars.DragonStat], Seq[Quotients.Scalars.DragonStat]] { dragons =>
+      dragons map { stat =>
         Quotients.Scalars.DragonStat(
           dragon = stat.dragon,
           // TODO(p): Figure out if there is a way for shapeless to derive this implicitly
@@ -36,7 +36,7 @@ object QuotientsDeriver {
       }
     }
 
-  implicit def optionsDeriver[S, Q](implicit deriver: QuotientsDeriver[S, Q]) =
+  implicit def optionDeriver[S, Q](implicit deriver: QuotientsDeriver[S, Q]) =
     pure[Option[S], Option[Q]](_.map(deriver.derive))
 
   implicit val hnilDeriver = pure[HNil, HNil](_ => HNil)

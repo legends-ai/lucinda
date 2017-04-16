@@ -1,92 +1,94 @@
 package asuna.lucinda.statistics
 
+import asuna.proto.league.lucinda.Statistic
 import asuna.proto.league.lucinda.AllChampionStatistics.Results
+import shapeless.{ Generic, HList, ::, HNil, Lazy }
+
+trait FilterChampions[A] {
+  def filter(in: A, champions: Set[Int]): A
+}
+
+object FilterChampions {
+
+  def apply[A](implicit filter: FilterChampions[A]) = filter
+
+  def pure[A](f: (A, Set[Int]) => A) = new FilterChampions[A] {
+    def filter(in: A, champions: Set[Int]) = f(in, champions)
+  }
+
+  implicit val statisticFilter =
+    pure[Map[Int, Statistic]]((in, c) => in.filterKeys(c))
+
+  implicit val dragonsDeriver =
+    pure[Seq[Results.Scalars.DragonStat]] { (dragons, c) =>
+      dragons map { stat =>
+        Results.Scalars.DragonStat(
+          dragon = stat.dragon,
+          // TODO(p): Figure out if there is a way for shapeless to derive this implicitly
+          value = statisticFilter.filter(stat.value, c)
+        )
+      }
+    }
+
+  implicit def optionFilter[A](implicit filter: FilterChampions[A]) =
+    pure[Option[A]]((opt, c) => opt.map(in => filter.filter(in, c)))
+
+  implicit val hnilDeriver = pure[HNil]((_, _) => HNil)
+
+  implicit def hlistFilter[H, T <: HList](
+    implicit
+    hFilter: Lazy[FilterChampions[H]],
+    tFilter: Lazy[FilterChampions[T]]
+  ) = pure[H :: T] { case (head :: tail, champions) =>
+      hFilter.value.filter(head, champions) :: tFilter.value.filter(tail, champions)
+  }
+
+  implicit def genericFilter[A, R](
+    implicit
+    gen: Generic.Aux[A, R],
+    filter: FilterChampions[R]
+  ) = pure[A]((in, c) => gen.from(filter.filter(gen.to(in), c)))
+
+}
 
 object FilterChampionsHelpers {
 
   implicit class ScalarsFilterChampions(scalars: Results.Scalars) {
 
-    def filterChampions(champs: Set[Int]): Results.Scalars = {
-      scalars.copy(
-        wins = scalars.wins.filterKeys(champs),
-        goldEarned = scalars.goldEarned.filterKeys(champs),
-        kills = scalars.kills.filterKeys(champs),
-        deaths = scalars.deaths.filterKeys(champs),
-        assists = scalars.assists.filterKeys(champs),
-        damageDealt = scalars.damageDealt.filterKeys(champs),
-        damageTaken = scalars.damageTaken.filterKeys(champs),
-        minionsKilled = scalars.minionsKilled.filterKeys(champs),
-        teamJungleMinionsKilled = scalars.teamJungleMinionsKilled.filterKeys(champs),
-        enemyJungleMinionsKilled = scalars.enemyJungleMinionsKilled.filterKeys(champs),
-        killingSpree = scalars.killingSpree.filterKeys(champs),
-        wardsBought = scalars.wardsBought.filterKeys(champs),
-        wardsPlaced = scalars.wardsPlaced.filterKeys(champs),
-        wardsKilled = scalars.wardsKilled.filterKeys(champs),
-        crowdControl = scalars.crowdControl.filterKeys(champs),
-        firstBlood = scalars.firstBlood.filterKeys(champs),
-        firstBloodAssist = scalars.firstBloodAssist.filterKeys(champs),
-        doublekills = scalars.doublekills.filterKeys(champs),
-        triplekills = scalars.triplekills.filterKeys(champs),
-        quadrakills = scalars.quadrakills.filterKeys(champs),
-        pentakills = scalars.pentakills.filterKeys(champs),
-        physicalDamage = scalars.physicalDamage.filterKeys(champs),
-        magicDamage = scalars.magicDamage.filterKeys(champs),
-        trueDamage = scalars.trueDamage.filterKeys(champs)
-      )
-    }
+    def filterChampions(champs: Set[Int]): Results.Scalars =
+      FilterChampions[Results.Scalars].filter(scalars, champs)
 
   }
 
   implicit class DeltaFilterChampions(delta: Results.Deltas.Delta) {
 
-    def filterChampions(champs: Set[Int]): Results.Deltas.Delta = {
-      delta.copy(
-        zeroToTen = delta.zeroToTen.filterKeys(champs),
-        tenToTwenty = delta.tenToTwenty.filterKeys(champs),
-        twentyToThirty = delta.twentyToThirty.filterKeys(champs),
-        thirtyToEnd = delta.thirtyToEnd.filterKeys(champs)
-      )
-    }
+    def filterChampions(champs: Set[Int]): Results.Deltas.Delta =
+      FilterChampions[Results.Deltas.Delta].filter(delta, champs)
 
   }
 
   implicit class DeltasFilterChampions(deltas: Results.Deltas) {
 
-    def filterChampions(champs: Set[Int]): Results.Deltas = {
-      deltas.copy(
-        csDiff = deltas.csDiff.map(_.filterChampions(champs)),
-        xpDiff = deltas.xpDiff.map(_.filterChampions(champs)),
-        damageTakenDiff = deltas.damageTakenDiff.map(_.filterChampions(champs)),
-        xpPerMin = deltas.xpPerMin.map(_.filterChampions(champs)),
-        goldPerMin = deltas.goldPerMin.map(_.filterChampions(champs)),
-        towersPerMin = deltas.towersPerMin.map(_.filterChampions(champs)),
-        wardsPlaced = deltas.wardsPlaced.map(_.filterChampions(champs)),
-        damageTaken = deltas.damageTaken.map(_.filterChampions(champs))
-      )
-    }
+    def filterChampions(champs: Set[Int]): Results.Deltas =
+      FilterChampions[Results.Deltas].filter(deltas, champs)
 
   }
 
   implicit class DerivativesFilterChampions(derivatives: Results.Derivatives) {
 
-    def filterChampions(champs: Set[Int]): Results.Derivatives = {
-      derivatives.copy(
-        picks = derivatives.picks.filterKeys(champs),
-        bans = derivatives.bans.filterKeys(champs)
-      )
-    }
+    def filterChampions(champs: Set[Int]): Results.Derivatives =
+      FilterChampions[Results.Derivatives].filter(derivatives, champs)
 
   }
 
   implicit class ResultsFilterChampions(results: Results) {
 
-    def filterChampions(champs: Set[Int]): Results = {
+    def filterChampions(champs: Set[Int]): Results =
       results.copy(
         scalars = results.scalars.map(_.filterChampions(champs)),
         deltas = results.deltas.map(_.filterChampions(champs)),
         derivatives = results.derivatives.map(_.filterChampions(champs))
       )
-    }
 
   }
 
