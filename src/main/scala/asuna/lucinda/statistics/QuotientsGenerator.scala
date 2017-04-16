@@ -45,8 +45,8 @@ object QuotientsDeriver {
     implicit
     hDeriver: Lazy[QuotientsDeriver[SH, QH]],
     tDeriver: Lazy[QuotientsDeriver[ST, QT]]
-  ) = pure[SH :: ST, QH :: QT] { sums =>
-    hDeriver.value.derive(sums.head) :: tDeriver.value.derive(sums.tail)
+  ) = pure[SH :: ST, QH :: QT] { case (head :: tail) =>
+    hDeriver.value.derive(head) :: tDeriver.value.derive(tail)
   }
 
   implicit def genericDeriver[S, Q, RS, RQ](
