@@ -112,13 +112,13 @@ object ResultsDeriver {
       // map of total games played per champion
       val plays = sums.plays
 
-      // total number of games. div by 10 since 10 champs per game.
-      // TODO(igm): tweak based off game mode. twisted treeline?
-      val totalGames = plays.values.sum / 10
+      // total number of champion instances analyzed.
+      val totalGames = plays.values.sum
 
+      // we will end up dividing each value by this total # of games to get incidence rate.
       val pickRateSums = plays.mapValues { v =>
         SMoments(
-          count = totalGames.toInt,
+          count = totalGames,
           sum = v,
         )
       }
