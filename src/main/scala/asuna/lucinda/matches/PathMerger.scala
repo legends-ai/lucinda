@@ -124,9 +124,9 @@ object PathMerger {
     override def isPathIncluded(in: ItemList, others: Seq[ItemList]): Boolean = {
       // TODO(igm): corrupting pot is core on singed. should it be included here?
       if (in.items.contains(sightstone)) {
-        in.items.size <= 7
+        in.items.size === 7
       } else {
-        in.items.size <= 6
+        in.items.size === 6
       }
     }
 
