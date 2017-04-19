@@ -237,8 +237,6 @@ object StatisticsGenerator {
       // Win/pick/ban distribution across all champions.
       distribution = Some(Statistics.Graphs.Distribution(
         winRate = results.flatMap(_.scalars).map(_.wins.mapValues(_.mean)).orEmpty,
-        pickRate = results.flatMap(_.derivatives).map(_.picks.mapValues(_.mean)).orEmpty,
-        banRate = results.flatMap(_.derivatives).map(_.bans.mapValues(_.mean)).orEmpty
       )),
 
       // Per-patch statistics.

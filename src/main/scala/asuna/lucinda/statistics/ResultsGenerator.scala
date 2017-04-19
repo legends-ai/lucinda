@@ -88,16 +88,17 @@ object ResultsDeriver {
     genu.from(deriver.derive(gena.to(sums), genc.to(quotients)))
   }
 
-  implicit object finalDeriver extends ResultsDeriver[Sums, Quotients, Results] {
-    // need this for a compiler hint,
-    // TODO(igm): remove
-    implicit val deltaDeriver = implicitly[
-      ResultsDeriver[Option[Sums.Deltas.Delta], Option[Quotients.Deltas.Delta], Option[Results.Deltas.Delta]]]
+  // need this for a compiler hint,
+  // TODO(igm): remove
+  implicit val deltaDeriver = implicitly[
+    ResultsDeriver[Option[Sums.Deltas.Delta], Option[Quotients.Deltas.Delta], Option[Results.Deltas.Delta]]]
 
-    val scalarsDeriver = implicitly[
-      ResultsDeriver[Option[Sums.Scalars], Option[Quotients.Scalars], Option[Results.Scalars]]]
-    val deltasDeriver = implicitly[
-      ResultsDeriver[Option[Sums.Deltas], Option[Quotients.Deltas], Option[Results.Deltas]]]
+  implicit val scalarsDeriver = implicitly[
+    ResultsDeriver[Option[Sums.Scalars], Option[Quotients.Scalars], Option[Results.Scalars]]]
+  implicit val deltasDeriver = implicitly[
+    ResultsDeriver[Option[Sums.Deltas], Option[Quotients.Deltas], Option[Results.Deltas]]]
+
+  class FinalDeriver(roleCount: Int) extends ResultsDeriver[Sums, Quotients, Results] {
 
     def derive(sums: Sums, quotients: Quotients): Results = {
       Results(
@@ -114,7 +115,7 @@ object ResultsDeriver {
       val plays = sums.plays
 
       // total number of champion instances analyzed.
-      val totalGames = plays.values.sum
+      val totalGames = plays.values.sum / (2 * roleCount)
 
       // we will end up dividing each value by this total # of games to get incidence rate.
       val pickRateSums = plays.mapValues { v =>
@@ -148,10 +149,10 @@ object ResultsDeriver {
 }
 
 /**
-  * Generats the Results part of the statistics.
+  * Generates the Results part of the statistics.
   */
-case class ResultsGenerator(sums: Sums, quotients: Quotients) {
+object ResultsGenerator {
 
-  def generate(): Results = implicitly[ResultsDeriver[Sums, Quotients, Results]].derive(sums, quotients)
-
+  def generate(roleCount: Int, sums: Sums, quotients: Quotients): Results =
+    new ResultsDeriver.FinalDeriver(roleCount).derive(sums, quotients)
 }

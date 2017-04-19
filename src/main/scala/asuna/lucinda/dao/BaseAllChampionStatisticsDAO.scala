@@ -63,7 +63,7 @@ trait BaseAllChampionStatisticsDAO[K <: BaseAllChampionStatisticsDAO.CompositeKe
       // Finally, we'll map over the values of this map to generate a Statistics
       // object for each value. Thus we end up with a Future[AllChampionStatistics],
       // and we are done.
-    } yield StatisticsAggregator.makeStatistics(sumsMap)
+    } yield StatisticsAggregator.makeStatistics(in.base.roles.size, sumsMap)
   }
 
 }
