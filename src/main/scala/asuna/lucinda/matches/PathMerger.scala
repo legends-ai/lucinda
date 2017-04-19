@@ -22,7 +22,7 @@ trait PathMerger[T] {
     * Elements of any path of which this path is a subset will have these stats added.
     * This should be a superset of path included stats.
     */
-  def isStatsIncluded(in: T): Boolean
+  def isStatsIncluded(in: T): Boolean = true
 
   /**
     * Returns true if the path should be included in the result.
@@ -110,8 +110,6 @@ object PathMerger {
     override val order: PartialOrder[SkillOrder] =
       sequencePartialOrder[Ability].on[SkillOrder](_.skillOrder)
 
-    def isStatsIncluded(in: SkillOrder): Boolean = true
-
     def rebuild(path: SkillOrder, ss: Option[Subscalars]): SkillOrder = {
       path.copy(subscalars = ss)
     }
@@ -123,7 +121,8 @@ object PathMerger {
     override val order: PartialOrder[ItemList] =
       sequencePartialOrder[Int].on[ItemList](_.items)
 
-    def isStatsIncluded(in: ItemList): Boolean = {
+    override def isPathIncluded(in: ItemList, others: Seq[ItemList]): Boolean = {
+      // TODO(igm): corrupting pot is core on singed. should it be included here?
       if (in.items.contains(sightstone)) {
         in.items.size <= 7
       } else {
