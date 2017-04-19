@@ -6,6 +6,7 @@ import asuna.proto.league.MatchSum.Collections.SkillOrder
 import asuna.proto.league.MatchSum.Collections.Subscalars
 import cats.PartialOrder
 import asuna.common.legends.MatchSumHelpers._
+import cats.Eq
 import cats.implicits._
 
 
@@ -94,13 +95,15 @@ object PathMerger {
 
   implicit object skillOrderMerger extends PathMerger[SkillOrder] {
 
+    implicit val abilityEq = Eq.fromUniversalEquals[Ability]
+
     val evolutions = Set(Ability.Q_EV, Ability.W_EV, Ability.E_EV, Ability.R_EV)
 
     override def isPathIncluded(in: SkillOrder, others: Seq[SkillOrder]): Boolean = {
       if (in.skillOrder.exists(evolutions)) {
-        in.skillOrder.size == 21
+        in.skillOrder.size == 21 && (in.skillOrder(17) =!= Ability.R)
       } else {
-        in.skillOrder.size == 18
+        in.skillOrder.size == 18 && (in.skillOrder(15) =!= Ability.R)
       }
     }
 
