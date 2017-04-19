@@ -57,8 +57,7 @@ object StatisticsGenerator {
       .map(_.wins.keys.filter(_ > 0).size).orEmpty
 
     // Number of games played by the champion for each role.
-    val gamesByRole = roleSums.mapValues(
-      _.statistics.map(_.plays).orEmpty).toMap
+    val gamesByRole = roleSums.mapValues(_.statistics.map(_.plays).orEmpty)
 
     // Number of total games played by the champion.
     val totalGames = gamesByRole.values.sum
@@ -68,18 +67,17 @@ object StatisticsGenerator {
       (role, numMatches) <- gamesByRole
     } yield Statistics.Roles.RoleStats(
       role = role,
-      pickRate = if (totalGames == 0) 0 else (numMatches.toDouble / totalGames),
+      pickRate = if (totalGames === 0) 0 else (numMatches.toDouble / totalGames),
       numMatches = numMatches.toInt
     )
 
-    val roleSpace = if (roles.size == 0) (Role.values.toSet - Role.UNDEFINED_ROLE) else roles
+    val roleSpace = if (roles.size === 0) (Role.values.toSet - Role.UNDEFINED_ROLE) else roles
     val maxRole = roleStats
       .filter(stats => roleSpace(stats.role)).toSeq
       .sortBy(_.pickRate).map(_.role)
       .lastOption.getOrElse(Role.UNDEFINED_ROLE)
 
     Statistics.Roles(
-      // TODO(igm): return correct role
       role = maxRole,
       totalChampionsInRole = totalChampionsInRole,
       roleStats = roleStats.toSeq
