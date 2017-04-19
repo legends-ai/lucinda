@@ -162,8 +162,8 @@ object StatisticsGenerator {
     val gamesPlayedStat = pickRateStat.map { stat =>
       stat
       // First, let's set the correct value for games played.
-        .update(_.mean := gamesPlayed.toDouble)
-        .update(_.meanAcrossRole := meanGamesPlayed)
+        .withMean(gamesPlayed.toDouble)
+        .withMeanAcrossRole(meanGamesPlayed)
 
       // All other attributes of stat (rank, change, champ) are the same, so we are done.
     }

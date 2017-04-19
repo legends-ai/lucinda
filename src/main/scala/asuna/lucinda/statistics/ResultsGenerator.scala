@@ -26,7 +26,8 @@ object ResultsDeriver {
     val sortedPairs = quot.toSeq.sortBy(_._2.mean).reverse
 
     // (weighted) average of the value across entire pairs map
-    val meanAcrossRole = sum.values.toList.map(_.sum).combineAll / sum.size
+    val sums = sum.values.toList
+    val meanAcrossRole = sums.map(_.sum).combineAll / sums.map(_.count).combineAll
 
     val statsWithIndex = sortedPairs.zipWithIndex.map { case ((champ, value), index) =>
       (champ, (value, index))
