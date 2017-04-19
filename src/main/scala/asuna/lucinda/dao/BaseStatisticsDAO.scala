@@ -8,6 +8,7 @@ import monix.eval.Task
 import cats.implicits._
 import monix.cats._
 import asuna.common.monix.TaskHelpers._
+import asuna.proto.league.lucinda.rpc.Constraints
 
 object BaseStatisticsDAO {
 
@@ -25,7 +26,9 @@ object BaseStatisticsDAO {
     regions: Set[Region],
     roles: Set[Role],
     enemies: Set[Int],
-    queues: Set[Queue]
+    queues: Set[Queue],
+
+    constraints: Constraints,
   ) {
 
     lazy val space = MatchFilterSpaceHelpers.generate(

@@ -89,7 +89,8 @@ class BareStatisticsDAO(
         regions = base.regions,
         roles = Set(role),
         queues = base.queues,
-        enemies = base.enemies
+        enemies = base.enemies,
+        constraints = base.constraints,
       )
     )
   }
@@ -105,7 +106,8 @@ class BareStatisticsDAO(
         regions = base.regions,
         roles = Set(role),
         queues = base.queues,
-        enemies = base.enemies
+        enemies = base.enemies,
+        constraints = base.constraints,
       )
     )
   }

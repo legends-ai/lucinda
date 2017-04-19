@@ -12,6 +12,7 @@ import asuna.proto.league.lucinda.Statistics
 import scala.concurrent.{ ExecutionContext, Future }
 import monix.eval.Task
 import asuna.proto.league.lucinda.AllChampionStatistics
+import asuna.proto.league.lucinda.rpc.Constraints
 
 object SummonerStatisticsDAO {
   case class Key(
@@ -24,7 +25,7 @@ object SummonerStatisticsDAO {
     champions: Set[Int],
     roles: Set[Role],
     enemies: Set[Int],
-    queues: Set[Queue]
+    queues: Set[Queue],
   ) extends SummonerKey with BaseStatisticsDAO.CompositeKey {
     val base = BaseStatisticsDAO.Key(
       allChampions = allChampions,
@@ -37,7 +38,8 @@ object SummonerStatisticsDAO {
       regions = Set(id.region),
       roles = roles,
       enemies = enemies,
-      queues = queues
+      queues = queues,
+      constraints = Constraints(),
     )
   }
 }

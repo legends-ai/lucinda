@@ -41,7 +41,9 @@ object StatisticsDAO {
             regions = regions,
             roles = roles,
             enemies = enemies,
-            queues = queues
+            queues = queues,
+
+            constraints = constraints,
           )
         ),
         constraints = constraints
