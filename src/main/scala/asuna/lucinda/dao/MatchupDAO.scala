@@ -2,6 +2,7 @@ package asuna.lucinda.dao
 
 import asuna.proto.league.{ Queue, Region, Role, Tier }
 import asuna.proto.league.lucinda.MatchupOverview
+import asuna.proto.league.lucinda.rpc.Constraints
 import cats.implicits._
 import monix.eval.Task
 
@@ -17,8 +18,8 @@ class MatchupDAO(allChampionStatisticsDAO: AllChampionStatisticsDAO) {
     regions: Set[Region],
     roles: Set[Role],
     queues: Set[Queue],
-    minPickRate: Double
-  ): Task[Vector[MatchupOverview]] = {
+    constraints: Constraints,
+  ): Task[Seq[MatchupOverview]] = {
     for {
       // First, let's get our statistics against each enemy.
       championStatistics <- allChampionStatisticsDAO.compute(
@@ -31,7 +32,8 @@ class MatchupDAO(allChampionStatisticsDAO: AllChampionStatisticsDAO) {
           roles = roles,
           queues = queues,
           enemies = Set(champion),
-          reverse = true
+          reverse = true,
+          constraints = constraints,
         )
       )
     } yield {
@@ -54,7 +56,7 @@ class MatchupDAO(allChampionStatisticsDAO: AllChampionStatisticsDAO) {
         )
 
       // Check that we obey the minimum play rate
-      }.filter(_.pickRate.map(_.mean).orEmpty >= minPickRate)
+      }.filter(_.pickRate.map(_.mean).orEmpty >= constraints.minPickRate)
     }
   }
 

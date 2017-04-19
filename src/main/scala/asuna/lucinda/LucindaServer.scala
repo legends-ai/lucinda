@@ -130,7 +130,7 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
         regions = req.regions.toSet,
         roles = req.roles.toSet,
         queues = defaultQueuesIfEmpty(req.queues),
-        minPickRate = req.constraints.map(_.minPickRate).orEmpty
+        constraints = req.constraints.get,
       ).runAsync
     } yield GetAllMatchupsResponse(matchups = matchups)
   }

@@ -6,6 +6,7 @@ import asuna.proto.league.MatchSum
 import asuna.proto.league.MatchSum.Statistics.{ Moments => SMoments }
 import asuna.proto.league.lucinda.MatchQuotient.Statistics.{ Moments => QMoments }
 import asuna.proto.league.lucinda.AllChampionStatistics.{ Results, Sums, Quotients }
+import asuna.common.legends.MomentsHelpers._
 import cats.implicits._
 import shapeless._
 
@@ -105,26 +106,39 @@ object ResultsDeriver {
       )
     }
 
-    def derivatives(sums: Sums): Results.Derivatives = {
+    def derivatives(sums: Sums)(
+      implicit deriver: ResultsDeriver[Map[Int, SMoments], Map[Int, QMoments], Map[Int, Statistic]]
+ ): Results.Derivatives = {
       // map of total games played per champion
       val plays = sums.plays
 
       // total number of games. div by 10 since 10 champs per game.
       // TODO(igm): tweak based off game mode. twisted treeline?
       val totalGames = plays.values.sum / 10
-      val pickRateMap = plays.mapValues(_.toDouble / totalGames)
 
-      val banRateMap = for {
-        banCount <- sums.subscalars.map(_.bans.mapValues(_.plays))
-      } yield {
-        val bans = banCount.mapValues(_.values.toList.combineAll)
-        // 6 bans per match. This finds us the total number of matches.
-        val total = bans.values.sum.toDouble / 6
-        bans.mapValues(_.toDouble / total)
+      val pickRateSums = plays.mapValues { v =>
+        SMoments(
+          count = totalGames.toInt,
+          sum = v,
+        )
       }
+
+      val banCount = sums.subscalars.map(_.bans.mapValues(_.plays)).orEmpty
+      val bans = banCount.mapValues(_.values.toList.combineAll)
+
+      // 6 bans per match. This finds us the total number of matches.
+      // in theory, this should be the same as totalGames, but meh
+      val total = bans.values.sum.toDouble / 6
+      val banRateSums = bans.mapValues { v =>
+        SMoments(
+          count = total.toInt,
+          sum = v,
+        )
+      }
+
       Results.Derivatives(
-        // picks = makeStat(pickRateMap, plays),
-        // bans = makeStat(banRateMap.orEmpty, plays)
+        picks = deriver.derive(pickRateSums, pickRateSums.mapValues(_.toQuotient)),
+        bans = deriver.derive(banRateSums, banRateSums.mapValues(_.toQuotient))
       )
     }
 

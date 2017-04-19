@@ -1,7 +1,7 @@
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 name := "lucinda"
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.2"
 
 enablePlugins(
   AssemblyPlugin,
