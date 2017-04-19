@@ -29,7 +29,8 @@ object StatisticsCombiner {
         // Roles should be the same. If they're not, fuck my ass.
         results = results,
         quotients = quotients,
-        sums = sums
+        sums = sums,
+        roleCount = a.roleCount,
       )
     }
 

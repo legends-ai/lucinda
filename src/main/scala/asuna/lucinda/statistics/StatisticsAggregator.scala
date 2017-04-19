@@ -15,7 +15,8 @@ object StatisticsAggregator {
     AllChampionStatistics(
       results = Some(results),
       quotients = Some(quotients),
-      sums = Some(sums)
+      sums = Some(sums),
+      roleCount = roleCount,
     )
   }
 
