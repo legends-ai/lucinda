@@ -15,6 +15,8 @@ trait SumConverter[In, Out] {
 
 object SumConverter {
 
+  def apply[In, Out](implicit converter: SumConverter[In, Out]) = converter
+
   def fromConvert[In, Out](f: (In, Int) => Out): SumConverter[In, Out] = new SumConverter[In, Out] {
     def convert(in: In, champion: Int): Out = f(in, champion)
   }
@@ -93,10 +95,10 @@ object SumConversionHelpers {
     genu.from(convt.convert(gent.to(in), champ))
   }
 
-  implicit val scalarsConv = implicitly[SumConverter[MatchSum.Statistics.Scalars, Sums.Scalars]]
-  implicit val deltaConv = implicitly[SumConverter[MatchSum.Statistics.Deltas.Delta, Sums.Deltas.Delta]]
-  implicit val deltasConv = implicitly[SumConverter[MatchSum.Statistics.Deltas, Sums.Deltas]]
-  implicit val ssConv = implicitly[SumConverter[MatchSum.Collections.Subscalars, Sums.Subscalars.Subscalar]]
+  implicit val scalarsConv = SumConverter[MatchSum.Statistics.Scalars, Sums.Scalars]
+  implicit val deltaConv = SumConverter[MatchSum.Statistics.Deltas.Delta, Sums.Deltas.Delta]
+  implicit val deltasConv = SumConverter[MatchSum.Statistics.Deltas, Sums.Deltas]
+  implicit val ssConv = SumConverter[MatchSum.Collections.Subscalars, Sums.Subscalars.Subscalar]
 
 
   implicit object matchSumConverter extends SumConverter[MatchSum, Sums] {

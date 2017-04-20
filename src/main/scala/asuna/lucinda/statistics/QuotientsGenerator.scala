@@ -1,7 +1,5 @@
 package asuna.lucinda.statistics
 
-import scala.math.Numeric
-import scala.math.Numeric.Implicits._
 import asuna.proto.league.MatchSum.Statistics.{ Moments => SMoments }
 import asuna.proto.league.lucinda.AllChampionStatistics.{ Quotients, Sums }
 import asuna.proto.league.lucinda.MatchQuotient.Statistics.{ Moments => QMoments }
@@ -56,23 +54,16 @@ object QuotientsDeriver {
     deriver: QuotientsDeriver[RS, RQ]
   ) = pure[S, Q](sums => qGen.from(deriver.derive(sGen.to(sums))))
 
+  implicit val scalarsDeriver = QuotientsDeriver[Sums.Scalars, Quotients.Scalars]
+  implicit val deltaDeriver = QuotientsDeriver[Sums.Deltas.Delta, Quotients.Deltas.Delta]
+  implicit val deltasDeriver = QuotientsDeriver[Sums.Deltas, Quotients.Deltas]
+
   implicit object generateDeriver extends QuotientsDeriver[Sums, Quotients] {
 
     def derive(sums: Sums): Quotients = {
-      val scalarsDeriver = QuotientsDeriver[Sums.Scalars, Quotients.Scalars]
-
-      implicit val deltaDeriver = QuotientsDeriver[Sums.Deltas.Delta, Quotients.Deltas.Delta]
-      val deltasDeriver = QuotientsDeriver[Sums.Deltas, Quotients.Deltas]
-
       Quotients(
-        scalars = sums.scalars
-          .map(scalarsDeriver.derive)
-          .getOrElse(Quotients.Scalars())
-          .some,
-        deltas = sums.deltas
-          .map(deltasDeriver.derive)
-          .getOrElse(Quotients.Deltas())
-          .some
+        scalars = sums.scalars.map(scalarsDeriver.derive),
+        deltas = sums.deltas.map(deltasDeriver.derive),
       )
     }
 

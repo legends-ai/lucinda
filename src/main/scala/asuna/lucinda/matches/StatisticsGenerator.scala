@@ -124,15 +124,14 @@ object StatisticsGenerator {
       _: AllChampionStatistics.Results.Deltas.Delta => Map[Int, Statistic],
       _: Option[MatchQuotient.Statistics.Moments]
     )
-    if (!delta.isDefined) {
-      return None
+    delta.map { _ =>
+      Statistics.Deltas.Delta(
+        zeroToTen = get(_.zeroToTen, quot.flatMap(_.zeroToTen)),
+        tenToTwenty = get(_.tenToTwenty, quot.flatMap(_.tenToTwenty)),
+        twentyToThirty = get(_.twentyToThirty, quot.flatMap(_.twentyToThirty)),
+        thirtyToEnd = get(_.thirtyToEnd, quot.flatMap(_.thirtyToEnd))
+      )
     }
-    Statistics.Deltas.Delta(
-      zeroToTen = get(_.zeroToTen, quot.flatMap(_.zeroToTen)),
-      tenToTwenty = get(_.tenToTwenty, quot.flatMap(_.tenToTwenty)),
-      twentyToThirty = get(_.twentyToThirty, quot.flatMap(_.twentyToThirty)),
-      thirtyToEnd = get(_.thirtyToEnd, quot.flatMap(_.thirtyToEnd))
-    ).some
   }
 
   def makeScalars(
