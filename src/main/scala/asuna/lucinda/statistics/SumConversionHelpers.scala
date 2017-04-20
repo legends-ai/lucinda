@@ -16,7 +16,7 @@ object SumConverter {
 
   def apply[In, Out](implicit converter: SumConverter[In, Out]) = converter
 
-  def fromConvert[In, Out](f: (In, Int) => Out): SumConverter[In, Out] = new SumConverter[In, Out] {
+  def instance[In, Out](f: (In, Int) => Out): SumConverter[In, Out] = new SumConverter[In, Out] {
     def convert(in: In, champion: Int): Out = f(in, champion)
   }
 
@@ -24,7 +24,7 @@ object SumConverter {
 
 object SumConversionHelpers {
 
-  implicit def mapConverter[T] = SumConverter.fromConvert[T, Map[Int, T]] {
+  implicit def mapConverter[T] = SumConverter.instance[T, Map[Int, T]] {
     (in, champion) => Map(champion -> in)
   }
 
@@ -53,7 +53,7 @@ object SumConversionHelpers {
 
   implicit val momentsOptConverter = implicitly[SumConverter[Option[Moments], Map[Int, Moments]]]
 
-  implicit val dragonStatSeqConverter = SumConverter.fromConvert[
+  implicit val dragonStatSeqConverter = SumConverter.instance[
     Seq[MatchSum.Statistics.Scalars.DragonStat], Seq[Sums.Scalars.DragonStat]
   ] { (sums, champ) =>
     sums.map { sum =>
@@ -64,7 +64,7 @@ object SumConversionHelpers {
     }
   }
 
-  implicit val subscalarMapConverter = SumConverter.fromConvert[
+  implicit val subscalarMapConverter = SumConverter.instance[
     Map[Int, MatchSum.Collections.Subscalars], Map[Int, Sums.Subscalars.Subscalar]
   ] { (sum, champ) =>
     Map(
@@ -75,7 +75,7 @@ object SumConversionHelpers {
     )
   }
 
-  implicit val hnilConverter = SumConverter.fromConvert[HNil, HNil] { (_, _) => HNil }
+  implicit val hnilConverter = SumConverter.instance[HNil, HNil] { (_, _) => HNil }
 
   implicit def hlistConverter[H, T <: HList, J, U <: HList](
     implicit hconv: SumConverter[H, J],
@@ -90,7 +90,7 @@ object SumConversionHelpers {
     implicit gent: Generic.Aux[T, TR],
     genu: Generic.Aux[U, UR],
     convt: SumConverter[TR, UR]
-  ): SumConverter[T, U] = SumConverter.fromConvert { (in, champ) =>
+  ): SumConverter[T, U] = SumConverter.instance { (in, champ) =>
     genu.from(convt.convert(gent.to(in), champ))
   }
 
