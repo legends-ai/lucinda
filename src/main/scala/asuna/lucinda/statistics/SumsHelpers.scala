@@ -1,6 +1,5 @@
 package asuna.lucinda.statistics
 
-import asuna.proto.league.Role
 import asuna.proto.league.lucinda.AllChampionStatistics
 import cats.Monoid
 import cats.implicits._

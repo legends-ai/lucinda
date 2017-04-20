@@ -1,6 +1,5 @@
 package asuna.lucinda.statistics
 
-import asuna.common.legends.MatchSumHelpers._
 import asuna.common.legends.MomentsHelpers._
 import asuna.proto.league.MatchSum
 import MatchSum.Statistics.Moments
