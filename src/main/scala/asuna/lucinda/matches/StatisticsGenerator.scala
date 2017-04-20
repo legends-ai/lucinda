@@ -99,15 +99,6 @@ object StatisticsGenerator {
         // get one of the statistics if exists
         // TODO(igm): merge statistics together somehow? prob impossible without count.
         accessor(statsMap).filterKeys(champions).values.headOption
-      }.map { baseStats =>
-        moments match {
-          case Some(moms) => baseStats.copy(
-            // in theory these should be the same, but in case they're not let's add it back
-            mean = moms.mean,
-            stdev = Math.sqrt(moms.variance)
-          )
-          case None => baseStats
-        }
       }
     }
   }
