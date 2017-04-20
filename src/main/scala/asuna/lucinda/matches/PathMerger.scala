@@ -101,9 +101,9 @@ object PathMerger {
 
     override def isPathIncluded(in: SkillOrder, others: Seq[SkillOrder]): Boolean = {
       if (in.skillOrder.exists(evolutions)) {
-        in.skillOrder.size == 21 && (in.skillOrder(17) =!= Ability.R)
+        in.skillOrder.size == 21 && (in.skillOrder(16) =!= Ability.R)
       } else {
-        in.skillOrder.size == 18 && (in.skillOrder(15) =!= Ability.R)
+        in.skillOrder.size == 18 && (in.skillOrder(14) =!= Ability.R)
       }
     }
 
