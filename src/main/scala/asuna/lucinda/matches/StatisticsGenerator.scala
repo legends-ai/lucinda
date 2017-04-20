@@ -25,12 +25,7 @@ object StatisticsGenerator {
     val roleStats = makeRoleStats(allStats, roles, byRole)
 
     // Then, we will fetch the stats for this patch for the champion.
-    val roleKeys = if (roles.size == 0) {
-      Set(roleStats.role)
-    } else {
-      roles
-    }
-    val patchStats = byRole.filterKeys(roleKeys).values.toList.combineAll
+    val patchStats = byRole.filterKeys(roles).values.toList.combineAll
 
     // This is the quotient of the champion for the entire search space.
     val quot = QuotientGenerator.generate(patchStats)
