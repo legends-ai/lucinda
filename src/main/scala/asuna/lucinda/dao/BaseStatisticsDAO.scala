@@ -96,7 +96,7 @@ trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDA
       champions = in.base.champions,
       allStats = allStats,
       patchNbhd = patchNbhd,
-      roles = in.base.roles,
+      roles = if (in.base.roles.size === 0) Set(maxRole) else in.base.roles,
       byRole = byRole,
       byPatch = byPatch,
       patches = in.base.patches

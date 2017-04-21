@@ -1,14 +1,9 @@
 package asuna.lucinda.matches
 
-import scala.util.{ Success, Try }
-
 import asuna.common.legends.MatchSumHelpers._
-import asuna.common.legends.MomentsHelpers._
-import asuna.lucinda.statistics.StatisticsCombiner._
-import asuna.proto.league.{ Ability, IntRange, MatchSum, Region, Role }
-import asuna.proto.league.lucinda.{ AllChampionStatistics, MatchQuotient, Statistic }
-import asuna.proto.league.lucinda.Statistics
-import asuna.proto.league.lucinda.Statistics.Graphs.GoldPerTime
+import asuna.proto.league._
+import asuna.proto.league.lucinda._
+import Statistics.Graphs.GoldPerTime
 import cats.implicits._
 
 object StatisticsGenerator {
@@ -27,7 +22,7 @@ object StatisticsGenerator {
     // Then, we will fetch the stats for this patch for the champion.
     val patchStats = byRole.filterKeys(roles).values.toList.combineAll
 
-    // This is the quotient of the champion for the entire search space.
+    // this is the quotient of the champion for the entire search space.
     val quot = QuotientGenerator.generate(patchStats)
 
     Statistics(
@@ -89,7 +84,6 @@ object StatisticsGenerator {
       None
     } else {
       // TODO(igm): support multiple champs
-      val champion = champions.toSeq.headOption.orEmpty
       obj.flatMap { statsMap =>
         // get one of the statistics if exists
         // TODO(igm): merge statistics together somehow? prob impossible without count.
