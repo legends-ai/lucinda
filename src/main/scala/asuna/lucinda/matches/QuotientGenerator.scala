@@ -3,7 +3,6 @@ package asuna.lucinda.matches
 import asuna.common.legends.MatchSumHelpers._
 import asuna.proto.league.MatchSum
 import asuna.proto.league.lucinda.MatchQuotient
-import MatchQuotient._
 import MatchQuotient.Collections._
 import cats.implicits._
 import asuna.proto.league.MatchSum.Collections.Trinket
@@ -11,6 +10,7 @@ import asuna.proto.league.MatchSum.Collections.Trinket
 object QuotientGenerator {
 
   def generate(sum: MatchSum): MatchQuotient = {
+    import Divisible._
     import Divisor._
     import PathMerger._
     import SubscalarsMapping._

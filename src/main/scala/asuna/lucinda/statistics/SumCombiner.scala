@@ -4,10 +4,9 @@ import asuna.proto.league.MatchSum
 import asuna.proto.league.lucinda.AllChampionStatistics.Sums
 import cats.implicits._
 
-import SumsHelpers._
-import SumConversionHelpers._
-
 object SumCombiner {
+  import SumsHelpers._
+  import SumConverter._
 
   def combineSums(sums: Map[Int, MatchSum]): Sums = {
     val filtered = sums.filterNot { case (_, sum) =>
