@@ -1,8 +1,6 @@
 package asuna.lucinda.statistics
 
-import scala.language.implicitConversions
 import asuna.proto.league.lucinda.Statistic
-import asuna.proto.league.MatchSum
 import asuna.proto.league.MatchSum.Statistics.{ Moments => SMoments }
 import asuna.proto.league.lucinda.MatchQuotient.Statistics.{ Moments => QMoments }
 import asuna.proto.league.lucinda.AllChampionStatistics.{ Results, Sums, Quotients }
@@ -15,6 +13,7 @@ trait ResultsDeriver[S, Q, R] {
   def derive(sums: S, quotients: Q): R
 }
 
+// TODO(igm): merge with Divisor somehow -- we don't really need the quotients object anymore
 object ResultsDeriver {
 
   private[this] val logger = getLogger
@@ -101,19 +100,32 @@ object ResultsDeriver {
   implicit val deltasDeriver = implicitly[
     ResultsDeriver[Option[Sums.Deltas], Option[Quotients.Deltas], Option[Results.Deltas]]]
 
+  private def derivePlays(in: Map[Int, Int])(
+    implicit deriver: ResultsDeriver[Map[Int, SMoments], Map[Int, QMoments], Map[Int, Statistic]]
+  ): Map[Int, Statistic] = {
+    val sums = in.mapValues { plays =>
+      SMoments(
+        count = 1,
+        sum = plays,
+      )
+    }
+    deriver.derive(sums, sums.mapValues(_.toQuotient))
+  }
+
   class FinalDeriver(roleCount: Int) extends ResultsDeriver[Sums, Quotients, Results] {
 
     def derive(sums: Sums, quotients: Quotients): Results = {
       Results(
+        plays = derivePlays(sums.plays),
         scalars = scalarsDeriver.derive(sums.scalars, quotients.scalars),
         deltas = deltasDeriver.derive(sums.deltas, quotients.deltas),
-        derivatives = derivatives(sums).some
+        derivatives = derivatives(sums).some,
       )
     }
 
     def derivatives(sums: Sums)(
       implicit deriver: ResultsDeriver[Map[Int, SMoments], Map[Int, QMoments], Map[Int, Statistic]]
- ): Results.Derivatives = {
+    ): Results.Derivatives = {
       // map of total games played per champion
       val plays = sums.plays
 
