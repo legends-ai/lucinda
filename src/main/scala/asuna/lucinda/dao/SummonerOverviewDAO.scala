@@ -38,12 +38,12 @@ class SummonerOverviewDAO(summonerChampions: SummonerChampionsDAO)
         (results, sums, plays) =>
           SummonerOverview(
             plays = plays.values.sum,
-            wins = sums.wins.values.map(_.sum).sum,
+            wins = sums.wins.values.map(_.sum).sum.toLong,
 
             // kda
-            kills = sums.kills.values.map(_.sum).sum,
-            deaths = sums.deaths.values.map(_.sum).sum,
-            assists = sums.assists.values.map(_.sum).sum,
+            kills = sums.kills.values.map(_.sum).sum.toLong,
+            deaths = sums.deaths.values.map(_.sum).sum.toLong,
+            assists = sums.assists.values.map(_.sum).sum.toLong,
 
             // champion data
             championOverviews = key.allChampions.toList
