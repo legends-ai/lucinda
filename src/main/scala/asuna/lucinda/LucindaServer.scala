@@ -93,7 +93,7 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
       statistics <- statisticsDAO.compute(
         StatisticsDAO.Key(
           allChampions = factors.champions.toSet,
-          boots = factors.generationFactors.map(_.boots.toSet).getOrElse(Set()),
+          boots = factors.boots.toSet,
 
           patchNeighborhood = factors.patchNeighborhood,
           prevPatch = factors.prevPatches.get(factors.earliestPatch),

@@ -10,7 +10,7 @@ class PathMergerSpec extends FlatSpec with Matchers {
   import SubscalarsMapping._
   import PathMerger._
 
-  "Item List Path Merger" should "merge only the full paths" in {
+  "Item List Path Merger" should "merge all paths" in {
     val paths = List(
       ItemList(
         items = Seq(1, 2, 3, 4, 5, 6),
@@ -39,7 +39,7 @@ class PathMergerSpec extends FlatSpec with Matchers {
           plays = 150,
           wins = 4
         ).some
-      )
+      ),
     )
 
     val expected = List(
@@ -48,6 +48,27 @@ class PathMergerSpec extends FlatSpec with Matchers {
         subscalars = Subscalars(
           plays = 16,
           wins = 7
+        ).some
+      ),
+      ItemList(
+        items = Seq(1, 2, 3, 4),
+        subscalars = Subscalars(
+          plays = 13,
+          wins = 6
+        ).some
+      ),
+      ItemList(
+        items = Seq(1, 2, 3),
+        subscalars = Subscalars(
+          plays = 3,
+          wins = 2
+        ).some
+      ),
+      ItemList(
+        items = Seq(1, 3, 4),
+        subscalars = Subscalars(
+          plays = 150,
+          wins = 4
         ).some
       ),
     )
