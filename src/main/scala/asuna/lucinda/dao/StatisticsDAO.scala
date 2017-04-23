@@ -11,13 +11,16 @@ object StatisticsDAO {
 
   case class Key(
     baseKey: BareStatisticsDAO.Key,
-    constraints: Constraints
+    boots: Set[Int],
+    constraints: Constraints,
   )
 
   object Key {
 
     def apply(
       allChampions: Set[Int],
+      boots: Set[Int],
+
       patches: Set[String],
       patchNeighborhood: Seq[String],
       prevPatch: Option[String],
@@ -27,7 +30,7 @@ object StatisticsDAO {
       roles: Set[Role],
       queues: Set[Queue],
       enemies: Set[Int],
-      constraints: Constraints
+      constraints: Constraints,
     ): Key = {
       Key(
         baseKey = BareStatisticsDAO.Key(
@@ -47,7 +50,8 @@ object StatisticsDAO {
             constraints = constraints,
           )
         ),
-        constraints = constraints
+        boots = boots,
+        constraints = constraints,
       )
     }
   }
@@ -55,19 +59,20 @@ object StatisticsDAO {
   /**
     * An attempt to bring diversity to the suggested build paths.
     * Only one build -- highest picked -- will be returned per 3 item set.
+    * This will not take boots into account.
     */
-  def diversifyBuilds(in: Seq[ItemList]): Seq[ItemList] = {
+  def diversifyBuilds(in: Seq[ItemList], boots: Set[Int]): Seq[ItemList] = {
     in
-      .groupBy(_.items.take(3))
+      .groupBy(_.items.filterNot(boots).take(3))
       .values.toSeq
       .map(
         _.sortBy(_.subscalars.map(_.playCount).getOrElse(0)).reverse.headOption
       ).flatten
   }
 
-  def diversifyBuildsOfStats(in: Statistics): Statistics = {
+  def diversifyBuildsOfStats(boots: Set[Int])(in: Statistics): Statistics = {
     in.update(_.collections.coreBuilds
-                := diversifyBuilds(in.collections.map(_.coreBuilds).getOrElse(Seq())))
+              := diversifyBuilds(in.collections.map(_.coreBuilds).getOrElse(Seq()), boots))
   }
 
 }
@@ -77,7 +82,7 @@ class StatisticsDAO(bareDAO: BareStatisticsDAO) {
 
   def compute(key: Key): Task[Statistics] = {
     bareDAO.get(key.baseKey, forceRefresh = key.constraints.forceRefresh)
-      .map(diversifyBuildsOfStats)
+      .map(diversifyBuildsOfStats(key.boots))
       .map { stats =>
         MinPickRateDecorator.decorate(key.constraints.minPickRate, 10, stats)
       }
