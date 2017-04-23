@@ -1,7 +1,6 @@
 package asuna.lucinda.dao
 
 import asuna.lucinda.DAOSettings
-import asuna.lucinda.filters.MatchFilterSpaceHelpers
 import asuna.lucinda.statistics.StatisticsAggregator
 import asuna.proto.league._
 import asuna.proto.league.alexandria.StoredAllChampionStatistics

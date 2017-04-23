@@ -3,13 +3,11 @@ package asuna.lucinda.dao
 import asuna.common.legends.MatchSumHelpers._
 import asuna.lucinda.matches.StatisticsGenerator
 import cats.implicits._
-import asuna.lucinda.filters.MatchFilterSpaceHelpers
-import asuna.proto.league.{ MatchFiltersSpace, SummonerId }
+import asuna.proto.league.SummonerId
 import asuna.proto.league.alexandria.rpc.GetSummonerMatchSumRequest
-import asuna.proto.league.{ Queue, Region, Role, Tier }
+import asuna.proto.league.{ Queue, Role, Tier }
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.lucinda.Statistics
-import scala.concurrent.{ ExecutionContext, Future }
 import monix.eval.Task
 import asuna.proto.league.lucinda.AllChampionStatistics
 import asuna.proto.league.lucinda.rpc.Constraints

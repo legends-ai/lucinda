@@ -2,7 +2,6 @@ package asuna.lucinda.dao
 
 import asuna.lucinda.matches.StatisticsGenerator
 import asuna.proto.league._
-import asuna.lucinda.filters.MatchFilterSpaceHelpers
 import asuna.proto.league.lucinda.{ AllChampionStatistics, Statistics, StatisticsKey }
 import monix.eval.Task
 import cats.implicits._
@@ -31,19 +30,26 @@ object BaseStatisticsDAO {
     constraints: Constraints,
   ) {
 
-    lazy val space = MatchFilterSpaceHelpers.generate(
-      champions, patches, tiers, regions, enemies, roles, queues)
+    lazy val space = MatchFiltersSpace(
+      championIds = champions,
+      versions = patches,
+      tiers = tiers,
+      regions = regions,
+      enemyIds = enemies,
+      roles = roles,
+      queues = queues,
+    )
 
     lazy val byRoleFilters: Map[Role, MatchFiltersSpace] = Role.values
       .map(r => (r, r)).toMap
       .mapValues { someRole =>
-        space.copy(roles = Seq(someRole))
+        space.copy(roles = Set(someRole))
       }
 
     lazy val byPatchFilters: Map[String, MatchFiltersSpace] = patchNeighborhood
       .map(p => (p, p)).toMap
       .mapValues { patch =>
-        space.copy(versions = Seq(patch))
+        space.copy(versions = Set(patch))
       }.toMap
 
     lazy val patchNbhdMap: Map[String, String] =

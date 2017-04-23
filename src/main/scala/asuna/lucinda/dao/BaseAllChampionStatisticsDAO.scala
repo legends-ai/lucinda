@@ -1,6 +1,5 @@
 package asuna.lucinda.dao
 
-import asuna.lucinda.filters.MatchFilterSpaceHelpers
 import asuna.lucinda.statistics.StatisticsAggregator
 import asuna.proto.league._
 import asuna.proto.league.lucinda.AllChampionStatistics
@@ -28,8 +27,14 @@ object BaseAllChampionStatisticsDAO {
     lazy val filtersMap: Map[Int, MatchFiltersSpace] = allChampions
       .map(c => (c, c)).toMap
       .mapValues { champ =>
-        val basis = MatchFilterSpaceHelpers.generate(
-          Set(champ), patches, tiers, regions, enemies, roles, queues
+        val basis = MatchFiltersSpace(
+          championIds = Set(champ),
+          enemyIds = enemies,
+          versions = patches,
+          tiers = tiers,
+          regions = regions,
+          roles = roles,
+          queues = queues,
         )
         if (reverse) {
           basis.copy(championIds = basis.enemyIds, enemyIds = basis.championIds)
