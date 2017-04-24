@@ -66,9 +66,9 @@ trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDA
 
   val sumFetcher: SumFetcher[K]
 
-  def fetchACS(in: K, role: Role): Task[AllChampionStatistics]
+  def fetchACS(in: K, roles: Set[Role]): Task[AllChampionStatistics]
 
-  def fetchPatchACS(in: K, role: Role, patch: String): Task[AllChampionStatistics]
+  def fetchPatchACS(in: K, roles: Set[Role], patch: String): Task[AllChampionStatistics]
 
   def compute(in: K): Task[Statistics] = {
     for {
@@ -76,12 +76,15 @@ trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDA
         sumFetcher.fetchSums(in, subspace)
       }
 
-      // The role with the most plays.
-      maxRole = byRole.toSeq
-        .sortBy(_._2.statistics.map(_.plays).orEmpty)
-        .lastOption
-        .map(_._1)
-        .getOrElse(Role.UNDEFINED_ROLE)
+      roles = if (in.base.roles.size === 0) {
+        // The role with the most plays.
+        val maxRole = byRole.toSeq
+          .sortBy(_._2.statistics.map(_.plays).orEmpty)
+          .lastOption
+          .map(_._1)
+          .getOrElse(Role.UNDEFINED_ROLE)
+        Set(maxRole)
+      } else in.base.roles
 
       // Map from patch ot matchsum
       byPatch <- in.base.byPatchFilters.traverseG { subspace =>
@@ -89,12 +92,12 @@ trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDA
       }
 
       // STats (where statistic objects come from)
-      allStats <- fetchACS(in, maxRole)
+      allStats <- fetchACS(in, roles)
 
       // TODO(igm): reuse prev call data
       // Map of patch to all champion statistics for a role
       patchNbhd <- in.base.patchNbhdMap.traverseG { patch =>
-        fetchPatchACS(in, maxRole, patch)
+        fetchPatchACS(in, roles, patch)
       }
 
       // TODO(igm): parallelize
@@ -102,10 +105,10 @@ trait BaseStatisticsDAO[K <: BaseStatisticsDAO.CompositeKey] extends EphemeralDA
       champions = in.base.champions,
       allStats = allStats,
       patchNbhd = patchNbhd,
-      roles = if (in.base.roles.size === 0) Set(maxRole) else in.base.roles,
+      roles = roles,
       byRole = byRole,
       byPatch = byPatch,
-      patches = in.base.patches
+      patches = in.base.patches,
     )
   }
 

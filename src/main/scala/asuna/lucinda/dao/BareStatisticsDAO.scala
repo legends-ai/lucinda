@@ -77,7 +77,7 @@ class BareStatisticsDAO(
   def project(full: StoredStatistics): Statistics =
     full.value.get
 
-  def fetchACS(in: BareStatisticsDAO.Key, role: Role): Task[AllChampionStatistics] = {
+  def fetchACS(in: BareStatisticsDAO.Key, roles: Set[Role]): Task[AllChampionStatistics] = {
     val base = in.base
     allChampionStatisticsDAO.compute(
       AllChampionStatisticsDAO.Key(
@@ -86,7 +86,7 @@ class BareStatisticsDAO(
         patches = base.patches,
         prevPatch = base.prevPatch,
         regions = base.regions,
-        roles = Set(role),
+        roles = roles,
         queues = base.queues,
         enemies = base.enemies,
         constraints = base.constraints,
@@ -94,7 +94,7 @@ class BareStatisticsDAO(
     )
   }
 
-  def fetchPatchACS(in: BareStatisticsDAO.Key, role: Role, patch: String): Task[AllChampionStatistics] = {
+  def fetchPatchACS(in: BareStatisticsDAO.Key, roles: Set[Role], patch: String): Task[AllChampionStatistics] = {
     val base = in.base
     allChampionStatisticsDAO.compute(
       AllChampionStatisticsDAO.Key(
@@ -103,7 +103,7 @@ class BareStatisticsDAO(
         patches = Set(patch),
         prevPatch = None,
         regions = base.regions,
-        roles = Set(role),
+        roles = roles,
         queues = base.queues,
         enemies = base.enemies,
         constraints = base.constraints,
