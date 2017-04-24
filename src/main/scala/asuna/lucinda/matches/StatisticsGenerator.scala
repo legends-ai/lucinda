@@ -230,7 +230,7 @@ object StatisticsGenerator {
           banRate = patchResults.flatMap(_.derivatives)
             .flatMap(_.bans.mapValues(_.mean).get(id)).orEmpty
         )
-      }.toSeq,
+      }.toSeq.sortBy(_.patch.split("\\.").map(_.toInt).toIterable),
 
       byGameLength = quot.collections.map(_.durations).getOrElse(Map()).map { case (duration, stats) =>
         Statistics.Graphs.ByGameLength(
