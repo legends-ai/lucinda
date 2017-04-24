@@ -1,12 +1,10 @@
 package asuna.lucinda.dao
 
+import asuna.common.monix.TaskHelpers._
 import asuna.lucinda.statistics.StatisticsAggregator
 import asuna.proto.league._
 import asuna.proto.league.lucinda.AllChampionStatistics
 import monix.eval.Task
-import cats.implicits._
-import monix.cats._
-import asuna.common.monix.TaskHelpers._
 
 object BaseAllChampionStatisticsDAO {
 

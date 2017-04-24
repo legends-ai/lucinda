@@ -2,7 +2,7 @@ package asuna.lucinda.dao
 
 import asuna.lucinda.matches.StatisticsGenerator
 import asuna.proto.league._
-import asuna.proto.league.lucinda.{ AllChampionStatistics, Statistics, StatisticsKey }
+import asuna.proto.league.lucinda.{ AllChampionStatistics, Statistics }
 import monix.eval.Task
 import cats.implicits._
 import monix.cats._

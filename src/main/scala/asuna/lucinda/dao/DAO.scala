@@ -1,17 +1,15 @@
 package asuna.lucinda.dao
 
-import asuna.lucinda.TaskBatcher
+import asuna.lucinda.{ DAOSettings, TaskBatcher }
+import cats.implicits._
 import com.timgroup.statsd.StatsDClient
-import java.util.concurrent.ConcurrentHashMap
 import com.google.protobuf.timestamp.Timestamp
+import java.util.concurrent.ConcurrentHashMap
 import monix.eval.Task
 import monix.execution.Scheduler
-import scala.concurrent.Future
 import monix.reactive.OverflowStrategy.DropNew
 import monix.reactive.subjects.PublishToOneSubject
-import asuna.lucinda.DAOSettings
-import scala.concurrent.duration.Duration
-import cats.implicits._
+import scala.concurrent.Future
 
 /**
   * @tparam I the key.

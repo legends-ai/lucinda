@@ -3,7 +3,6 @@ package asuna.lucinda.statistics
 import asuna.proto.league.MatchSum.Statistics.{ Moments => SMoments }
 import asuna.proto.league.lucinda.AllChampionStatistics.{ Quotients, Sums }
 import asuna.proto.league.lucinda.MatchQuotient.Statistics.{ Moments => QMoments }
-import cats.implicits._
 import shapeless.{ Generic, HList, ::, HNil, Lazy }
 
 trait QuotientsDeriver[S, Q] {
