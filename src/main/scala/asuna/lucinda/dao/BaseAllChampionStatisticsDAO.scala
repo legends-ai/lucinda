@@ -28,13 +28,13 @@ object BaseAllChampionStatisticsDAO {
       .map(c => (c, c)).toMap
       .mapValues { champ =>
         val basis = MatchFiltersSpace(
-          championIds = Set(champ),
-          enemyIds = enemies,
-          versions = patches,
-          tiers = tiers,
-          regions = regions,
-          roles = roles,
-          queues = queues,
+          championIds = Set(champ).toSeq,
+          enemyIds = enemies.toSeq,
+          versions = patches.toSeq,
+          tiers = tiers.toSeq,
+          regions = regions.toSeq,
+          roles = roles.toSeq,
+          queues = queues.toSeq,
         )
         if (reverse) {
           basis.copy(championIds = basis.enemyIds, enemyIds = basis.championIds)

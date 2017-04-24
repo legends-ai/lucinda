@@ -31,25 +31,25 @@ object BaseStatisticsDAO {
   ) {
 
     lazy val space = MatchFiltersSpace(
-      championIds = champions,
-      versions = patches,
-      tiers = tiers,
-      regions = regions,
-      enemyIds = enemies,
-      roles = roles,
-      queues = queues,
+      championIds = champions.toSeq,
+      versions = patches.toSeq,
+      tiers = tiers.toSeq,
+      regions = regions.toSeq,
+      enemyIds = enemies.toSeq,
+      roles = roles.toSeq,
+      queues = queues.toSeq,
     )
 
     lazy val byRoleFilters: Map[Role, MatchFiltersSpace] = Role.values
       .map(r => (r, r)).toMap
       .mapValues { someRole =>
-        space.copy(roles = Set(someRole))
+        space.copy(roles = Set(someRole).toSeq)
       }
 
     lazy val byPatchFilters: Map[String, MatchFiltersSpace] = patchNeighborhood
       .map(p => (p, p)).toMap
       .mapValues { patch =>
-        space.copy(versions = Set(patch))
+        space.copy(versions = Set(patch).toSeq)
       }.toMap
 
     lazy val patchNbhdMap: Map[String, String] =
