@@ -4,11 +4,11 @@ import asuna.proto.league.Ability
 import asuna.proto.league.MatchSum.Collections.ItemList
 import asuna.proto.league.MatchSum.Collections.SkillOrder
 import asuna.proto.league.MatchSum.Collections.Subscalars
-import cats.PartialOrder
 import asuna.common.legends.MatchSumHelpers._
 import cats.Eq
+import cats.PartialOrder
+import cats.kernel.Comparison._
 import cats.implicits._
-
 
 /**
   * Allows merging of path lists.
@@ -68,26 +68,10 @@ object PathMerger {
     * @param E -- path element
     */
   def sequencePartialOrder[E]: PartialOrder[Seq[E]] = PartialOrder.from { (a, b) =>
-    val alen = a.size
-    val blen = b.size
-    if (alen == blen) {
-      if (a == b) {
-        0
-      } else {
-        Double.NaN
-      }
-    } else if (alen < blen) {
-      if (b.indexOfSlice(a) == 0) {
-        -1
-      } else {
-        Double.NaN
-      }
-    } else {
-      if (a.indexOfSlice(b) == 0) {
-        1
-      } else {
-        Double.NaN
-      }
+    a.size comparison b.size match {
+      case LessThan => if (b.indexOfSlice(a) == 0) -1 else Double.NaN
+      case GreaterThan => if (a.indexOfSlice(b) == 0) 1 else Double.NaN
+      case EqualTo => if (a == b) 0 else Double.NaN
     }
   }
 
@@ -123,11 +107,10 @@ object PathMerger {
 
     override def isPathIncluded(in: ItemList, others: Seq[ItemList]): Boolean = {
       // TODO(igm): corrupting pot is core on singed. should it be included here?
-      if (in.items.contains(sightstone)) {
+      if (in.items.contains(sightstone))
         in.items.size <= 7
-      } else {
+      else
         in.items.size <= 6
-      }
     }
 
     def rebuild(path: ItemList, ss: Option[Subscalars]): ItemList = {
