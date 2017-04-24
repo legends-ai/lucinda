@@ -23,6 +23,7 @@ object QuotSubscalarsExtractor {
   implicit val trinketQSE: QuotSubscalarsExtractor[Trinket] = fromFn(_.subscalars)
   implicit val skillOrderQSE: QuotSubscalarsExtractor[SkillOrder] = fromFn(_.subscalars)
   implicit val itemListQSE: QuotSubscalarsExtractor[ItemList] = fromFn(_.subscalars)
+  implicit def elQSE[T]: QuotSubscalarsExtractor[(T, Subscalars)] = fromFn(_._2.some)
 
   implicit class MPRAndTopK[T](seq: Seq[T]) {
     def mprAndTopK(mpr: Double, k: Int)(implicit qse: QuotSubscalarsExtractor[T]): Seq[T] = {
@@ -33,6 +34,14 @@ object QuotSubscalarsExtractor {
         .filter { el =>
           qse.subscalars(el).map(_.playRate).orEmpty >= mpr
         }
+    }
+  }
+
+  implicit class MPRAndTopKOCS(seq: Seq[OtherChampionStats]) {
+    def mprAndTopK(mpr: Double, k: Int): Seq[OtherChampionStats] = {
+      seq.map { ocs =>
+        ocs.copy(stats = ocs.stats.toSeq.mprAndTopK(mpr, k).toMap)
+      }
     }
   }
 
@@ -63,9 +72,11 @@ object MinPickRateDecorator {
       summoners = colls.summoners.mprAndTopK(minPickRate, topK),
       startingTrinkets = colls.startingTrinkets.mprAndTopK(minPickRate, topK),
       endingTrinkets = colls.endingTrinkets.mprAndTopK(minPickRate, topK),
+      allies = colls.allies.mprAndTopK(minPickRate, topK),
+      enemies = colls.enemies.mprAndTopK(minPickRate, topK),
       skillOrders = colls.skillOrders.mprAndTopK(minPickRate, topK),
       starterItems = colls.starterItems.mprAndTopK(minPickRate, topK),
-      coreBuilds = colls.coreBuilds.mprAndTopK(minPickRate, topK)
+      coreBuilds = colls.coreBuilds.mprAndTopK(minPickRate, topK),
     )
   }
 
