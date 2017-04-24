@@ -190,11 +190,10 @@ object StatisticsGenerator {
       csDiff = getDeltas(_.csDiff, quot.csDiff),
       xpDiff = getDeltas(_.xpDiff, quot.xpDiff),
       damageTakenDiff = getDeltas(_.damageTakenDiff, quot.damageTakenDiff),
+      csPerMin = getDeltas(_.csPerMin, quot.csPerMin),
       xpPerMin = getDeltas(_.xpPerMin, quot.xpPerMin),
       goldPerMin = getDeltas(_.goldPerMin, quot.goldPerMin),
-      towersPerMin = getDeltas(_.towersPerMin, quot.towersPerMin),
-      wardsPlaced = getDeltas(_.wardsPlaced, quot.wardsPlaced),
-      damageTaken = getDeltas(_.damageTaken, quot.damageTaken)
+      damageTakenPerMin = getDeltas(_.damageTakenPerMin, quot.damageTakenPerMin),
     )
   }
 
