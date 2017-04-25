@@ -144,8 +144,8 @@ object ResultsDeriver {
         )
       }
 
-      val banCount = sums.subscalars.map(_.bans.mapValues(_.plays)).orEmpty
-      val bans = banCount.mapValues(_.values.toList.combineAll)
+      val bansMap = sums.subscalars.map(_.bans).getOrElse(Map())
+      val bans = bansMap.mapValues(_.plays.values.toList.combineAll)
 
       // 6 bans per match. This finds us the total number of matches.
       // in theory, this should be the same as totalGames, but meh
@@ -159,7 +159,7 @@ object ResultsDeriver {
 
       Results.Derivatives(
         picks = deriver.derive(pickRateSums, pickRateSums.mapValues(_.toQuotient)),
-        bans = deriver.derive(banRateSums, banRateSums.mapValues(_.toQuotient))
+        bans = deriver.derive(banRateSums, banRateSums.mapValues(_.toQuotient)),
       )
     }
 

@@ -64,12 +64,12 @@ object SumConverter {
   implicit val subscalarMapConverter = SumConverter.instance[
     Map[Int, MatchSum.Collections.Subscalars], Map[Int, Sums.Subscalars.Subscalar]
   ] { (sum, champ) =>
-    Map(
-      champ -> Sums.Subscalars.Subscalar(
-        plays = sum.mapValues(_.plays),
-        wins = sum.mapValues(_.wins)
+    sum.mapValues { ss =>
+      Sums.Subscalars.Subscalar(
+        plays = Map(champ -> ss.plays),
+        wins = Map(champ -> ss.wins),
       )
-    )
+    }
   }
 
   implicit val hnilConverter = SumConverter.instance[HNil, HNil] { (_, _) => HNil }
