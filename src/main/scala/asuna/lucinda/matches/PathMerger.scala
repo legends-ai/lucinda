@@ -1,12 +1,11 @@
 package asuna.lucinda.matches
 
+import asuna.common.legends.MatchSumHelpers._
 import asuna.proto.league.Ability
 import asuna.proto.league.MatchSum.Collections.ItemList
 import asuna.proto.league.MatchSum.Collections.SkillOrder
 import asuna.proto.league.MatchSum.Collections.Subscalars
-import asuna.common.legends.MatchSumHelpers._
-import cats.Eq
-import cats.PartialOrder
+import cats.{ Eq, PartialOrder }
 import cats.kernel.Comparison._
 import cats.implicits._
 
@@ -41,8 +40,9 @@ trait PathMerger[T] {
     // TODO(igm): this is pretty inefficient -- n^s. We can use a trie for better runtime.
     // find all matching prefix
     val statsPaths = in.filter(isStatsIncluded)
-    val resultPaths = statsPaths.filter(x => isPathIncluded(x, in))
+    val resultPaths = statsPaths.filter(isPathIncluded(_, in))
 
+    // group by path and combine all scalars
     resultPaths.map { path =>
       val lists = statsPaths.filter { path2 =>
         order.tryCompare(path, path2) match {
@@ -84,11 +84,10 @@ object PathMerger {
     val evolutions = Set(Ability.Q_EV, Ability.W_EV, Ability.E_EV, Ability.R_EV)
 
     override def isPathIncluded(in: SkillOrder, others: Seq[SkillOrder]): Boolean = {
-      if (in.skillOrder.exists(evolutions)) {
+      if (in.skillOrder.exists(evolutions))
         in.skillOrder.size == 21 && (in.skillOrder(16) =!= Ability.R)
-      } else {
+      else
         in.skillOrder.size == 18 && (in.skillOrder(14) =!= Ability.R)
-      }
     }
 
     override val order: PartialOrder[SkillOrder] =
