@@ -1,6 +1,6 @@
 package asuna.lucinda.dao
 
-import asuna.proto.league.SummonerId
+import asuna.proto.league.AccountId
 import asuna.proto.league.{ Queue, Role, Tier }
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.lucinda.AllChampionStatistics
@@ -9,7 +9,7 @@ import monix.eval.Task
 
 object SummonerStatisticsDAO {
   case class Key(
-    id: SummonerId,
+    id: AccountId,
     allChampions: Set[Int],
     patches: Set[String],
     patchNeighborhood: Seq[String],

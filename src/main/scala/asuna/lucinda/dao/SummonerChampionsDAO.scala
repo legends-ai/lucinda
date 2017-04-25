@@ -1,7 +1,7 @@
 package asuna.lucinda.dao
 
 import asuna.lucinda.statistics.ChangeMarker
-import asuna.proto.league.{ Queue, Role, SummonerId, Tier }
+import asuna.proto.league.{ Queue, Role, AccountId, Tier }
 import asuna.proto.league.lucinda.AllChampionStatistics
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import cats.implicits._
@@ -10,7 +10,7 @@ import monix.eval.Task
 
 object SummonerChampionsDAO {
   case class Key(
-    id: SummonerId,
+    id: AccountId,
     allChampions: Set[Int],
     roles: Set[Role],
     patches: Set[String],
@@ -38,7 +38,7 @@ class SummonerChampionsDAO(alexandria: Alexandria, sf: SumFetcher[SummonerChampi
   val sumFetcher = sf
 
   def getResults(
-    id: SummonerId,
+    id: AccountId,
     allChampions: Set[Int],
     prevPatch: Option[String],
     roles: Set[Role],
@@ -52,7 +52,7 @@ class SummonerChampionsDAO(alexandria: Alexandria, sf: SumFetcher[SummonerChampi
   }
 
   def get(
-    id: SummonerId,
+    id: AccountId,
     allChampions: Set[Int],
     prevPatch: Option[String],
     roles: Set[Role],

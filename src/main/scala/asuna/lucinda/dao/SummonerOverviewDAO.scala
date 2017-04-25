@@ -8,7 +8,7 @@ import monix.eval.Task
 object SummonerOverviewDAO {
 
   case class Key(
-    id: SummonerId,
+    id: AccountId,
     allChampions: Set[Int],
     prevPatch: Option[String],
     roles: Set[Role],

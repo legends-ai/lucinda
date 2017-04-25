@@ -139,18 +139,18 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
 
 
   def getAllSummonerChampions(req: GetAllSummonerChampionsRequest): Future[AllChampionStatistics.Results] = {
-    if (!req.summonerId.isDefined) {
+    if (!req.accountId.isDefined) {
       Future.failed(new AsunaError("summoner id unspecified"))
     }
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = VulgateHelpers.makeVulgateContext(req.patches, req.summonerId.get.region).some,
+          context = VulgateHelpers.makeVulgateContext(req.patches, req.accountId.get.region).some,
           patches = req.patches
         )
       )
       results <- summonerChampionsDAO.getResults(
-        id = req.summonerId.get,
+        id = req.accountId.get,
         allChampions = factors.champions.toSet,
         prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
@@ -163,20 +163,20 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
   }
 
   def getSummonerOverview(req: GetSummonerRequest): Future[SummonerOverview] = {
-    if (!req.summonerId.isDefined) {
+    if (!req.accountId.isDefined) {
       Future.failed(new AsunaError("summoner id unspecified"))
     }
 
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = VulgateHelpers.makeVulgateContext(req.patches, req.summonerId.get.region).some,
+          context = VulgateHelpers.makeVulgateContext(req.patches, req.accountId.get.region).some,
           patches = req.patches
         )
       )
       results <- summonerOverviewDAO.compute(
         SummonerOverviewDAO.Key(
-          id = req.summonerId.get,
+          id = req.accountId.get,
           allChampions = factors.champions.toSet,
           prevPatch = factors.prevPatches.get(factors.earliestPatch),
 
@@ -190,19 +190,19 @@ class LucindaServer(args: Seq[String])(implicit scheduler: Scheduler)
   }
 
   def getSummonerStatistics(req: GetSummonerRequest): Future[Statistics] = {
-    if (!req.summonerId.isDefined) {
+    if (!req.accountId.isDefined) {
       Future.failed(new AsunaError("summoner id unspecified"))
     }
     for {
       factors <- vulgate.getAggregationFactors(
         GetAggregationFactorsRequest(
-          context = VulgateHelpers.makeVulgateContext(req.patches, req.summonerId.get.region).some,
+          context = VulgateHelpers.makeVulgateContext(req.patches, req.accountId.get.region).some,
           patches = req.patches
         )
       )
       results <- summonerStatisticsDAO.compute(
         SummonerStatisticsDAO.Key(
-          id = req.summonerId.get,
+          id = req.accountId.get,
           allChampions = factors.champions.toSet,
           patches = req.patches.toSet,
           patchNeighborhood = factors.patchNeighborhood,

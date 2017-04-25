@@ -1,7 +1,7 @@
 package asuna.lucinda.dao
 
 import asuna.common.legends.MatchSumHelpers._
-import asuna.proto.league.SummonerId
+import asuna.proto.league.AccountId
 import asuna.proto.league.alexandria.AlexandriaGrpc.Alexandria
 import asuna.proto.league.alexandria.rpc.{ GetSumRequest, GetSummonerMatchSumRequest }
 import asuna.proto.league.{ MatchFiltersSpace, MatchSum }
@@ -34,7 +34,7 @@ class AllSumFetcher(alexandria: Alexandria) extends SumFetcher[AllKey] {
 }
 
 trait SummonerKey {
-  def id: SummonerId
+  def id: AccountId
 }
 
 trait AllKey
