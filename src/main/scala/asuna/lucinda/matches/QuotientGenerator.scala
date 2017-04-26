@@ -18,8 +18,8 @@ object QuotientGenerator {
       .copy(collections = sum.collections.map { colls =>
         colls.copy(
           startingTrinkets = removeZeroTrinket(colls.startingTrinkets),
-          skillOrders = colls.skillOrders.mergePaths,
-          coreBuilds = colls.coreBuilds.mergePaths,
+          skillOrders = colls.skillOrders,
+          coreBuilds = colls.coreBuilds,
         )
       })
       .quotient
