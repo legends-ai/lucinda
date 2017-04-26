@@ -83,11 +83,12 @@ object PathMerger {
 
     val evolutions = Set(Ability.Q_EV, Ability.W_EV, Ability.E_EV, Ability.R_EV)
 
+    override def isStatsIncluded(in: SkillOrder): Boolean = {
+      in.skillOrder.size <= 15
+    }
+
     override def isPathIncluded(in: SkillOrder, others: Seq[SkillOrder]): Boolean = {
-      if (in.skillOrder.exists(evolutions))
-        in.skillOrder.size == 21 && (in.skillOrder(16) =!= Ability.R)
-      else
-        in.skillOrder.size == 18 && (in.skillOrder(14) =!= Ability.R)
+      in.skillOrder.size === 18 && (in.skillOrder(14) =!= Ability.R)
     }
 
     override val order: PartialOrder[SkillOrder] =
@@ -103,6 +104,10 @@ object PathMerger {
 
     override val order: PartialOrder[ItemList] =
       sequencePartialOrder[Int].on[ItemList](_.items)
+
+    override def isStatsIncluded(in: ItemList): Boolean = {
+      in.items.size > 2
+    }
 
     override def isPathIncluded(in: ItemList, others: Seq[ItemList]): Boolean = {
       // TODO(igm): corrupting pot is core on singed. should it be included here?
