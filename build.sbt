@@ -11,7 +11,7 @@ enablePlugins(
 )
 
 libraryDependencies ++= Seq(
-  "asuna" %% "common" % "3.4.6",
+  "asuna" %% "common" % "3.4.9",
   "ch.qos.logback" % "logback-classic" % "1.1.9",
   "net.logstash.logback" % "logstash-logback-encoder" % "4.8",
 
