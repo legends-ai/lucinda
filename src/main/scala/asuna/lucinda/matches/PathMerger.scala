@@ -67,11 +67,11 @@ object PathMerger {
     * Kind of like subset but cares about position and order.
     * @param E -- path element
     */
-  def sequencePartialOrder[E]: PartialOrder[Seq[E]] = PartialOrder.from { (a, b) =>
+  def sequencePartialOrder[E: Eq]: PartialOrder[Seq[E]] = PartialOrder.from { (a, b) =>
     a.size comparison b.size match {
-      case LessThan => if (b.indexOfSlice(a) == 0) -1 else Double.NaN
-      case GreaterThan => if (a.indexOfSlice(b) == 0) 1 else Double.NaN
-      case EqualTo => if (a == b) 0 else Double.NaN
+      case LessThan => if (b.indexOfSlice(a) === 0) -1 else Double.NaN
+      case GreaterThan => if (a.indexOfSlice(b) === 0) 1 else Double.NaN
+      case EqualTo => if (a.toVector === b.toVector) 0 else Double.NaN
     }
   }
 

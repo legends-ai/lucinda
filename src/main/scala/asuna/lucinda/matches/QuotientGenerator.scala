@@ -19,7 +19,7 @@ object QuotientGenerator {
         colls.copy(
           startingTrinkets = removeZeroTrinket(colls.startingTrinkets),
           skillOrders = colls.skillOrders.mergePaths,
-          coreBuilds = colls.coreBuilds.mergePaths
+          coreBuilds = colls.coreBuilds.mergePaths,
         )
       })
       .quotient
