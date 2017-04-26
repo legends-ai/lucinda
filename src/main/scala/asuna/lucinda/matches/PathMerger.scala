@@ -19,7 +19,6 @@ trait PathMerger[T] {
   /**
     * Returns true if the path's stats should be included in the result.
     * Elements of any path of which this path is a subset will have these stats added.
-    * This should be a superset of path included stats.
     */
   def isStatsIncluded(in: T): Boolean = true
 
@@ -40,20 +39,20 @@ trait PathMerger[T] {
     // TODO(igm): this is pretty inefficient -- n^s. We can use a trie for better runtime.
     // find all matching prefix
     val statsPaths = in.filter(isStatsIncluded)
-    val resultPaths = statsPaths.filter(isPathIncluded(_, in))
+    val resultPaths = in.filter(isPathIncluded(_, in))
 
     // group by path and combine all scalars
     resultPaths.map { path =>
       val lists = statsPaths.filter { path2 =>
         order.tryCompare(path, path2) match {
           // We will make sure path contains all of path 2.
-          case Some(res) => res > 0
+          case Some(res) => res >= 0
           // If incomparable, not useful.
           case None => false
         }
       }
       // combine subscalars
-      val subscalars = (x.extract(path) :: lists.map(x.extract).toList).combineAll
+      val subscalars = lists.map(x.extract).toList.combineAll
       rebuild(path, subscalars)
     }
   }
