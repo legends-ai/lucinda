@@ -75,6 +75,12 @@ object StatisticsDAO {
               := diversifyBuilds(in.collections.map(_.coreBuilds).getOrElse(Seq()), boots))
   }
 
+  def filterEmptyStarterItems(in: Statistics): Statistics = {
+    in.collections.map(_.starterItems).map { starterItems =>
+      in.update(_.collections.starterItems := starterItems.filterNot(_.items.isEmpty))
+    }.getOrElse(in)
+  }
+
 }
 
 class StatisticsDAO(bareDAO: BareStatisticsDAO) {
@@ -83,6 +89,7 @@ class StatisticsDAO(bareDAO: BareStatisticsDAO) {
   def compute(key: Key): Task[Statistics] = {
     bareDAO.get(key.baseKey, forceRefresh = key.constraints.forceRefresh)
       .map(diversifyBuildsOfStats(key.boots))
+      .map(filterEmptyStarterItems)
       .map { stats =>
         MinPickRateDecorator.decorate(key.constraints.minPickRate, 10, stats)
       }
