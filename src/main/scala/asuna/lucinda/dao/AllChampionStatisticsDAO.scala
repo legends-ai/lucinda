@@ -61,11 +61,28 @@ class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO)
       // Get the results object
       val results = statistics.results.getOrElse(AllChampionStatistics.Results())
 
-      // Find the champions that satisfy the min play rate
-      val pickRates = results.derivatives
-        .map(_.picks.mapValues(_.mean)).orEmpty
-      val champs = pickRates.filter {
-        case (champ, pickRate) => pickRate >= key.constraints.minPickRate
+      // Find the champions that satisfy the min play rate for their role
+      val pickStats = statistics.sums.flatMap(_.subscalars).map(_.picks).getOrElse(Seq())
+
+      val roleStats = pickStats.filter(x => key.roles(x.role)).map(_.picks).toList.combineAll
+      val totalStats = pickStats.map(_.picks).toList.combineAll
+
+      // filter champions with appropriate pick rate for their role
+      val champs = roleStats.filter {
+        case (champ, rolePlays) => {
+          // Get their total plays
+          val totalPlays = totalStats.get(champ).orEmpty
+
+          // if they have plays, filter if they have enough percentage in the role
+          if (totalPlays > 0) {
+            val pickRate = rolePlays / totalPlays
+            pickRate >= key.constraints.minChampInRoleRate
+
+          // otherwise don't display
+          } else {
+            false
+          }
+        }
       }.keys
 
       // Filter maps for keys that contain the champion

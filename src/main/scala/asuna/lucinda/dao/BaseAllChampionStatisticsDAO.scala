@@ -5,6 +5,7 @@ import asuna.lucinda.statistics.StatisticsAggregator
 import asuna.proto.league._
 import asuna.proto.league.lucinda.AllChampionStatistics
 import monix.eval.Task
+import cats.implicits._
 
 object BaseAllChampionStatisticsDAO {
 
@@ -57,6 +58,7 @@ object BaseAllChampionStatisticsDAO {
 }
 
 trait BaseAllChampionStatisticsDAO[K <: BaseAllChampionStatisticsDAO.CompositeKey] extends EphemeralDAO[K, AllChampionStatistics] {
+  import asuna.common.legends.MatchSumSeqElement._
 
   implicit val sumFetcher: SumFetcher[K]
 
@@ -72,11 +74,20 @@ trait BaseAllChampionStatisticsDAO[K <: BaseAllChampionStatisticsDAO.CompositeKe
 
       // Next, we'll compute ban rates by fetching a sum representing the entire space.
       bansSum <- sumFetcher.fetchSums(in, in.base.bansSpace)
-      bans = bansSum.collections.map(_.bans).getOrElse(Map())
+      bans = bansSum.collections.map(_.bans.mapValues(_.plays)).getOrElse(Map())
+
+      // We'll also compute picks here.
+      picks = (bansSum.collections.map(_.allies) |+| bansSum.collections.map(_.enemies))
+        .getOrElse(Seq()).map { elt =>
+          AllChampionStatistics.Sums.Subscalars.PickStats(
+            role = elt.role,
+            picks = elt.stats.mapValues(_.plays),
+          )
+        }
 
       // Finally, we'll map over the values of this map to generate a Statistics
       // object for each value. Thus we end up with a Future[AllChampionStatistics],
-    } yield StatisticsAggregator.makeStatistics(sumsMap, bans)
+    } yield StatisticsAggregator.makeStatistics(sumsMap, bans, picks)
   }
 
 }

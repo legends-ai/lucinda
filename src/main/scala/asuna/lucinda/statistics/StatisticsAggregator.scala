@@ -2,26 +2,22 @@ package asuna.lucinda.statistics
 
 import asuna.proto.league.MatchSum
 import asuna.proto.league.lucinda._
-import AllChampionStatistics.Sums.Subscalars.Subscalar
-import MatchSum.Collections.Subscalars
 
 object StatisticsAggregator {
-
-  def liftSubscalar(in: Subscalars): Subscalar = {
-    Subscalar(
-      plays = Map(0 -> in.plays),
-      wins = Map(0 -> in.wins),
-    )
-  }
 
   /**
     * Make the Statistics object from a role and sums for that role. This function is p u r e.
     */
   def makeStatistics(
-    rawSums: Map[Int, MatchSum], bans: Map[Int, Subscalars],
+    rawSums: Map[Int, MatchSum],
+    bans: Map[Int, Int],
+    picks: Seq[AllChampionStatistics.Sums.Subscalars.PickStats],
   ): AllChampionStatistics = {
     val initSums = SumCombiner.combineSums(rawSums)
-    val sums = initSums.update(_.subscalars.bans := bans.mapValues(liftSubscalar))
+    val sums = initSums.update(
+      _.subscalars.bans := bans,
+      _.subscalars.picks := picks,
+    )
     val results = ResultsGenerator.generate(sums)
     AllChampionStatistics(
       results = Some(results),

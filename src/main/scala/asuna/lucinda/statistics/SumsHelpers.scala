@@ -1,38 +1,47 @@
 package asuna.lucinda.statistics
 
 import asuna.proto.league.lucinda.AllChampionStatistics
-import cats.Monoid
+import AllChampionStatistics.Sums.Scalars.DragonStat
+import AllChampionStatistics.Sums.Subscalars.PickStats
+import cats._
 import cats.implicits._
+import cats.data.NonEmptyList
 import cats.derived._, monoid._, legacy._
 
 object SumsHelpers {
 
-  implicit object dragonStatMonoid extends Monoid[AllChampionStatistics.Sums.Scalars.DragonStat] {
-
-    def combine(
-      a: AllChampionStatistics.Sums.Scalars.DragonStat,
-      b: AllChampionStatistics.Sums.Scalars.DragonStat
-    ): AllChampionStatistics.Sums.Scalars.DragonStat = {
+  implicit object dragonStatSemigroup extends Semigroup[DragonStat] {
+    def combine(a: DragonStat, b: DragonStat): DragonStat = {
       a.copy(value = a.value |+| b.value)
     }
-
-    def empty = AllChampionStatistics.Sums.Scalars.DragonStat()
-
   }
 
   implicit object dragonSumMonoid extends Monoid[Seq[AllChampionStatistics.Sums.Scalars.DragonStat]] {
 
-    def combine(
-      a: Seq[AllChampionStatistics.Sums.Scalars.DragonStat],
-      b: Seq[AllChampionStatistics.Sums.Scalars.DragonStat]
-    ): Seq[AllChampionStatistics.Sums.Scalars.DragonStat] = {
+    def combine(a: Seq[DragonStat], b: Seq[DragonStat]): Seq[DragonStat] = {
       (a ++ b)
         // same dragon
         .groupBy(_.dragon)
-        // get values as a seq
-        .values.toSeq
-        // combine all stats with same dragon
-        .map(_.toList.combineAll)
+        .mapValues(x => NonEmptyList.fromList(x.toList).map(_.reduce.some).getOrElse(None))
+        .values.flatten.toSeq
+    }
+
+    def empty = Seq()
+
+  }
+
+  implicit object pickStatsSemigroup extends Semigroup[PickStats] {
+    def combine(a: PickStats, b: PickStats): PickStats =
+      a.copy(picks = a.picks |+| b.picks)
+  }
+
+  implicit object pickStatsMonoid extends Monoid[Seq[PickStats]] {
+
+    def combine(a: Seq[PickStats], b: Seq[PickStats]): Seq[PickStats] = {
+      (a ++ b)
+        .groupBy(_.role)
+        .mapValues(x => NonEmptyList.fromList(x.toList).map(_.reduce.some).getOrElse(None))
+        .values.flatten.toSeq
     }
 
     def empty = Seq()

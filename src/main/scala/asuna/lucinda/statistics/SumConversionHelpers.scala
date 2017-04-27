@@ -1,6 +1,5 @@
 package asuna.lucinda.statistics
 
-import asuna.common.legends.MatchSumHelpers._
 import asuna.common.legends.MomentsHelpers._
 import asuna.proto.league.MatchSum
 import MatchSum.Statistics.Moments
@@ -61,17 +60,6 @@ object SumConverter {
     }
   }
 
-  implicit val subscalarMapConverter = SumConverter.instance[
-    Map[Int, MatchSum.Collections.Subscalars], Map[Int, Sums.Subscalars.Subscalar]
-  ] { (sum, champ) =>
-    sum.mapValues { ss =>
-      Sums.Subscalars.Subscalar(
-        plays = Map(champ -> ss.plays),
-        wins = Map(champ -> ss.wins),
-      )
-    }
-  }
-
   implicit val hnilConverter = SumConverter.instance[HNil, HNil] { (_, _) => HNil }
 
   implicit def hlistConverter[H, T <: HList, J, U <: HList](
@@ -94,7 +82,6 @@ object SumConverter {
   implicit val scalarsConv = SumConverter[MatchSum.Statistics.Scalars, Sums.Scalars]
   implicit val deltaConv = SumConverter[MatchSum.Statistics.Deltas.Delta, Sums.Deltas.Delta]
   implicit val deltasConv = SumConverter[MatchSum.Statistics.Deltas, Sums.Deltas]
-  implicit val ssConv = SumConverter[MatchSum.Collections.Subscalars, Sums.Subscalars.Subscalar]
 
   implicit val matchSumConverter: SumConverter[MatchSum, Sums] = instance { (in, champion) =>
     Sums(
@@ -105,16 +92,6 @@ object SumConverter {
       },
       deltas = in.statistics.flatMap(_.deltas).map { deltas =>
         deltasConv.convert(deltas, champion)
-      },
-      subscalars = in.collections.map { colls =>
-        Sums.Subscalars(
-          bans = subscalarMapConverter.convert(colls.bans, champion),
-
-          // we just want all allies here.
-          // role doesnt matter.
-          // this ends up being used for (overall) pick rate
-          allies = subscalarMapConverter.convert(colls.allies.map(_.stats).toList.combineAll, champion),
-        )
       },
     )
   }

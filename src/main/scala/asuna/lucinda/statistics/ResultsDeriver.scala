@@ -127,8 +127,7 @@ object ResultsDeriver {
         )
       }
 
-      val bansMap = sums.subscalars.map(_.bans).getOrElse(Map())
-      val bans = bansMap.mapValues(_.plays.values.toList.combineAll)
+      val bans = sums.subscalars.map(_.bans).getOrElse(Map())
 
       // 6 bans per match. This finds us the total number of matches.
       // in theory, this should be the same as totalGames, but meh
