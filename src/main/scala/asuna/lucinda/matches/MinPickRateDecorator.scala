@@ -56,15 +56,21 @@ object MinPickRateDecorator {
 
   def decorate(minPickRate: Double, topK: Int, stats: Statistics): Statistics = {
     stats.copy(
-      collections = stats.collections
-        .map(colls => decorateCollections(minPickRate, topK, colls))
+      roles = stats.roles.map(decorateRoles(minPickRate, topK)),
+      collections = stats.collections.map(decorateCollections(minPickRate, topK)),
+    )
+  }
+
+  def decorateRoles(minPickRate: Double, topK: Int)(roles: Statistics.Roles): Statistics.Roles = {
+    roles.copy(
+      roleStats = roles.roleStats.filter(_.pickRate >= minPickRate),
     )
   }
 
   /**
     * Applies min play rate to everything
     */
-  def decorateCollections(minPickRate: Double, topK: Int, colls: MatchQuotient.Collections): MatchQuotient.Collections = {
+  def decorateCollections(minPickRate: Double, topK: Int)(colls: MatchQuotient.Collections): MatchQuotient.Collections = {
     colls.copy(
       masteries = colls.masteries.mprAndTopK(minPickRate, topK),
       runes = colls.runes.mprAndTopK(minPickRate, topK),
