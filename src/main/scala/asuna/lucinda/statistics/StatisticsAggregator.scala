@@ -18,15 +18,14 @@ object StatisticsAggregator {
     * Make the Statistics object from a role and sums for that role. This function is p u r e.
     */
   def makeStatistics(
-    roleCount: Int, rawSums: Map[Int, MatchSum], bans: Map[Int, Subscalars],
+    rawSums: Map[Int, MatchSum], bans: Map[Int, Subscalars],
   ): AllChampionStatistics = {
     val initSums = SumCombiner.combineSums(rawSums)
     val sums = initSums.update(_.subscalars.bans := bans.mapValues(liftSubscalar))
-    val results = ResultsGenerator.generate(roleCount, sums)
+    val results = ResultsGenerator.generate(sums)
     AllChampionStatistics(
       results = Some(results),
       sums = Some(sums),
-      roleCount = roleCount,
     )
   }
 

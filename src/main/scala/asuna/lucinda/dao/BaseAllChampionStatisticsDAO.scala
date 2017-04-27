@@ -48,8 +48,6 @@ object BaseAllChampionStatisticsDAO {
         // get all data across roles and enemies to fetch everything for this filter combination.
         // everything else is a valid partition to compute ban rate for.
         .clearRoles.clearEnemyIds
-
-    lazy val roleCount = if (roles.isEmpty) 5 else Math.max(5, roles.size)
   }
 
   trait CompositeKey {
@@ -78,7 +76,7 @@ trait BaseAllChampionStatisticsDAO[K <: BaseAllChampionStatisticsDAO.CompositeKe
 
       // Finally, we'll map over the values of this map to generate a Statistics
       // object for each value. Thus we end up with a Future[AllChampionStatistics],
-    } yield StatisticsAggregator.makeStatistics(in.base.roleCount, sumsMap, bans)
+    } yield StatisticsAggregator.makeStatistics(sumsMap, bans)
   }
 
 }

@@ -5,7 +5,6 @@ import asuna.proto.league.MatchSum.Statistics.{ Moments => SMoments }
 import asuna.proto.league.lucinda.AllChampionStatistics.{ Results, Sums }
 import cats.implicits._
 import shapeless._
-import org.log4s._
 
 trait ResultsDeriver[S, R] {
   def derive(sums: S): R
@@ -14,8 +13,6 @@ trait ResultsDeriver[S, R] {
 // TODO(igm): merge with Divisor somehow -- we don't really need the quotients object anymore
 object ResultsDeriver {
   import asuna.common.legends.MomentsHelpers._
-
-  private[this] val logger = getLogger
 
   def from[S, R](f: S => R): ResultsDeriver[S, R] = new ResultsDeriver[S, R] {
     def derive(sums: S): R = f(sums)
@@ -103,7 +100,7 @@ object ResultsDeriver {
     deriver.derive(sums)
   }
 
-  class FinalDeriver(roleCount: Int) extends ResultsDeriver[Sums, Results] {
+  implicit object FinalDeriver extends ResultsDeriver[Sums, Results] {
 
     def derive(sums: Sums): Results = {
       Results(
@@ -120,12 +117,7 @@ object ResultsDeriver {
       // map of total games played per champion
       val plays = sums.plays
 
-      // total number of champion instances analyzed.
-      // if divisor is zero, that is a big problem. We will warn.
-      if (roleCount === 0) {
-        logger.warn("zero role count encountered...")
-      }
-      val totalGames = plays.values.sum / Math.max(2 * roleCount, 1)
+      val totalGames = plays.values.sum / 10
 
       // we will end up dividing each value by this total # of games to get incidence rate.
       val pickRateSums = plays.mapValues { v =>
@@ -163,6 +155,6 @@ object ResultsDeriver {
   */
 object ResultsGenerator {
 
-  def generate(roleCount: Int, sums: Sums): Results =
-    new ResultsDeriver.FinalDeriver(roleCount).derive(sums)
+  def generate(sums: Sums): Results =
+    ResultsDeriver.FinalDeriver.derive(sums)
 }
