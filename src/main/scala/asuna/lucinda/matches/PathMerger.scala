@@ -87,7 +87,7 @@ object PathMerger {
     }
 
     override def isPathIncluded(in: SkillOrder, others: Seq[SkillOrder]): Boolean = {
-      in.skillOrder.size === 18 && (in.skillOrder(14) =!= Ability.R)
+      in.skillOrder.size === 18
     }
 
     override val order: PartialOrder[SkillOrder] =

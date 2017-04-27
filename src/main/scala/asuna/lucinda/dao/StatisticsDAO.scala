@@ -1,7 +1,7 @@
 package asuna.lucinda.dao
 
 import asuna.lucinda.matches.MinPickRateDecorator
-import asuna.proto.league.lucinda.MatchQuotient.Collections.ItemList
+import asuna.proto.league.lucinda.MatchQuotient.Collections._
 import asuna.proto.league._
 import asuna.proto.league.lucinda.Statistics
 import asuna.proto.league.lucinda.rpc.Constraints
@@ -75,6 +75,20 @@ object StatisticsDAO {
               := diversifyBuilds(in.collections.map(_.coreBuilds).getOrElse(Seq()), boots))
   }
 
+  def diversifySkillOrders(in: Seq[SkillOrder]): Seq[SkillOrder] = {
+    in
+      .groupBy(_.skillOrder.take(15))
+      .values.toSeq
+      .map(
+        _.sortBy(_.subscalars.map(_.playCount).getOrElse(0)).reverse.headOption
+      ).flatten
+  }
+
+  def diversifySkillOrdersOfStats(in: Statistics): Statistics = {
+    in.update(_.collections.skillOrders
+              := diversifySkillOrders(in.collections.map(_.skillOrders).getOrElse(Seq())))
+  }
+
   def filterEmptyStarterItems(in: Statistics): Statistics = {
     in.collections.map(_.starterItems).map { starterItems =>
       in.update(_.collections.starterItems := starterItems.filterNot(_.items.isEmpty))
@@ -89,6 +103,7 @@ class StatisticsDAO(bareDAO: BareStatisticsDAO) {
   def compute(key: Key): Task[Statistics] = {
     bareDAO.get(key.baseKey, forceRefresh = key.constraints.forceRefresh)
       .map(diversifyBuildsOfStats(key.boots))
+      .map(diversifySkillOrdersOfStats)
       .map(filterEmptyStarterItems)
       .map { stats =>
         MinPickRateDecorator.decorate(key.constraints.minPickRate, 10, stats)
