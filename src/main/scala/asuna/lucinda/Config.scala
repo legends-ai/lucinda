@@ -37,10 +37,12 @@ object LucindaConfigParser extends ConfigParser[LucindaConfig](
 ) {
 
   opt[Boolean]("cache_bypass").valueName("<bool>")
-    .configure((x, c) => c.copy(
-      allChampionStatisticsDAOSettings = c.allChampionStatisticsDAOSettings.copy(cacheBypass = x),
-      statisticsDAOSettings = c.statisticsDAOSettings.copy(cacheBypass = x),
-    ))
+    .configure { (x, c) =>
+      c.copy(
+        allChampionStatisticsDAOSettings = c.allChampionStatisticsDAOSettings.copy(cacheBypass = x),
+        statisticsDAOSettings = c.statisticsDAOSettings.copy(cacheBypass = x),
+      )
+    }
     .text("Whether to bypass the cache or not.")
 
 }
