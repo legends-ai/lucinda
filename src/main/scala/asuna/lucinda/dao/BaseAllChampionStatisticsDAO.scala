@@ -41,6 +41,7 @@ object BaseAllChampionStatisticsDAO {
         }
       }
 
+    lazy val roleCount = if (roles.isEmpty) 5 else Math.max(5, roles.size)
   }
 
   trait CompositeKey {
@@ -66,7 +67,7 @@ trait BaseAllChampionStatisticsDAO[K <: BaseAllChampionStatisticsDAO.CompositeKe
       // Finally, we'll map over the values of this map to generate a Statistics
       // object for each value. Thus we end up with a Future[AllChampionStatistics],
       // and we are done.
-    } yield StatisticsAggregator.makeStatistics(in.base.roles.size, sumsMap)
+    } yield StatisticsAggregator.makeStatistics(in.base.roleCount, sumsMap)
   }
 
 }
