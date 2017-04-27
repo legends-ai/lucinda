@@ -1,6 +1,6 @@
 package asuna.lucinda.dao
 
-import asuna.lucinda.{ DAOSettings, TaskBatcher }
+import asuna.lucinda._
 import cats.implicits._
 import com.timgroup.statsd.StatsDClient
 import com.google.protobuf.timestamp.Timestamp
@@ -23,14 +23,12 @@ trait EphemeralDAO[I, O] {
 }
 
 /**
-  * Persistent data object. Supports TTLs on data.
-  * TODO(igm): rethink this class hierarchy
-  *
-  * @tparam I the key.
-  * @tparam S the stored value.
-  * @tparam O the output.
+  * Allows refreshing of elements in the DAO, in memory.
   */
-trait PersistentDAO[I, S, O] extends EphemeralDAO[I, O] {
+abstract class RefreshableDAO[I, S, O](
+  settings: DAOSettings
+)(implicit statsd: StatsDClient) extends EphemeralDAO[I, O] {
+
   /**
     * Fetches this data from the cache.
     */
@@ -46,53 +44,6 @@ trait PersistentDAO[I, S, O] extends EphemeralDAO[I, O] {
     */
   def project(full: S): O
 
-  /**
-    * Checks if the data is stale. Defaults to never being stale.
-    */
-  def isStale(stored: S): Boolean = false
-
-  /**
-    * Queues up a refresh. Defaults to noop.
-    */
-  def queueRefresh(in: I): Task[Unit] = Task.unit
-
-  /**
-    * Gets data (possibly from cache), persisting it to a cache.
-    * @param forceRefresh Forces refreshing of data.
-    */
-  def get(in: I, forceRefresh: Boolean = false): Task[O] = {
-    fetch(in) flatMap {
-      case Some(data) if !forceRefresh => {
-        val update = if (isStale(data)) {
-          queueRefresh(in)
-        } else {
-          Task.unit
-        }
-        update.map(_ => project(data))
-      }
-      case _ => refresh(in)
-    }
-  }
-
-  /**
-    * Refreshes the element in the cache.
-    */
-  def refresh(in: I): Task[O] = {
-    for {
-      data <- compute(in)
-      _ <- persist(in, data)
-    } yield data
-  }
-
-}
-
-/**
-  * Allows refreshing of elements in the DAO, in memory.
-  */
-abstract class RefreshableDAO[I, S, O](
-  settings: DAOSettings
-)(implicit statsd: StatsDClient) extends PersistentDAO[I, S, O] {
-
   val refreshes = PublishToOneSubject[I]
 
   val refreshing = new ConcurrentHashMap[I, Unit]
@@ -105,10 +56,16 @@ abstract class RefreshableDAO[I, S, O](
     */
   def creation(stored: S): Long
 
-  override def isStale(stored: S): Boolean =
+  /**
+    * Checks if the data is stale.
+    */
+  def isStale(stored: S): Boolean =
     System.currentTimeMillis - creation(stored) > settings.expiryTime.toMillis
 
-  override def queueRefresh(in: I): Task[Unit] = {
+  /**
+    * Queues up a refresh. Defaults to noop.
+    */
+  def queueRefresh(in: I): Task[Unit] = {
     if (refreshing.containsKey(in)) {
       Task.unit
     } else {
@@ -141,10 +98,15 @@ abstract class RefreshableDAO[I, S, O](
       .runAsync(scheduler)
   }
 
-  override def refresh(in: I): Task[O] = {
+  /**
+    * Refreshes the element in the cache.
+    */
+  def refresh(in: I): Task[O] = {
     val time = System.currentTimeMillis()
     for {
-      result <- super.refresh(in)
+      result <- compute(in)
+      _ <- persist(in, result)
+
       _ = statsd.recordExecutionTime(
         s"dao.refresh.${settings.name}",
         System.currentTimeMillis() - time
@@ -163,9 +125,9 @@ abstract class RefreshableDAO[I, S, O](
     * Gets data (possibly from cache), persisting it to a cache.
     * @param forceRefresh Forces refreshing of data.
     */
-  override def get(in: I, forceRefresh: Boolean = false): Task[O] = {
+  def get(in: I, forceRefresh: Boolean = false): Task[O] = {
     fetch(in) flatMap {
-      case Some(data) if !forceRefresh => {
+      case Some(data) if !(forceRefresh || settings.cacheBypass) => {
         val update = if (isStale(data)) {
           queueRefresh(in)
         } else {
