@@ -105,9 +105,7 @@ class StatisticsDAO(bareDAO: BareStatisticsDAO) {
       .map(diversifyBuildsOfStats(key.boots))
       .map(diversifySkillOrdersOfStats)
       .map(filterEmptyStarterItems)
-      .map { stats =>
-        MinPickRateDecorator.decorate(key.constraints.minPickRate, 10, stats)
-      }
+      .map(MinPickRateDecorator.decorate(key.constraints))
   }
 
 }
