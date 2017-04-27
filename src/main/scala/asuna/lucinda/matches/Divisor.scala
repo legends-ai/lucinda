@@ -173,6 +173,24 @@ object Divisor {
     )
   }
 
+  implicit val kdaDistributionDivisor: Divisor[Seq[MatchSum.Collections.KDADistribution], Seq[MatchQuotient.Collections.KDADistribution]] =
+    instance { sum =>
+      val totalKills = sum.map(_.kills).sum
+      val totalDeaths = sum.map(_.deaths).sum
+      val totalAssists = sum.map(_.assists).sum
+      val totalExecutes = sum.map(_.executes).sum
+      sum.map { elt =>
+        MatchQuotient.Collections.KDADistribution(
+          time = elt.time,
+
+          kills = if (totalKills > 0) elt.kills / totalKills else 0,
+          deaths = if (totalDeaths > 0) elt.deaths / totalDeaths else 0,
+          assists = if (totalAssists > 0) elt.assists / totalAssists else 0,
+          executes = if (totalExecutes > 0) elt.executes / totalExecutes else 0,
+        )
+      }
+    }
+
   implicit val momentsOptionDivisor = optionDivisor(MomentsDivisor)
 
   implicit val hnilDivisor = instance[HNil, HNil](identity)
