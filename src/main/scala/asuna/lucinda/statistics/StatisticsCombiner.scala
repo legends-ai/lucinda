@@ -15,20 +15,18 @@ object StatisticsCombiner {
 
     def combine(a: AllChampionStatistics, b: AllChampionStatistics): AllChampionStatistics = {
       val sums = a.sums |+| b.sums
-      val quotients = sums.map(QuotientsGenerator.generateQuotients)
-      val results = (sums |@| quotients).map { (sums, quotients) =>
+      val results = sums.map { sms =>
         // note that this combination is invalid if the role counts are different...
         // there isn't really a good way to enforce this other than throwing
         // an exception, so we'll just log and allow it :)
         if (a.roleCount =!= b.roleCount) {
           logger.warn(s"role counts ${a.roleCount} and ${b.roleCount} don't match up!")
         }
-        ResultsGenerator.generate(a.roleCount, sums, quotients)
+        ResultsGenerator.generate(a.roleCount, sms)
       }
       AllChampionStatistics(
         // Roles should be the same. If they're not, fuck my ass.
         results = results,
-        quotients = quotients,
         sums = sums,
         roleCount = a.roleCount,
       )

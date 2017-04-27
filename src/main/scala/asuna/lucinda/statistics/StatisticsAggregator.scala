@@ -22,11 +22,9 @@ object StatisticsAggregator {
   ): AllChampionStatistics = {
     val initSums = SumCombiner.combineSums(rawSums)
     val sums = initSums.update(_.subscalars.bans := bans.mapValues(liftSubscalar))
-    val quotients = QuotientsGenerator.generateQuotients(sums)
-    val results = ResultsGenerator.generate(roleCount, sums, quotients)
+    val results = ResultsGenerator.generate(roleCount, sums)
     AllChampionStatistics(
       results = Some(results),
-      quotients = Some(quotients),
       sums = Some(sums),
       roleCount = roleCount,
     )
