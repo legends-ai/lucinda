@@ -19,27 +19,35 @@ object BaseAllChampionStatisticsDAO {
     reverse: Boolean = false
   ) {
 
+    lazy val protoBasis: MatchFiltersSpace = MatchFiltersSpace(
+      enemyIds = enemies.toSeq,
+      versions = patches.toSeq,
+      tiers = tiers.toSeq,
+      regions = regions.toSeq,
+      roles = roles.toSeq,
+      queues = queues.toSeq,
+    )
+
     /**
       * Map of every champion to the filters space.
       */
     lazy val filtersMap: Map[Int, MatchFiltersSpace] = allChampions
       .map(c => (c, c)).toMap
       .mapValues { champ =>
-        val basis = MatchFiltersSpace(
-          championIds = Set(champ).toSeq,
-          enemyIds = enemies.toSeq,
-          versions = patches.toSeq,
-          tiers = tiers.toSeq,
-          regions = regions.toSeq,
-          roles = roles.toSeq,
-          queues = queues.toSeq,
-        )
+        val basis = protoBasis.withChampionIds(Set(champ).toSeq)
         if (reverse) {
           basis.copy(championIds = basis.enemyIds, enemyIds = basis.championIds)
         } else {
           basis
         }
       }
+
+    lazy val bansSpace: MatchFiltersSpace =
+      protoBasis
+        .withChampionIds(allChampions.toSeq)
+        // get all data across roles and enemies to fetch everything for this filter combination.
+        // everything else is a valid partition to compute ban rate for.
+        .clearRoles.clearEnemyIds
 
     lazy val roleCount = if (roles.isEmpty) 5 else Math.max(5, roles.size)
   }
@@ -64,10 +72,13 @@ trait BaseAllChampionStatisticsDAO[K <: BaseAllChampionStatisticsDAO.CompositeKe
         sumFetcher.fetchSums(in, space)
       }
 
+      // Next, we'll compute ban rates by fetching a sum representing the entire space.
+      bansSum <- sumFetcher.fetchSums(in, in.base.bansSpace)
+      bans = bansSum.collections.map(_.bans).getOrElse(Map())
+
       // Finally, we'll map over the values of this map to generate a Statistics
       // object for each value. Thus we end up with a Future[AllChampionStatistics],
-      // and we are done.
-    } yield StatisticsAggregator.makeStatistics(in.base.roleCount, sumsMap)
+    } yield StatisticsAggregator.makeStatistics(in.base.roleCount, sumsMap, bans)
   }
 
 }
