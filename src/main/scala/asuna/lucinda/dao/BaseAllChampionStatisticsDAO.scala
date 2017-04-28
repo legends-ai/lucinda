@@ -69,7 +69,7 @@ trait BaseAllChampionStatisticsDAO[K <: BaseAllChampionStatisticsDAO.CompositeKe
       // no database call is made at the time of execution.) This returns a
       // Map[Int, Task[MatchSum]].
       sumsMap <- in.base.filtersMap.traverseG { space =>
-        sumFetcher.fetchSums(in, space)
+        sumFetcher.fetchSums(in, space, removeCollections = true)
       }
 
       // Next, we'll compute ban rates by fetching a sum representing the entire space.

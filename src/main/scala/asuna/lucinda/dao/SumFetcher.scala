@@ -10,11 +10,15 @@ import cats.implicits._
 
 
 trait SumFetcher[-K] {
-  def fetchSums(ctx: K, space: MatchFiltersSpace): Task[MatchSum]
+  def fetchSums(
+    ctx: K, space: MatchFiltersSpace, removeCollections: Boolean = false,
+  ): Task[MatchSum]
 }
 
 class SummonerSumFetcher(alexandria: Alexandria) extends SumFetcher[SummonerKey] {
-  def fetchSums(ctx: SummonerKey, space: MatchFiltersSpace): Task[MatchSum] = {
+  def fetchSums(
+    ctx: SummonerKey, space: MatchFiltersSpace, removeCollections: Boolean = false,
+  ): Task[MatchSum] = {
     Task.deferFuture {
       val req = GetSummonerMatchSumRequest(
         summoner = ctx.id.some,
@@ -26,9 +30,11 @@ class SummonerSumFetcher(alexandria: Alexandria) extends SumFetcher[SummonerKey]
 }
 
 class AllSumFetcher(alexandria: Alexandria) extends SumFetcher[AllKey] {
-  def fetchSums(ctx: AllKey, space: MatchFiltersSpace): Task[MatchSum] = {
+  def fetchSums(
+    ctx: AllKey, space: MatchFiltersSpace, removeCollections: Boolean = false,
+  ): Task[MatchSum] = {
     Task.deferFuture {
-      alexandria.getSum(GetSumRequest(space = space.some))
+      alexandria.getSum(GetSumRequest(space = space.some, removeCollections = removeCollections))
     }
   }
 }
