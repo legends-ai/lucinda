@@ -38,8 +38,7 @@ object ResultsDeriver {
         mean = value.mean,
         meanAcrossRole = meanAcrossRole,
         stdev = Math.sqrt(value.variance),
-        // TODO(igm): is this what we mean by percentile?
-        percentile = 1 - index.toDouble / quot.size
+        percentile = 1 - index.toDouble / quot.size,
       )
     }
   }
@@ -117,7 +116,7 @@ object ResultsDeriver {
       // map of total games played per champion
       val plays = sums.plays
 
-      val totalGames = plays.values.sum / 10
+      val totalGames = plays.values.sum / 2
 
       // we will end up dividing each value by this total # of games to get incidence rate.
       val pickRateSums = plays.mapValues { v =>

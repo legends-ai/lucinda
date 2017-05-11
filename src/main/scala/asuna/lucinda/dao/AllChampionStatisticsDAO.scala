@@ -86,7 +86,11 @@ class AllChampionStatisticsDAO(bareDAO: BareAllChampionStatisticsDAO)
       }.keys
 
       // Filter maps for keys that contain the champion
-      results.filterChampions(champs.toSet)
+      if (champs.isEmpty) {
+        results
+      } else {
+        results.filterChampions(champs.toSet)
+      }
     }
   }
 
