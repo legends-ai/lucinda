@@ -37,13 +37,14 @@ class SummonerOverviewDAO(summonerChampions: SummonerChampionsDAO)
       (scs.results.flatMap(_.scalars) |@| scs.sums.flatMap(_.scalars) |@| scs.sums.map(_.plays)).map {
         (results, sums, plays) =>
           SummonerOverview(
-            plays = plays.values.sum,
-            wins = sums.wins.values.map(_.sum).sum.toLong,
+            plays    = plays.values.sum,
+            wins     = sums.wins.values.map(_.sum).sum.toLong,
 
-            // kda
-            kills = sums.kills.values.map(_.sum).sum.toLong,
-            deaths = sums.deaths.values.map(_.sum).sum.toLong,
-            assists = sums.assists.values.map(_.sum).sum.toLong,
+            //       kda
+            kills    = sums.kills.values.map(_.sum).sum.toLong,
+            deaths   = sums.deaths.values.map(_.sum).sum.toLong,
+            assists  = sums.assists.values.map(_.sum).sum.toLong,
+            duration = sums.gameLength.values.map(_.sum).sum.toLong,
 
             // champion data
             championOverviews = key.allChampions.toList
@@ -52,14 +53,14 @@ class SummonerOverviewDAO(summonerChampions: SummonerChampionsDAO)
               .filter(_._2 > 0).sortBy(_._2).reverse.take(10)
               .map { case (champ, _) =>
                 SummonerOverview.ChampionOverview(
-                  id = champ,
-                  plays = plays.get(champ).orEmpty,
-                  wins = results.wins.get(champ),
-                  kills = results.kills.get(champ),
-                  deaths = results.deaths.get(champ),
-                  assists = results.assists.get(champ),
+                  id            = champ,
+                  plays         = plays.get(champ).orEmpty,
+                  wins          = results.wins.get(champ),
+                  kills         = results.kills.get(champ),
+                  deaths        = results.deaths.get(champ),
+                  assists       = results.assists.get(champ),
                   minionsKilled = results.minionsKilled.get(champ),
-                  firstBlood = results.firstBlood.get(champ)
+                  firstBlood    = results.firstBlood.get(champ),
                 )
               }
           )
